@@ -59,3 +59,21 @@ The Resource Pack Manager changes local client pack selections. Server-required 
 ## Source and licensing
 
 The current KillAura and Mace Hitter implementations were written for MORGUE rather than copied from AUTISM Client source. MORGUE does not import AUTISM Client classes or require that client at runtime. Review third-party dependencies and their licenses before redistribution.
+
+## References and inspiration
+
+These public projects were reviewed for architectural ideas, feature behavior, and implementation patterns while planning MORGUE. They are **research references only**: MORGUE does not bundle these clients, depend on their runtime, or claim their code as its own.
+
+| Project | What we studied | Repository / license |
+| --- | --- | --- |
+| [Meteor Client](https://github.com/MeteorDevelopment/meteor-client) | Combat target filtering, priority settings, range handling, and modular settings organization. | [GPL-3.0](https://github.com/MeteorDevelopment/meteor-client) |
+| [LiquidBounce](https://github.com/CCBlueX/LiquidBounce) | Event-driven module architecture, coordinated target state, and inventory-action scheduling patterns for offhand management. | [GPL-3.0](https://github.com/CCBlueX/LiquidBounce) |
+| [Wurst 7](https://github.com/Wurst-Imperium/Wurst7) | FightBot/pathfinding concepts and how movement decisions can be separated from combat actions. | [GPL-3.0](https://github.com/Wurst-Imperium/Wurst7) |
+| [Baritone](https://github.com/cabaletta/baritone) | Goal-based navigation and pathfinding concepts for autonomous movement. | [LGPL-3.0](https://github.com/cabaletta/baritone) |
+| [Anomoly](https://github.com/DistilledSlop/anomoly) | Minecraft 26.3 Fabric project structure, ClickGUI ideas, and local server-profile diagnostics. | [CC0-1.0](https://github.com/DistilledSlop/anomoly) |
+| [BleachHack](https://github.com/BleachDev/BleachHack) | Historical Fabric utility-client patterns for GUI organization, AutoTotem, combat modules, and automation. This project is discontinued and targets older Minecraft versions. | See the repository's license and redistribution terms. |
+
+### Attribution and code-use note
+
+The references above informed research and design discussions; they are not a list of MORGUE dependencies or code contributions. MORGUE's current combat and target-intelligence implementation is written for this project. No source code is intentionally copied from the projects listed above. If code is ever copied or adapted from any reference, its exact license, attribution requirements, source-disclosure obligations, and compatibility with MORGUE's distribution license must be reviewed before merging or distributing that change. A repository's license applies to its own covered code; dependencies and bundled components may have separate terms.
+
