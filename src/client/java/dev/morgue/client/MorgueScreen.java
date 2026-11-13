@@ -179,7 +179,7 @@ public final class MorgueScreen extends Screen {
             if (!query.isEmpty() && !module.toLowerCase(java.util.Locale.ROOT).contains(query)) {
                 continue;
             }
-            boolean viewOnly = "AI Brain".equals(module);
+            boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {

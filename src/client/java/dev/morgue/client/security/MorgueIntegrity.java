@@ -42,15 +42,23 @@ public final class MorgueIntegrity {
                     : MorgueIntegrity.class.getProtectionDomain().getCodeSource();
             URL location = codeSource == null ? null : codeSource.getLocation();
             if (location == null || !"file".equalsIgnoreCase(location.getProtocol())) {
-                setStatus("SKIPPED", "The runtime did not expose a local JAR location.");
+                if (isDevelopmentEnvironment()) {
+                    setStatus("SKIPPED", "Fabric development environment; no packaged JAR check is required.");
+                } else {
+                    setStatus("FAILED", "The runtime did not expose a verifiable local JAR location.");
+                }
                 return;
             }
 
             URI locationUri = location.toURI();
             Path jarPath = Path.of(locationUri);
+            if (Files.isDirectory(jarPath) && isDevelopmentEnvironment()) {
+                setStatus("SKIPPED", "Fabric development run detected; packaged-JAR verification was skipped.");
+                return;
+            }
             if (!Files.isRegularFile(jarPath)
                     || !jarPath.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar")) {
-                setStatus("SKIPPED", "Development run detected; packaged-JAR verification was skipped.");
+                setStatus("FAILED", "A packaged MORGUE JAR could not be located for verification.");
                 return;
             }
 
@@ -58,6 +66,16 @@ public final class MorgueIntegrity {
         } catch (Exception exception) {
             setStatus("FAILED", "Integrity verification could not complete: "
                     + exception.getClass().getSimpleName());
+        }
+    }
+
+    private static boolean isDevelopmentEnvironment() {
+        try {
+            Class<?> loaderType = Class.forName("net.fabricmc.loader.api.FabricLoader");
+            Object loader = loaderType.getMethod("getInstance").invoke(null);
+            return (Boolean) loaderType.getMethod("isDevelopmentEnvironment").invoke(loader);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            return false;
         }
     }
 
@@ -159,7 +177,7 @@ public final class MorgueIntegrity {
     }
 
     /**
-     * Development runs are allowed; packaged runs require a complete check.
+     * Only confirmed development runs may skip; packaged runs require a complete check.
      */
     public static boolean isActivationAllowed() {
         return "VERIFIED".equals(status) || "SKIPPED".equals(status);
