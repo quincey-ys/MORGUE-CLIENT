@@ -5,6 +5,7 @@ import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
@@ -127,6 +128,10 @@ public final class MorgueScreen extends Screen {
             buildAutoTotemSettings();
         } else if ("KillAura".equals(selectedModule)) {
             buildKillAuraSettings();
+        } else if ("Resource Pack Manager".equals(selectedModule)) {
+            buildResourcePackManager();
+        } else if ("Privacy Dashboard".equals(selectedModule)) {
+            buildPrivacyDashboard();
         } else {
             buildPlaceholderSettings();
         }
@@ -326,6 +331,38 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
+        addBackButton();
+    }
+
+    private void buildResourcePackManager() {
+        int x = panelX + 150;
+        addRenderableWidget(Button.builder(Component.literal("OPEN VANILLA RESOURCE PACK MANAGER"), button -> {
+            minecraft.gui.setScreen(new PackSelectionScreen(
+                    minecraft.getResourcePackRepository(),
+                    repository -> {
+                        minecraft.options.updateResourcePacks(repository);
+                        minecraft.gui.setScreen(this);
+                    },
+                    minecraft.getResourcePackDirectory(),
+                    Component.translatable("resourcePack.title")
+            ));
+        }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
+
+        addRenderableWidget(Button.builder(Component.literal("Manage local packs and normal client selections."),
+                button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("Server-required packs remain controlled by the server."),
+                button -> {}).bounds(x, panelY + 192, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildPrivacyDashboard() {
+        int x = panelX + 150;
+        addRenderableWidget(Button.builder(Component.literal("MORGUE does not send a custom mod-list handshake."),
+                button -> {}).bounds(x, panelY + 116, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("Servers can still inspect normal gameplay and network behavior."),
+                button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("No anti-cheat evasion, fake responses, or required-pack bypass is active."),
+                button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
         addBackButton();
     }
 
