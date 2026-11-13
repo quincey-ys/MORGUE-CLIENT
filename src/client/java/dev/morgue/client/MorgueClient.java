@@ -1,7 +1,6 @@
 package dev.morgue.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import org.lwjgl.glfw.GLFW;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -22,7 +21,7 @@ public final class MorgueClient implements ClientModInitializer {
         openClickGui = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.morgue.clickgui",
                 InputConstants.Type.KEYBOARD,
-                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                InputConstants.KEY_RSHIFT,
                 category
         ));
 
