@@ -161,47 +161,47 @@ public final class MorgueScreen extends Screen {
         int y = panelY + 108;
         int row = 0;
 
-        addSettingButton(leftX, y + row++ * 34, "Range: " + format(module.getRange()) + "  (+0.2)",
+        addSettingButton(leftX, y + row++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
                 () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
-        addSettingButton(leftX, y + row++ * 34, "FOV: " + format(module.getFov()) + "  (+15)",
+        addSettingButton(leftX, y + row++ * 27, "FOV: " + format(module.getFov()) + "  (+15)",
                 () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(leftX, y + row++ * 34, "Minimum Fall: " + format(module.getMinimumFallDistance()) + "  (+0.1)",
+        addSettingButton(leftX, y + row++ * 27, "Minimum Fall: " + format(module.getMinimumFallDistance()) + "  (+0.1)",
                 () -> module.setMinimumFallDistance(module.getMinimumFallDistance() >= 5.0 ? 0.0 : module.getMinimumFallDistance() + 0.1));
-        addSettingButton(leftX, y + row++ * 34, "Attack Delay: " + module.getAttackDelayMillis() + " ms  (+10)",
+        addSettingButton(leftX, y + row++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms  (+10)",
                 () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
-        addSettingButton(leftX, y + row++ * 34, "Priority: " + module.getPriority(),
+        addSettingButton(leftX, y + row++ * 27, "Priority: " + module.getPriority(),
                 () -> module.setPriority(module.getPriority() == MaceHitterModule.Priority.CLOSEST
                         ? MaceHitterModule.Priority.LOWEST_HEALTH : MaceHitterModule.Priority.CLOSEST));
-        addSettingButton(leftX, y + row++ * 34, "Target Mode: " + module.getTargetMode(),
+        addSettingButton(leftX, y + row++ * 27, "Target Mode: " + module.getTargetMode(),
                 () -> module.setTargetMode(nextTargetMode(module.getTargetMode())));
 
         row = 0;
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Rotation", module.isRotate()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Auto Swap", module.isAutoSwap()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Auto Swap", module.isAutoSwap()),
                 () -> module.setAutoSwap(!module.isAutoSwap()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Auto Jump", module.isAutoJump()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Auto Jump", module.isAutoJump()),
                 () -> module.setAutoJump(!module.isAutoJump()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Falling Only", module.isFallingOnly()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Falling Only", module.isFallingOnly()),
                 () -> module.setFallingOnly(!module.isFallingOnly()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Shield Stun", module.isShieldStun()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Shield Stun", module.isShieldStun()),
                 () -> module.setShieldStun(!module.isShieldStun()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Require Mace", module.isRequireMace()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Require Mace", module.isRequireMace()),
                 () -> module.setRequireMace(!module.isRequireMace()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
                 () -> module.setIgnoreWalls(!module.isIgnoreWalls()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("FOV Check", module.isFovCheck()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("FOV Check", module.isFovCheck()),
                 () -> module.setFovCheck(!module.isFovCheck()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Team Check", module.isTeamsCheck()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Team Check", module.isTeamsCheck()),
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
-        addSettingButton(rightX, y + row++ * 34, toggleLabel("Ignore Cooldown", module.isIgnoreCooldown()),
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Ignore Cooldown", module.isIgnoreCooldown()),
                 () -> module.setIgnoreCooldown(!module.isIgnoreCooldown()));
 
         addRenderableWidget(Button.builder(Component.literal("ENTITY TARGET FILTER  >"), button -> {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX, panelY + panelHeight - 78, panelWidth - 176, 28).build());
+        }).bounds(leftX + 170, panelY + panelHeight - 42, panelWidth - 360, 24).build());
 
         addBackButton();
     }
@@ -367,9 +367,9 @@ public final class MorgueScreen extends Screen {
         boolean enabled = !isModuleEnabled(module);
         ENABLED.put(module, enabled);
         if ("Mace Hitter".equals(module)) {
-            MorgueClient.maceHitter().setEnabled(enabled);
+            MorgueClient.setMaceHitterEnabled(enabled);
         } else if ("KillAura".equals(module)) {
-            MorgueClient.killAura().setEnabled(enabled);
+            MorgueClient.setKillAuraEnabled(enabled);
         } else if ("Auto Totem".equals(module)) {
             MorgueClient.autoTotem().setEnabled(enabled);
         }
