@@ -122,6 +122,8 @@ public final class MorgueScreen extends Screen {
             buildEntitySelector();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
+        } else if ("Auto Totem".equals(selectedModule)) {
+            buildAutoTotemSettings();
         } else {
             buildPlaceholderSettings();
         }
@@ -243,6 +245,41 @@ public final class MorgueScreen extends Screen {
         addBackButton();
     }
 
+    private void buildAutoTotemSettings() {
+        var module = MorgueClient.autoTotem();
+        int leftX = panelX + 150;
+        int rightX = panelX + panelWidth / 2 + 12;
+        int y = panelY + 112;
+
+        addSettingButton(leftX, y, "Mode: " + module.getMode(), () -> {
+            module.setMode(switch (module.getMode()) {
+                case SMART -> dev.morgue.client.modules.player.AutoTotemModule.Mode.SWITCH;
+                case SWITCH -> dev.morgue.client.modules.player.AutoTotemModule.Mode.PICK_UP;
+                case PICK_UP -> dev.morgue.client.modules.player.AutoTotemModule.Mode.SMART;
+            });
+        });
+        addSettingButton(leftX, y + 36, "Search Priority: " + module.getSearchPriority(), () -> {
+            module.setSearchPriority(module.getSearchPriority()
+                    == dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.HOTBAR_FIRST
+                    ? dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.INVENTORY_FIRST
+                    : dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.HOTBAR_FIRST);
+        });
+        addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
+            module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
+        });
+        addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
+                () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
+
+        addRenderableWidget(Button.builder(Component.literal("AUTO TOTEM STATUS: " + (module.isEnabled() ? "ON" : "OFF")),
+                button -> {
+                    module.toggle();
+                    ENABLED.put("Auto Totem", module.isEnabled());
+                    rebuildWidgets();
+                }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
+
+        addBackButton();
+    }
+
     private void buildPlaceholderSettings() {
         int x = panelX + 150;
         addRenderableWidget(Button.builder(Component.literal("This module is listed in the ClickGUI prototype."),
@@ -272,6 +309,8 @@ public final class MorgueScreen extends Screen {
         ENABLED.put(module, enabled);
         if ("Mace Hitter".equals(module)) {
             MorgueClient.maceHitter().setEnabled(enabled);
+        } else if ("Auto Totem".equals(module)) {
+            MorgueClient.autoTotem().setEnabled(enabled);
         }
     }
 
