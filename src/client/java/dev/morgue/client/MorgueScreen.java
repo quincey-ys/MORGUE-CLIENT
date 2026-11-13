@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
@@ -156,6 +157,10 @@ public final class MorgueScreen extends Screen {
             buildResourcePackManager();
         } else if ("Privacy Dashboard".equals(selectedModule)) {
             buildPrivacyDashboard();
+        } else if ("Keybinds".equals(selectedModule)) {
+            buildKeybindSettings();
+        } else if ("Profiles".equals(selectedModule)) {
+            buildProfileSettings();
         } else {
             buildPlaceholderSettings();
         }
@@ -397,6 +402,27 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Servers can still inspect normal gameplay and network behavior."),
                 button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
         addRenderableWidget(Button.builder(Component.literal("No anti-cheat evasion, fake responses, or required-pack bypass is active."),
+                button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildKeybindSettings() {
+        int x = panelX + 150;
+        addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
+            minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
+        }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
+        addRenderableWidget(Button.builder(Component.literal("MORGUE defaults: Right Shift / M / K / V"),
+                button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildProfileSettings() {
+        int x = panelX + 150;
+        addRenderableWidget(Button.builder(Component.literal("ACTIVE PROFILE: DEFAULT"),
+                button -> {}).bounds(x, panelY + 116, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("Settings save automatically to config/morgue-client.properties."),
+                button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("Named profile import/export is not implemented yet."),
                 button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
         addBackButton();
     }
