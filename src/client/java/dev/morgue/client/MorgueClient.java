@@ -3,9 +3,8 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 
 public final class MorgueClient implements ClientModInitializer {
@@ -17,11 +16,10 @@ public final class MorgueClient implements ClientModInitializer {
                 Identifier.fromNamespaceAndPath("morgue", "main")
         );
 
-        // SDL scancode 229 is Right Shift.
-        openClickGui = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        openClickGui = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.morgue.clickgui",
-                InputConstants.Type.KEYSYM,
-                229,
+                InputConstants.Type.KEYBOARD,
+                InputConstants.KEY_RIGHT_SHIFT,
                 category
         ));
 
