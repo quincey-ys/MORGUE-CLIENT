@@ -103,12 +103,12 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     keep('public class dev.morgue.client.MorgueClient { public <init>(); public void onInitializeClient(); }')
 
     // Keep the verifier's diagnostic API names stable for the CI smoke test.
-    keepclassmembernames('class dev.morgue.client.security.MorgueIntegrity {
+    keepclassmembernames('''class dev.morgue.client.security.MorgueIntegrity {
         public static void verify();
         public static java.lang.String getStatus();
         public static java.lang.String getDetails();
         public static boolean isActivationAllowed();
-    }')
+    }''')
 
     repackageclasses('morgue.internal')
     adaptresourcefilecontents('fabric.mod.json')
