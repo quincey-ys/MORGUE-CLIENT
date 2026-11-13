@@ -36,4 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MORGUE-CLIENT
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            build/libs/*.jar.sha256
+            build/libs/BUILD-INFO.txt
