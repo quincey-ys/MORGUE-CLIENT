@@ -46,11 +46,11 @@ public final class MorgueClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
                 while (toggleMaceHitter.consumeClick()) {
-                    MACE_HITTER.toggle();
+                    setMaceHitterEnabled(!MACE_HITTER.isEnabled());
                     MorgueConfig.save();
                 }
                 while (toggleKillAura.consumeClick()) {
-                    KILL_AURA.toggle();
+                    setKillAuraEnabled(!KILL_AURA.isEnabled());
                     MorgueConfig.save();
                 }
                 while (toggleAutoTotem.consumeClick()) {
@@ -71,6 +71,20 @@ public final class MorgueClient implements ClientModInitializer {
             MACE_HITTER.tick(client);
             AUTO_TOTEM.tick(client);
         });
+    }
+
+    public static void setMaceHitterEnabled(boolean enabled) {
+        MACE_HITTER.setEnabled(enabled);
+        if (enabled) {
+            KILL_AURA.setEnabled(false);
+        }
+    }
+
+    public static void setKillAuraEnabled(boolean enabled) {
+        KILL_AURA.setEnabled(enabled);
+        if (enabled) {
+            MACE_HITTER.setEnabled(false);
+        }
     }
 
     public static KillAuraModule killAura() {
