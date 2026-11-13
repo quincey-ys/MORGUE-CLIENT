@@ -36,7 +36,12 @@ The output JAR is written to `build/libs/`. GitHub Actions uploads it as a workf
 | Key | Action |
 | --- | --- |
 | Right Shift | Open / close ClickGUI |
+| M | Toggle Mace Hitter |
+| K | Toggle KillAura |
+| V | Toggle Auto Totem |
 | Escape | Close the current screen |
+
+M, K, and V can be rebound in **Options → Controls → Key Binds**.
 
 ## Compatibility and privacy
 
