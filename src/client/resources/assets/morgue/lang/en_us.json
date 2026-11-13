@@ -1,4 +1,7 @@
 {
+  "key.category.morgue.main": "MORGUE",
   "key.morgue.clickgui": "Open MORGUE ClickGUI",
-  "key.category.morgue.main": "MORGUE"
+  "key.morgue.toggle_mace_hitter": "Toggle Mace Hitter",
+  "key.morgue.toggle_kill_aura": "Toggle KillAura",
+  "key.morgue.toggle_auto_totem": "Toggle Auto Totem"
 }
