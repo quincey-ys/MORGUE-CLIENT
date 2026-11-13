@@ -1,6 +1,7 @@
 package dev.morgue.client;
 
 import dev.morgue.client.modules.combat.MaceHitterModule;
+import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -228,6 +229,7 @@ public final class MorgueScreen extends Screen {
                     button -> {
                         module.setEntityTypeSelected(option.id(), !enabled);
                         module.setTargetMode(MaceHitterModule.TargetMode.CUSTOM);
+                        MorgueConfig.save();
                         rebuildWidgets();
                     }).bounds(columnX, rowY, panelWidth / 2 - 170, 23).build());
         }
@@ -319,6 +321,7 @@ public final class MorgueScreen extends Screen {
                 button -> {
                     module.toggle();
                     ENABLED.put("Auto Totem", module.isEnabled());
+                    MorgueConfig.save();
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
@@ -337,6 +340,7 @@ public final class MorgueScreen extends Screen {
     private void addSettingButton(int x, int y, String label, Runnable action) {
         addRenderableWidget(Button.builder(Component.literal(label), button -> {
             action.run();
+            MorgueConfig.save();
             rebuildWidgets();
         }).bounds(x, y, panelWidth / 2 - 170, 27).build());
     }
@@ -359,6 +363,7 @@ public final class MorgueScreen extends Screen {
         } else if ("Auto Totem".equals(module)) {
             MorgueClient.autoTotem().setEnabled(enabled);
         }
+        MorgueConfig.save();
     }
 
     private static MaceHitterModule.TargetMode nextTargetMode(MaceHitterModule.TargetMode mode) {
