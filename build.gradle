@@ -61,16 +61,16 @@ java {
     withSourcesJar()
 }
 
-// Build a separately obfuscated distributable from Loom's remapped JAR.
+// Minecraft 26.3 is distributed without the legacy mapping-remap task; obfuscate the Loom client JAR.
 // Fabric's entrypoint class and callback are retained; internal implementation
 // classes are repackaged. Shrinking and optimization are disabled for safety.
 def obfuscatedJar = layout.buildDirectory.file("obfuscated/${project.archives_base_name}-${project.version}.jar")
 def obfuscationMap = layout.buildDirectory.file("reports/morgue/proguard-mapping.txt")
 
-tasks.register('obfuscateRemappedJar', proguard.gradle.ProGuardTask) {
-    dependsOn tasks.named('remapJar')
+tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
+    dependsOn tasks.named('jar')
 
-    injars(tasks.named('remapJar').get().archiveFile.get().asFile)
+    injars(tasks.named('jar').get().archiveFile.get().asFile)
     outjars(obfuscatedJar.get().asFile)
 
     // JDK modules plus the compile classpath used by the client source set.
@@ -93,6 +93,7 @@ tasks.register('obfuscateRemappedJar', proguard.gradle.ProGuardTask) {
 
     repackageclasses('morgue.internal')
     adaptresourcefilecontents('fabric.mod.json')
+    doFirst { obfuscationMap.get().asFile.parentFile.mkdirs() }
     printmapping(obfuscationMap.get().asFile)
 }
 
