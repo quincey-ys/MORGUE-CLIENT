@@ -124,6 +124,8 @@ public final class MorgueScreen extends Screen {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
             buildAutoTotemSettings();
+        } else if ("KillAura".equals(selectedModule)) {
+            buildKillAuraSettings();
         } else {
             buildPlaceholderSettings();
         }
@@ -245,6 +247,49 @@ public final class MorgueScreen extends Screen {
         addBackButton();
     }
 
+    private void buildKillAuraSettings() {
+        var module = MorgueClient.killAura();
+        int leftX = panelX + 150;
+        int rightX = panelX + panelWidth / 2 + 12;
+        int y = panelY + 110;
+        int leftRow = 0;
+        int rightRow = 0;
+
+        addSettingButton(leftX, y + leftRow++ * 34, "Range: " + format(module.getRange()) + "  (+0.2)",
+                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
+        addSettingButton(leftX, y + leftRow++ * 34, "FOV: " + format(module.getFov()) + "  (+15)",
+                () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
+        addSettingButton(leftX, y + leftRow++ * 34, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
+                () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
+        addSettingButton(leftX, y + leftRow++ * 34, "Priority: " + module.getPriority(),
+                () -> module.setPriority(module.getPriority() == dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST
+                        ? dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH
+                        : dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST));
+        addSettingButton(leftX, y + leftRow++ * 34, "Targets: " + module.getTargetMode(),
+                () -> module.setTargetMode(switch (module.getTargetMode()) {
+                    case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
+                    case HOSTILE_MOBS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.ALL_LIVING;
+                    case ALL_LIVING -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.PLAYERS;
+                }));
+
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Rotation", module.isRotate()),
+                () -> module.setRotate(!module.isRotate()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Auto Sword", module.isAutoSword()),
+                () -> module.setAutoSword(!module.isAutoSword()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Switch Back", module.isSwitchBack()),
+                () -> module.setSwitchBack(!module.isSwitchBack()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Shield Break", module.isShieldBreak()),
+                () -> module.setShieldBreak(!module.isShieldBreak()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
+                () -> module.setIgnoreWalls(!module.isIgnoreWalls()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("FOV Check", module.isFovCheck()),
+                () -> module.setFovCheck(!module.isFovCheck()));
+        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Team Check", module.isTeamsCheck()),
+                () -> module.setTeamsCheck(!module.isTeamsCheck()));
+
+        addBackButton();
+    }
+
     private void buildAutoTotemSettings() {
         var module = MorgueClient.autoTotem();
         int leftX = panelX + 150;
@@ -309,6 +354,8 @@ public final class MorgueScreen extends Screen {
         ENABLED.put(module, enabled);
         if ("Mace Hitter".equals(module)) {
             MorgueClient.maceHitter().setEnabled(enabled);
+        } else if ("KillAura".equals(module)) {
+            MorgueClient.killAura().setEnabled(enabled);
         } else if ("Auto Totem".equals(module)) {
             MorgueClient.autoTotem().setEnabled(enabled);
         }
