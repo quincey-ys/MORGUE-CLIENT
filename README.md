@@ -12,7 +12,10 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, and pause-while-using-item option.
 - **KillAura:** independent MORGUE implementation with player/hostile/all-living target modes, range/FOV, target priority, rotation, auto-sword, shield breaking, and switch-back settings.
+- **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
+- **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
 - Mace Hitter and KillAura are mutually exclusive to avoid competing attack loops.
+- Target Intelligence centralizes ranking only; each combat module retains its own target filters and action logic.
 - Settings persist in `config/morgue-client.properties`.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.

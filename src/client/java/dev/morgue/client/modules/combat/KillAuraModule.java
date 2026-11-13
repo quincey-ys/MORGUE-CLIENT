@@ -1,5 +1,6 @@
 package dev.morgue.client.modules.combat;
 
+import dev.morgue.client.ai.TargetIntelligence;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,7 +26,8 @@ public final class KillAuraModule {
 
     public enum Priority {
         CLOSEST,
-        LOWEST_HEALTH
+        LOWEST_HEALTH,
+        THREAT
     }
 
     private boolean enabled;
@@ -106,38 +108,16 @@ public final class KillAuraModule {
                 entity -> entity != player && entity.isAlive() && !entity.isRemoved()
         );
 
-        LivingEntity best = null;
-        double bestDistance = Double.MAX_VALUE;
-        float bestHealth = Float.MAX_VALUE;
-
-        for (LivingEntity candidate : candidates) {
-            if (!isAllowed(candidate)) {
-                continue;
-            }
-            if (teamsCheck && player.isAlliedTo(candidate)) {
-                continue;
-            }
-            if (!ignoreWalls && !player.hasLineOfSight(candidate)) {
-                continue;
-            }
-
-            double distance = player.distanceToSqr(candidate);
-            if (distance > range * range) {
-                continue;
-            }
-            if (fovCheck && !isWithinFov(player, candidate)) {
-                continue;
-            }
-
-            if (priority == Priority.CLOSEST && distance < bestDistance) {
-                bestDistance = distance;
-                best = candidate;
-            } else if (priority == Priority.LOWEST_HEALTH && candidate.getHealth() < bestHealth) {
-                bestHealth = candidate.getHealth();
-                best = candidate;
-            }
-        }
-        return best;
+        return TargetIntelligence.selectBest(
+                player,
+                candidates,
+                candidate -> isAllowed(candidate)
+                        && (!teamsCheck || !player.isAlliedTo(candidate))
+                        && (ignoreWalls || player.hasLineOfSight(candidate))
+                        && (!fovCheck || isWithinFov(player, candidate)),
+                TargetIntelligence.Priority.valueOf(priority.name()),
+                range
+        );
     }
 
     private boolean isAllowed(LivingEntity entity) {

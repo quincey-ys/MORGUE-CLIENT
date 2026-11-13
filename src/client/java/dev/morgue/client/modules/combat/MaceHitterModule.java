@@ -1,5 +1,6 @@
 package dev.morgue.client.modules.combat;
 
+import dev.morgue.client.ai.TargetIntelligence;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +24,8 @@ import java.util.Set;
 public final class MaceHitterModule {
     public enum Priority {
         CLOSEST,
-        LOWEST_HEALTH
+        LOWEST_HEALTH,
+        THREAT
     }
 
     public enum TargetMode {
@@ -154,40 +156,16 @@ public final class MaceHitterModule {
                 entity -> entity != player && entity.isAlive() && !entity.isRemoved()
         );
 
-        LivingEntity best = null;
-        double bestDistance = Double.MAX_VALUE;
-        float bestHealth = Float.MAX_VALUE;
-
-        for (LivingEntity candidate : candidates) {
-            if (!isTargetTypeAllowed(candidate)) {
-                continue;
-            }
-            if (teamsCheck && player.isAlliedTo(candidate)) {
-                continue;
-            }
-            if (!ignoreWalls && !player.hasLineOfSight(candidate)) {
-                continue;
-            }
-
-            double distance = player.distanceToSqr(candidate);
-            if (distance > range * range) {
-                continue;
-            }
-            if (fovCheck && !isWithinFov(player, candidate)) {
-                continue;
-            }
-
-            if (priority == Priority.CLOSEST) {
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = candidate;
-                }
-            } else if (candidate.getHealth() < bestHealth) {
-                bestHealth = candidate.getHealth();
-                best = candidate;
-            }
-        }
-        return best;
+        return TargetIntelligence.selectBest(
+                player,
+                candidates,
+                candidate -> isTargetTypeAllowed(candidate)
+                        && (!teamsCheck || !player.isAlliedTo(candidate))
+                        && (ignoreWalls || player.hasLineOfSight(candidate))
+                        && (!fovCheck || isWithinFov(player, candidate)),
+                TargetIntelligence.Priority.valueOf(priority.name()),
+                range
+        );
     }
 
     private boolean isTargetTypeAllowed(LivingEntity entity) {

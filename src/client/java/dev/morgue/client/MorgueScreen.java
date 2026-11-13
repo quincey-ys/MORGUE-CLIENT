@@ -76,7 +76,7 @@ public final class MorgueScreen extends Screen {
     );
 
     static {
-        MODULES.put("Combat", List.of("Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
+        MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
         MODULES.put("Movement", List.of("Sprint", "Safe Walk", "Movement Settings"));
         MODULES.put("Player", List.of("Auto Totem", "Inventory Helper", "Item Use"));
         MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
@@ -153,6 +153,8 @@ public final class MorgueScreen extends Screen {
             buildAutoTotemSettings();
         } else if ("KillAura".equals(selectedModule)) {
             buildKillAuraSettings();
+        } else if ("AI Brain".equals(selectedModule)) {
+            buildAiBrainSettings();
         } else if ("Resource Pack Manager".equals(selectedModule)) {
             buildResourcePackManager();
         } else if ("Privacy Dashboard".equals(selectedModule)) {
@@ -175,10 +177,16 @@ public final class MorgueScreen extends Screen {
             if (!query.isEmpty() && !module.toLowerCase(java.util.Locale.ROOT).contains(query)) {
                 continue;
             }
+            boolean viewOnly = "AI Brain".equals(module);
             addRenderableWidget(Button.builder(
-                    Component.literal((isModuleEnabled(module) ? "ON   " : "OFF   ") + module),
+                    Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
-                        toggleModule(module);
+                        if (viewOnly) {
+                            selectedModule = module;
+                            entityPage = false;
+                        } else {
+                            toggleModule(module);
+                        }
                         rebuildWidgets();
                     }
             ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), 28).build());
@@ -215,8 +223,11 @@ public final class MorgueScreen extends Screen {
         addSettingButton(leftX, y + row++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms  (+10)",
                 () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
         addSettingButton(leftX, y + row++ * 27, "Priority: " + module.getPriority(),
-                () -> module.setPriority(module.getPriority() == MaceHitterModule.Priority.CLOSEST
-                        ? MaceHitterModule.Priority.LOWEST_HEALTH : MaceHitterModule.Priority.CLOSEST));
+                () -> module.setPriority(switch (module.getPriority()) {
+                    case CLOSEST -> MaceHitterModule.Priority.LOWEST_HEALTH;
+                    case LOWEST_HEALTH -> MaceHitterModule.Priority.THREAT;
+                    case THREAT -> MaceHitterModule.Priority.CLOSEST;
+                }));
         addSettingButton(leftX, y + row++ * 27, "Target Mode: " + module.getTargetMode(),
                 () -> module.setTargetMode(nextTargetMode(module.getTargetMode())));
 
@@ -310,9 +321,11 @@ public final class MorgueScreen extends Screen {
         addSettingButton(leftX, y + leftRow++ * 34, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
                 () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
         addSettingButton(leftX, y + leftRow++ * 34, "Priority: " + module.getPriority(),
-                () -> module.setPriority(module.getPriority() == dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST
-                        ? dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH
-                        : dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST));
+                () -> module.setPriority(switch (module.getPriority()) {
+                    case CLOSEST -> dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH;
+                    case LOWEST_HEALTH -> dev.morgue.client.modules.combat.KillAuraModule.Priority.THREAT;
+                    case THREAT -> dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST;
+                }));
         addSettingButton(leftX, y + leftRow++ * 34, "Targets: " + module.getTargetMode(),
                 () -> module.setTargetMode(switch (module.getTargetMode()) {
                     case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
@@ -334,6 +347,47 @@ public final class MorgueScreen extends Screen {
                 () -> module.setFovCheck(!module.isFovCheck()));
         addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Team Check", module.isTeamsCheck()),
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
+
+        addBackButton();
+    }
+
+    private void buildAiBrainSettings() {
+        int x = panelX + 150;
+        int y = panelY + 108;
+        var assessment = dev.morgue.client.ai.TargetIntelligence.getLatestAssessment();
+
+        String activeCombat = MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
+                : MorgueClient.killAura().isEnabled() ? "KillAura" : "No combat module active";
+        addRenderableWidget(Button.builder(Component.literal("ENGINE: LOCAL TARGET INTELLIGENCE  /  READY"),
+                button -> {}).bounds(x, y, panelWidth - 176, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("ACTIVE CONTROLLER: " + activeCombat),
+                button -> {}).bounds(x, y + 34, panelWidth - 176, 27).build());
+
+        if (assessment == null) {
+            addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: Waiting for a valid target"),
+                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("ASSESSMENT: No candidate passed the active filters"),
+                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
+        } else {
+            addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: " + assessment.targetName()),
+                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("PRIORITY: " + assessment.priority()
+                    + "  /  DISTANCE: " + format(assessment.distance())),
+                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("THREAT SCORE: "
+                    + String.format(java.util.Locale.ROOT, "%.2f", assessment.threatScore())
+                    + "  /  HEALTH: " + format(assessment.health())),
+                    button -> {}).bounds(x, y + 136, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("REASON: " + assessment.reason()),
+                    button -> {}).bounds(x, y + 170, panelWidth - 176, 27).build());
+        }
+
+        addRenderableWidget(Button.builder(Component.literal("DECISION MODEL: deterministic local heuristics; no cloud AI"),
+                button -> {}).bounds(x, y + 208, panelWidth - 176, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("CLEAR LAST ASSESSMENT"), button -> {
+            dev.morgue.client.ai.TargetIntelligence.clearAssessment();
+            rebuildWidgets();
+        }).bounds(x, y + 242, panelWidth - 176, 27).build());
 
         addBackButton();
     }
