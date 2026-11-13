@@ -90,7 +90,7 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
 
     dontshrink()
     dontoptimize()
-    preverify()
+    // ProGuard preverification is enabled by default; do not disable it.
     // ProGuard may report unresolved optional references from platform libraries.
     // Keep these visible in verbose CI logs; no shrinking or optimization is done.
     verbose()
