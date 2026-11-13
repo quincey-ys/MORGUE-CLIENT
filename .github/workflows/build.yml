@@ -33,9 +33,15 @@ jobs:
           jar_file="$(find build/release -maxdepth 1 -type f -name '*.jar' -print -quit)"
           test -n "$jar_file"
           test -s "$jar_file.sha256"
-          sha256sum -c "$jar_file.sha256"
+          sha_file="$(basename "$jar_file").sha256"
+          (cd build/release && sha256sum -c "$sha_file")
           unzip -t "$jar_file"
           jar tf "$jar_file" > build/release/jar-contents.txt
+          verify_dir="$(mktemp -d)"
+          trap 'rm -rf "$verify_dir"' EXIT
+          unzip -q "$jar_file" -d "$verify_dir"
+          test -s "$verify_dir/META-INF/morgue-integrity.sha256"
+          (cd "$verify_dir" && sha256sum -c META-INF/morgue-integrity.sha256)
           grep -Fxq 'fabric.mod.json' build/release/jar-contents.txt
           grep -Fxq 'dev/morgue/client/MorgueClient.class' build/release/jar-contents.txt
           grep -Fxq 'META-INF/morgue-integrity.sha256' build/release/jar-contents.txt
