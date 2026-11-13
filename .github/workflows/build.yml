@@ -48,7 +48,7 @@ jobs:
         with:
           subject-path: 'build/release/*.jar'
       - name: Upload protected release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MORGUE-CLIENT
           path: build/release/*
