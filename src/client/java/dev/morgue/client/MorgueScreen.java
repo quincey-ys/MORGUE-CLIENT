@@ -4,6 +4,8 @@ import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.network.chat.Component;
@@ -92,6 +94,10 @@ public final class MorgueScreen extends Screen {
     private int panelY;
     private int panelWidth;
     private int panelHeight;
+    private EditBox searchBox;
+    private String searchQuery = "";
+    private boolean draggingPanel;
+    private boolean resizingPanel;
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -101,10 +107,19 @@ public final class MorgueScreen extends Screen {
     protected void init() {
         clearWidgets();
 
-        panelWidth = Math.min(720, width - 32);
-        panelHeight = Math.min(440, height - 32);
-        panelX = (width - panelWidth) / 2;
-        panelY = (height - panelHeight) / 2;
+        int maxWidth = Math.max(320, width - 24);
+        int maxHeight = Math.max(300, height - 24);
+        if (panelWidth == 0 || panelHeight == 0) {
+            panelWidth = Math.min(720, maxWidth);
+            panelHeight = Math.min(440, maxHeight);
+            panelX = (width - panelWidth) / 2;
+            panelY = (height - panelHeight) / 2;
+        } else {
+            panelWidth = Math.max(Math.min(560, maxWidth), Math.min(panelWidth, maxWidth));
+            panelHeight = Math.max(Math.min(360, maxHeight), Math.min(panelHeight, maxHeight));
+            panelX = Math.max(12, Math.min(panelX, width - panelWidth - 12));
+            panelY = Math.max(12, Math.min(panelY, height - panelHeight - 12));
+        }
 
         int sidebarX = panelX + 16;
         int sidebarY = panelY + 88;
@@ -112,6 +127,7 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal(category), button -> {
                 selectedCategory = category;
                 selectedModule = null;
+                searchQuery = "";
                 entityPage = false;
                 rebuildWidgets();
             }).bounds(sidebarX, sidebarY, 116, 24).build());
@@ -119,6 +135,14 @@ public final class MorgueScreen extends Screen {
         }
 
         if (selectedModule == null) {
+            searchBox = new EditBox(font, panelX + 150, panelY + 102,
+                    Math.max(120, panelWidth - 285), 24, Component.literal("Search modules"));
+            searchBox.setValue(searchQuery);
+            addRenderableWidget(searchBox);
+            addRenderableWidget(Button.builder(Component.literal("FILTER"), button -> {
+                searchQuery = searchBox.getValue().trim();
+                rebuildWidgets();
+            }).bounds(panelX + panelWidth - 120, panelY + 101, 88, 26).build());
             buildModuleList();
         } else if (entityPage) {
             buildEntitySelector();
@@ -139,8 +163,13 @@ public final class MorgueScreen extends Screen {
 
     private void buildModuleList() {
         int moduleX = panelX + 150;
-        int moduleY = panelY + 104;
+        int moduleY = panelY + 140;
+        String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
+        int visibleCount = 0;
         for (String module : MODULES.getOrDefault(selectedCategory, List.of())) {
+            if (!query.isEmpty() && !module.toLowerCase(java.util.Locale.ROOT).contains(query)) {
+                continue;
+            }
             addRenderableWidget(Button.builder(
                     Component.literal((isModuleEnabled(module) ? "ON   " : "OFF   ") + module),
                     button -> {
@@ -156,6 +185,12 @@ public final class MorgueScreen extends Screen {
             }).bounds(panelX + panelWidth - 112, moduleY, 88, 28).build());
 
             moduleY += 36;
+            visibleCount++;
+        }
+
+        if (visibleCount == 0) {
+            addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
+                    button -> {}).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), 28).build());
         }
     }
 
@@ -456,12 +491,60 @@ public final class MorgueScreen extends Screen {
 
         graphics.fill(panelX + 16, panelY + panelHeight - 34, panelX + panelWidth - 16,
                 panelY + panelHeight - 33, BORDER);
+        graphics.fill(panelX + panelWidth - 14, panelY + panelHeight - 3,
+                panelX + panelWidth - 3, panelY + panelHeight - 2, RED);
+        graphics.fill(panelX + panelWidth - 9, panelY + panelHeight - 8,
+                panelX + panelWidth - 3, panelY + panelHeight - 3, BORDER);
         graphics.text(font, Component.literal("MORGUE-CLIENT"), panelX + 17,
                 panelY + panelHeight - 24, MUTED);
         graphics.text(font, Component.literal("RIGHT SHIFT  •  CLOSE"),
                 panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
 
         super.extractRenderState(graphics, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 1) {
+            double mouseX = event.x();
+            double mouseY = event.y();
+
+            if (mouseX >= panelX + panelWidth - 18 && mouseY >= panelY + panelHeight - 18) {
+                resizingPanel = true;
+                return true;
+            }
+
+            if (mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 12
+                    && mouseY >= panelY + 3 && mouseY <= panelY + 68) {
+                draggingPanel = true;
+                return true;
+            }
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 1 && draggingPanel) {
+            panelX = Math.max(12, Math.min(width - panelWidth - 12, panelX + (int) Math.round(deltaX)));
+            panelY = Math.max(12, Math.min(height - panelHeight - 12, panelY + (int) Math.round(deltaY)));
+            rebuildWidgets();
+            return true;
+        }
+        if (event.button() == 1 && resizingPanel) {
+            panelWidth = Math.max(560, Math.min(width - panelX - 12, panelWidth + (int) Math.round(deltaX)));
+            panelHeight = Math.max(360, Math.min(height - panelY - 12, panelHeight + (int) Math.round(deltaY)));
+            rebuildWidgets();
+            return true;
+        }
+        return super.mouseDragged(event, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        draggingPanel = false;
+        resizingPanel = false;
+        return super.mouseReleased(event);
     }
 
     @Override
