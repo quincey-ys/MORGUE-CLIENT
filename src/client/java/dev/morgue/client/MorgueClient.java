@@ -2,6 +2,7 @@ package dev.morgue.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
+import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -12,6 +13,7 @@ import net.minecraft.resources.Identifier;
 public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping openClickGui;
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
+    private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
 
     @Override
@@ -36,9 +38,14 @@ public final class MorgueClient implements ClientModInitializer {
                 }
             }
 
+            KILL_AURA.tick(client);
             MACE_HITTER.tick(client);
             AUTO_TOTEM.tick(client);
         });
+    }
+
+    public static KillAuraModule killAura() {
+        return KILL_AURA;
     }
 
     public static MaceHitterModule maceHitter() {
