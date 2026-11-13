@@ -9,7 +9,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Independent Fabric client; no AUTISM Client dependency.
 - Right Shift opens/closes the MORGUE ClickGUI.
 - Dark charcoal interface with white typography and restrained red accents.
-- Category navigation and starter module toggles.
+- Category navigation and starter module-toggle UI (feature behavior is still being implemented).
 - Build workflow uploads the compiled JAR as a GitHub Actions artifact.
 
 ## Development environment
@@ -19,7 +19,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Fabric Loader: 0.20.1
 - Fabric API: 0.166.0+26.3
 - Fabric Loom: 1.19-SNAPSHOT
-- Gradle: 9.6.0
+- Gradle: 9.7.1
 
 Run the build with:
 
@@ -38,6 +38,6 @@ The output JAR is written to `build/libs/`.
 
 ## Project direction
 
-The first milestone focuses on the ClickGUI foundation. Planned UI work includes a draggable layout, searchable module list, per-module settings, keybind editor, profile manager, and a HUD editor.
+The first milestone is the ClickGUI foundation. The current module switches are UI prototypes and do not yet activate gameplay or HUD features. Planned UI work includes a draggable layout, searchable module list, per-module settings, keybind editor, profile manager, and a HUD editor.
 
 Privacy features are limited to ordinary user-controlled UI preferences. The project will not implement concealment intended to evade moderation, anti-cheat, or screen-share inspections.
