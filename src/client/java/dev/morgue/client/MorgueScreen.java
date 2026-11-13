@@ -532,8 +532,14 @@ public final class MorgueScreen extends Screen {
             return true;
         }
         if (event.button() == 1 && resizingPanel) {
-            panelWidth = Math.max(560, Math.min(width - panelX - 12, panelWidth + (int) Math.round(deltaX)));
-            panelHeight = Math.max(360, Math.min(height - panelY - 12, panelHeight + (int) Math.round(deltaY)));
+            int availableWidth = Math.max(280, width - panelX - 12);
+            int availableHeight = Math.max(260, height - panelY - 12);
+            int minimumWidth = Math.min(560, availableWidth);
+            int minimumHeight = Math.min(360, availableHeight);
+            panelWidth = Math.max(minimumWidth,
+                    Math.min(availableWidth, panelWidth + (int) Math.round(deltaX)));
+            panelHeight = Math.max(minimumHeight,
+                    Math.min(availableHeight, panelHeight + (int) Math.round(deltaY)));
             rebuildWidgets();
             return true;
         }
