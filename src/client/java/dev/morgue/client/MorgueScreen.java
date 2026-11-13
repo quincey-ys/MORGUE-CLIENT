@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
@@ -29,7 +30,8 @@ public final class MorgueScreen extends Screen {
     private static final int RED_SOFT = 0xFF8F263F;
     private static final int BUTTON_IDLE = 0xF0121721;
     private static final int BUTTON_HOVER = 0xFF25202A;
-    private static final Identifier DISPLAY_FONT = Identifier.fromNamespaceAndPath("morgue", "display");
+    private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
+            Identifier.fromNamespaceAndPath("morgue", "display"));
 
     private static final List<String> CATEGORIES = List.of(
             "Combat", "Movement", "Player", "Render", "World", "Misc", "Privacy", "Config"

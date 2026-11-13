@@ -2,7 +2,7 @@
   "providers": [
     {
       "type": "ttf",
-      "file": "morgue:Oxanium.ttf",
+      "file": "morgue:oxanium.ttf",
       "shift": [
         0,
         0
