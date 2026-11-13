@@ -3,6 +3,7 @@ package dev.morgue.client;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -10,6 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,13 +19,17 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xFF080808;
-    private static final int PANEL = 0xFF111111;
-    private static final int PANEL_LIGHT = 0xFF191919;
-    private static final int BORDER = 0xFF303030;
-    private static final int WHITE = 0xFFF2F2F2;
-    private static final int MUTED = 0xFF888888;
-    private static final int RED = 0xFF8E2525;
+    private static final int BLACK = 0xD80A0D13;
+    private static final int PANEL = 0xC5151B26;
+    private static final int PANEL_LIGHT = 0xE01B2430;
+    private static final int BORDER = 0xB34B596B;
+    private static final int WHITE = 0xFFF2F4F8;
+    private static final int MUTED = 0xFF9BA8B8;
+    private static final int RED = 0xFFE43D5C;
+    private static final int RED_SOFT = 0xFF8F263F;
+    private static final int BUTTON_IDLE = 0xF0121721;
+    private static final int BUTTON_HOVER = 0xFF25202A;
+    private static final Identifier DISPLAY_FONT = Identifier.fromNamespaceAndPath("morgue", "display");
 
     private static final List<String> CATEGORIES = List.of(
             "Combat", "Movement", "Player", "Render", "World", "Misc", "Privacy", "Config"
@@ -570,27 +576,87 @@ public final class MorgueScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(0, 0, width, height, 0xB9000000);
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        // Keep the live world visible; MORGUE draws only its own translucent panels.
+    }
 
+    private static Component displayText(String value) {
+        return Component.literal(value).withStyle(style -> style.withFont(DISPLAY_FONT).withBold(true));
+    }
+
+    private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, int mouseX, int mouseY) {
+        int x = widget.getX();
+        int y = widget.getY();
+        int w = widget.getWidth();
+        int h = widget.getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+
+        String rawLabel = widget.getMessage().getString();
+        boolean selected = rawLabel.equals(selectedCategory);
+        boolean activeState = rawLabel.startsWith("LIVE") || rawLabel.startsWith("ON")
+                || rawLabel.contains(": ON");
+        boolean hovered = widget.isHoveredOrFocused() || widget.isMouseOver(mouseX, mouseY);
+        boolean enabled = widget.isActive();
+
+        int background = !enabled ? 0xE010131A
+                : hovered ? BUTTON_HOVER
+                : selected ? 0xFF21151D
+                : activeState ? 0xFF1B1720
+                : BUTTON_IDLE;
+        int accent = selected || activeState ? RED
+                : hovered ? 0xFFB86B7E
+                : 0xFF465365;
+        int textColor = !enabled ? 0xFF798391
+                : selected || activeState ? 0xFFFFDDE4
+                : WHITE;
+
+        graphics.fill(x, y, x + w, y + h, background);
+        graphics.fill(x, y, x + 2, y + h, accent);
+        graphics.fill(x + 2, y, x + w, y + 1, 0xFF46515F);
+        graphics.fill(x + 2, y + h - 1, x + w, y + h, 0xFF090C12);
+        graphics.fill(x + w - 4, y + 4, x + w - 3, y + h - 4,
+                selected || activeState ? RED_SOFT : 0xFF354152);
+        if (hovered) {
+            graphics.fill(x + 3, y + 1, x + w - 4, y + 2, 0xFF8D5868);
+        }
+
+        String visibleLabel = rawLabel;
+        Component label = displayText(visibleLabel);
+        int maxTextWidth = Math.max(8, w - 22);
+        while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
+            visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
+            label = displayText(visibleLabel);
+        }
+        int textY = y + Math.max(2, (h - 10) / 2);
+        graphics.text(font, label, x + 9, textY, textColor);
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
+        graphics.fill(panelX + 1, panelY + 3, panelX + panelWidth - 1, panelY + panelHeight - 1, PANEL);
         graphics.outline(panelX, panelY, panelWidth, panelHeight, BORDER);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
+        graphics.fill(panelX + panelWidth - 92, panelY + 3, panelX + panelWidth - 16,
+                panelY + 4, RED_SOFT);
 
-        graphics.fill(panelX + 1, panelY + 1, panelX + 132, panelY + 72, PANEL);
-        graphics.text(font, Component.literal("M"), panelX + 20, panelY + 14, WHITE);
-        graphics.text(font, Component.literal("MORGUE"), panelX + 49, panelY + 17, WHITE);
-        graphics.text(font, Component.literal("CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
+        graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
+        graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
+        graphics.text(font, displayText("MORGUE"), panelX + 49, panelY + 17, WHITE);
+        graphics.text(font, displayText("CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
 
-        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL);
+        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL_LIGHT);
+        graphics.fill(panelX + 145, panelY + 18, panelX + 148, panelY + 69, RED_SOFT);
         String heading = selectedModule == null ? selectedCategory.toUpperCase() : selectedModule.toUpperCase();
-        graphics.text(font, Component.literal(heading), panelX + 161, panelY + 27, WHITE);
-        graphics.text(font, Component.literal(selectedModule == null
+        graphics.text(font, displayText(heading), panelX + 161, panelY + 27, WHITE);
+        graphics.text(font, displayText(selectedModule == null
                 ? "INDEPENDENT CLIENT  //  BUILD 0.1.0"
                 : entityPage ? "TARGET ENTITY FILTER" : "MODULE SETTINGS"), panelX + 161, panelY + 43, MUTED);
 
         graphics.fill(panelX + 136, panelY + 82, panelX + 137, panelY + panelHeight - 16, BORDER);
-        graphics.text(font, Component.literal(selectedModule == null ? "MODULES" : "CONFIGURATION"),
+        graphics.text(font, displayText(selectedModule == null ? "MODULES" : "CONFIGURATION"),
                 panelX + 151, panelY + 86, MUTED);
 
         graphics.fill(panelX + 16, panelY + panelHeight - 34, panelX + panelWidth - 16,
@@ -599,12 +665,28 @@ public final class MorgueScreen extends Screen {
                 panelX + panelWidth - 3, panelY + panelHeight - 2, RED);
         graphics.fill(panelX + panelWidth - 9, panelY + panelHeight - 8,
                 panelX + panelWidth - 3, panelY + panelHeight - 3, BORDER);
-        graphics.text(font, Component.literal("MORGUE-CLIENT"), panelX + 17,
+        graphics.text(font, displayText("MORGUE-CLIENT"), panelX + 17,
                 panelY + panelHeight - 24, MUTED);
-        graphics.text(font, Component.literal("RIGHT SHIFT  •  CLOSE"),
+        graphics.text(font, displayText("RIGHT SHIFT  •  CLOSE"),
                 panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
 
         super.extractRenderState(graphics, mouseX, mouseY, delta);
+
+        // Repaint vanilla Button widgets with MORGUE's own control language.
+        for (var child : children()) {
+            if (child instanceof AbstractWidget widget) {
+                if (widget instanceof EditBox) {
+                    graphics.outline(widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(),
+                            hoveredSearchBorder(widget, mouseX, mouseY));
+                    continue;
+                }
+                extractCustomButton(graphics, widget, mouseX, mouseY);
+            }
+        }
+    }
+
+    private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
+        return widget.isMouseOver(mouseX, mouseY) ? RED : 0xFF59697D;
     }
 
     @Override
