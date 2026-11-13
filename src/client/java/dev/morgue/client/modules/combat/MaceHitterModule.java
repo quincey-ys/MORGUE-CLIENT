@@ -89,9 +89,39 @@ public final class MaceHitterModule {
             player.jumpFromGround();
         }
 
-        int originalSlot = player.getInventory().getSelectedSlot();
-        boolean usingMace = isMace(player.getMainHandItem());
+        long now = System.currentTimeMillis();
+        if (now < nextAttackAt) {
+            return;
+        }
+        if (!ignoreCooldown && player.getAttackStrengthScale(0.5F) < 1.0F) {
+            return;
+        }
 
+        int originalSlot = player.getInventory().getSelectedSlot();
+
+        // Shield stun is a separate axe tap, so it can happen even while grounded.
+        if (shieldStun && target instanceof Player targetPlayer && targetPlayer.isBlocking()) {
+            int axeSlot = findHotbarAxe(player);
+            if (axeSlot >= 0) {
+                if (rotate) {
+                    faceTarget(player, target);
+                }
+                player.getInventory().setSelectedSlot(axeSlot);
+                client.gameMode.attack(player, target);
+                player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
+                player.getInventory().setSelectedSlot(originalSlot);
+                nextAttackAt = now + attackDelayMillis;
+                return;
+            }
+        }
+
+        // Do not equip a mace until a falling smash can actually be attempted.
+        if (fallingOnly && (player.fallDistance < minimumFallDistance
+                || player.getDeltaMovement().y >= 0.0)) {
+            return;
+        }
+
+        boolean usingMace = isMace(player.getMainHandItem());
         if (!usingMace && autoSwap) {
             int maceSlot = findHotbarItem(player, Items.MACE);
             if (maceSlot >= 0) {
@@ -99,22 +129,8 @@ public final class MaceHitterModule {
                 usingMace = true;
             }
         }
-
         if (requireMace && !usingMace) {
-            return;
-        }
-
-        if (fallingOnly && (player.fallDistance < minimumFallDistance
-                || player.getDeltaMovement().y >= 0.0)) {
-            return;
-        }
-
-        if (!ignoreCooldown && player.getAttackStrengthScale(0.5F) < 1.0F) {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        if (now < nextAttackAt) {
+            player.getInventory().setSelectedSlot(originalSlot);
             return;
         }
 
@@ -122,22 +138,11 @@ public final class MaceHitterModule {
             faceTarget(player, target);
         }
 
-        boolean swappedForShield = false;
-        if (shieldStun && target instanceof Player targetPlayer && targetPlayer.isBlocking()) {
-            int axeSlot = findHotbarAxe(player);
-            if (axeSlot >= 0) {
-                player.getInventory().setSelectedSlot(axeSlot);
-                swappedForShield = true;
-            }
-        }
-
         client.gameMode.attack(player, target);
         player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
-
-        if (swappedForShield || (autoSwap && originalSlot != player.getInventory().getSelectedSlot())) {
+        if (autoSwap && originalSlot != player.getInventory().getSelectedSlot()) {
             player.getInventory().setSelectedSlot(originalSlot);
         }
-
         nextAttackAt = now + attackDelayMillis;
     }
 
