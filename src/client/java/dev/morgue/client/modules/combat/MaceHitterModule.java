@@ -120,7 +120,7 @@ public final class MaceHitterModule {
         }
 
         client.gameMode.attack(player, target);
-        player.swing(InteractionHand.MAIN_HAND);
+        player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
 
         if (swappedForShield || (autoSwap && originalSlot != player.getInventory().getSelectedSlot())) {
             player.getInventory().setSelectedSlot(originalSlot);
