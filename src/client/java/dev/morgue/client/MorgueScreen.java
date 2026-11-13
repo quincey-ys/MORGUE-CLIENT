@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xD80A0D13;
-    private static final int PANEL = 0xC5151B26;
-    private static final int PANEL_LIGHT = 0xE01B2430;
+    private static final int BLACK = 0xA80A0D13;
+    private static final int PANEL = 0x94151B26;
+    private static final int PANEL_LIGHT = 0xB51B2430;
     private static final int BORDER = 0xB34B596B;
     private static final int WHITE = 0xFFF2F4F8;
     private static final int MUTED = 0xFF9BA8B8;
@@ -595,6 +595,8 @@ public final class MorgueScreen extends Screen {
             return;
         }
 
+        long now = System.nanoTime();
+        double pulse = (Math.sin(now / 310_000_000.0) + 1.0) * 0.5;
         String rawLabel = widget.getMessage().getString();
         boolean selected = rawLabel.equals(selectedCategory);
         boolean activeState = rawLabel.startsWith("LIVE") || rawLabel.startsWith("ON")
@@ -602,37 +604,102 @@ public final class MorgueScreen extends Screen {
         boolean hovered = widget.isHoveredOrFocused() || widget.isMouseOver(mouseX, mouseY);
         boolean enabled = widget.isActive();
 
-        int background = !enabled ? 0xE010131A
+        int background = !enabled ? 0xB010131A
                 : hovered ? BUTTON_HOVER
-                : selected ? 0xFF21151D
-                : activeState ? 0xFF1B1720
+                : selected ? 0xD021151D
+                : activeState ? 0xC51B1720
                 : BUTTON_IDLE;
         int accent = selected || activeState ? RED
-                : hovered ? 0xFFB86B7E
-                : 0xFF465365;
+                : hovered ? 0xFFE28A9C
+                : 0xFF52647A;
         int textColor = !enabled ? 0xFF798391
-                : selected || activeState ? 0xFFFFDDE4
+                : selected || activeState ? 0xFFFFE3E9
                 : WHITE;
 
+        // Layered glass plate, cut corners, and a restrained animated edge.
         graphics.fill(x, y, x + w, y + h, background);
-        graphics.fill(x, y, x + 2, y + h, accent);
-        graphics.fill(x + 2, y, x + w, y + 1, 0xFF46515F);
-        graphics.fill(x + 2, y + h - 1, x + w, y + h, 0xFF090C12);
-        graphics.fill(x + w - 4, y + 4, x + w - 3, y + h - 4,
+        graphics.fill(x + 2, y + 1, x + w - 2, y + h - 1, hovered ? 0x182F455D : 0x101D2A39);
+        graphics.fill(x, y + 2, x + 3, y + h - 2, accent);
+        graphics.fill(x + 3, y, x + w - 5, y + 1, 0x806B7B8E);
+        graphics.fill(x + 4, y + h - 1, x + w - 2, y + h, 0xA0060A10);
+        graphics.fill(x + w - 5, y + 4, x + w - 4, y + h - 4,
                 selected || activeState ? RED_SOFT : 0xFF354152);
+        graphics.fill(x, y, x + 8, y + 1, accent);
+        graphics.fill(x + w - 10, y + h - 1, x + w, y + h, accent);
+
         if (hovered) {
-            graphics.fill(x + 3, y + 1, x + w - 4, y + 2, 0xFF8D5868);
+            int sweepWidth = Math.max(12, w / 4);
+            int travel = Math.max(1, w - sweepWidth - 8);
+            int sweepX = x + 4 + (int) (Math.floorMod(now / 5_000_000L, travel));
+            graphics.fill(sweepX, y + 2, Math.min(x + w - 4, sweepX + sweepWidth), y + h - 2, 0x24FF6682);
+            graphics.fill(x + 3, y + 1, x + w - 4, y + 2, 0xA0FF8AA0);
+            graphics.outline(x - 1, y - 1, w + 2, h + 2,
+                    0x50000000 | ((int) (90 + pulse * 100) << 16) | 0x003D536B);
+        }
+
+        if (selected || activeState) {
+            int beaconAlpha = (int) (150 + pulse * 105);
+            graphics.fill(x + w - 12, y + h / 2 - 3, x + w - 6, y + h / 2 + 3,
+                    (beaconAlpha << 24) | 0x00FF526F);
+            graphics.fill(x + w - 17, y + h / 2 - 1, x + w - 14, y + h / 2 + 1, 0xB5FF8195);
+        } else {
+            graphics.fill(x + w - 11, y + h / 2 - 1, x + w - 7, y + h / 2 + 1,
+                    hovered ? 0xFFFF91A5 : 0xFF526176);
         }
 
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int maxTextWidth = Math.max(8, w - 22);
+        int maxTextWidth = Math.max(8, w - 30);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
-        graphics.text(font, label, x + 9, textY, textColor);
+        graphics.text(font, label, x + 10, textY, textColor);
+    }
+
+    private void drawAnimatedPanelEffects(GuiGraphicsExtractor graphics) {
+        long now = System.nanoTime();
+        double pulse = (Math.sin(now / 420_000_000.0) + 1.0) * 0.5;
+        int contentLeft = panelX + 140;
+        int contentRight = panelX + panelWidth - 10;
+        int contentTop = panelY + 78;
+        int contentBottom = panelY + panelHeight - 38;
+
+        // Technical grid behind the controls, kept deliberately faint.
+        for (int x = panelX + 12; x < panelX + panelWidth - 10; x += 24) {
+            graphics.fill(x, panelY + 5, x + 1, panelY + panelHeight - 5, 0x102D5870);
+        }
+        for (int y = panelY + 84; y < panelY + panelHeight - 38; y += 22) {
+            graphics.fill(contentLeft, y, contentRight, y + 1, 0x102D5870);
+        }
+
+        // A moving scanline adds life without dimming the Minecraft world.
+        int scanRange = Math.max(1, contentBottom - contentTop);
+        int scanY = contentTop + (int) Math.floorMod(now / 42_000_000L, scanRange);
+        graphics.fill(contentLeft, scanY, contentRight, scanY + 1, 0x24FF526F);
+        graphics.fill(contentLeft, scanY + 1, contentRight, scanY + 2, 0x0CFF526F);
+
+        // Moving top-edge signal and pulsing corner brackets.
+        int sweepRange = Math.max(1, panelWidth - 54);
+        int sweepX = panelX + 12 + (int) Math.floorMod(now / 7_000_000L, sweepRange);
+        graphics.fill(sweepX, panelY + 2, Math.min(panelX + panelWidth - 12, sweepX + 34),
+                panelY + 4, 0xD0FF627D);
+        int bracketAlpha = (int) (110 + pulse * 100);
+        int bracket = (bracketAlpha << 24) | 0x00FF5874;
+        graphics.fill(panelX + 7, panelY + 8, panelX + 22, panelY + 9, bracket);
+        graphics.fill(panelX + 7, panelY + 8, panelX + 8, panelY + 21, bracket);
+        graphics.fill(panelX + panelWidth - 22, panelY + 8, panelX + panelWidth - 7, panelY + 9, bracket);
+        graphics.fill(panelX + panelWidth - 8, panelY + 8, panelX + panelWidth - 7, panelY + 21, bracket);
+
+        // Tiny diagnostic equalizer in the footer.
+        for (int i = 0; i < 9; i++) {
+            int barHeight = 2 + (int) ((Math.sin(now / 150_000_000.0 + i * 0.72) + 1.0) * 3.0);
+            int barX = panelX + panelWidth - 186 + i * 5;
+            graphics.fill(barX, panelY + panelHeight - 12 - barHeight,
+                    barX + 2, panelY + panelHeight - 12,
+                    i < 3 ? 0xD0FF526F : 0x806C829B);
+        }
     }
 
     @Override
@@ -643,6 +710,7 @@ public final class MorgueScreen extends Screen {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
         graphics.fill(panelX + panelWidth - 92, panelY + 3, panelX + panelWidth - 16,
                 panelY + 4, RED_SOFT);
+        drawAnimatedPanelEffects(graphics);
 
         graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
         graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
@@ -656,6 +724,11 @@ public final class MorgueScreen extends Screen {
         graphics.text(font, displayText(selectedModule == null
                 ? "INDEPENDENT CLIENT  //  BUILD 0.1.0"
                 : entityPage ? "TARGET ENTITY FILTER" : "MODULE SETTINGS"), panelX + 161, panelY + 43, MUTED);
+        long headerTime = System.nanoTime();
+        int headerPulse = (int) (150 + (Math.sin(headerTime / 300_000_000.0) + 1.0) * 52.0);
+        graphics.fill(panelX + panelWidth - 43, panelY + 34, panelX + panelWidth - 37, panelY + 40,
+                (headerPulse << 24) | 0x003DFF9A);
+        graphics.text(font, displayText("ONLINE"), panelX + panelWidth - 91, panelY + 33, 0xFF93B9A6);
 
         graphics.fill(panelX + 136, panelY + 82, panelX + 137, panelY + panelHeight - 16, BORDER);
         graphics.text(font, displayText(selectedModule == null ? "MODULES" : "CONFIGURATION"),
@@ -678,8 +751,17 @@ public final class MorgueScreen extends Screen {
         for (var child : children()) {
             if (child instanceof AbstractWidget widget) {
                 if (widget instanceof EditBox) {
-                    graphics.outline(widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(),
-                            hoveredSearchBorder(widget, mouseX, mouseY));
+                    int ex = widget.getX();
+                    int ey = widget.getY();
+                    int ew = widget.getWidth();
+                    int eh = widget.getHeight();
+                    boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
+                    graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
+                            searchHovered ? RED : 0xB85D7892);
+                    graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
+                            searchHovered ? 0xFFFF607A : 0xA047647E);
+                    graphics.fill(ex + 6, ey + 2, ex + 7, ey + eh - 2,
+                            searchHovered ? 0xFFFF607A : 0xA047647E);
                     continue;
                 }
                 extractCustomButton(graphics, widget, mouseX, mouseY);
