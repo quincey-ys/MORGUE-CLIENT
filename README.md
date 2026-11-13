@@ -7,12 +7,16 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 ## Current implementation
 
 - Independent Fabric client with no AUTISM Client runtime dependency.
-- Right Shift opens the MORGUE ClickGUI.
-- Dark charcoal interface with white typography and restrained red accents.
-- **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, and target priority. The later spear/Breach rework is intentionally excluded.
+- Dark charcoal ClickGUI with white typography and restrained red accents.
+- Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
+- **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, and pause-while-using-item option.
-- **KillAura:** independent MORGUE implementation with player/hostile/all-living target modes, range/FOV, priority, rotation, auto-sword, shield breaking, and switch-back settings.
-- The GUI also includes the planned Movement, Player, Render, World, Misc, Privacy, and Config sections; modules not listed above are still prototypes/placeholders.
+- **KillAura:** independent MORGUE implementation with player/hostile/all-living target modes, range/FOV, target priority, rotation, auto-sword, shield breaking, and switch-back settings.
+- Mace Hitter and KillAura are mutually exclusive to avoid competing attack loops.
+- Settings persist in `config/morgue-client.properties`.
+- The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
+- The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
+- Movement, Player, Render, World, and some Misc/Privacy/Config items are currently UI placeholders.
 
 ## Development environment
 
@@ -41,13 +45,13 @@ The output JAR is written to `build/libs/`. GitHub Actions uploads it as a workf
 | V | Toggle Auto Totem |
 | Escape | Close the current screen |
 
-M, K, and V can be rebound in **Options → Controls → Key Binds**.
+M, K, and V can be rebound in **Options → Controls → Key Binds**, or opened from the Config → Keybinds panel.
 
 ## Compatibility and privacy
 
 The combat modules are client-side gameplay features and are not guaranteed to work on every server or configuration. They use Minecraft's normal client game-mode and inventory interaction APIs; they do not attempt to forge server responses or conceal modifications from server moderation.
 
-Privacy-related UI is limited to transparent, user-controlled client preferences. Forced server resource-pack requirements and anti-cheat/mod-detection checks are not bypassed.
+The Resource Pack Manager changes local client pack selections. Server-required pack requests are still handled by Minecraft and cannot be bypassed through MORGUE.
 
 ## Source and licensing
 
