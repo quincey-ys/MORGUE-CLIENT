@@ -20,7 +20,19 @@ jobs:
           gradle-version: '9.8.0'
       - name: Build mod
         run: gradle build
-      - name: Upload JAR
+      - name: Generate release integrity files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for jar in build/libs/*.jar; do
+            sha256sum "$jar" > "$jar.sha256"
+          done
+          {
+            echo "commit=$GITHUB_SHA"
+            echo "workflow_run=$GITHUB_RUN_ID"
+            echo "java=25"
+          } > build/libs/BUILD-INFO.txt
+      - name: Upload JAR and integrity files
         uses: actions/upload-artifact@v4
         with:
           name: MORGUE-CLIENT

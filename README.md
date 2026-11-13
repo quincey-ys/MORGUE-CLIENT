@@ -56,6 +56,16 @@ The combat modules are client-side gameplay features and are not guaranteed to w
 
 The Resource Pack Manager changes local client pack selections. Server-required pack requests are still handled by Minecraft and cannot be bypassed through MORGUE.
 
+## Protection and release integrity
+
+MORGUE's protection work focuses on protecting distributed builds and making local behavior transparent, not hiding cheats from server moderation.
+
+- GitHub Actions generates a SHA-256 sidecar checksum for each built JAR and includes build metadata (commit, workflow run, and Java version) in the release artifact.
+- Verify a downloaded JAR with `sha256sum -c MORGUE-CLIENT-0.1.0.jar.sha256` (use the matching JAR filename/version).
+- A matching checksum confirms that the file matches the artifact used to generate that checksum; it does **not** prove that a build is safe, undetectable, or accepted by a server.
+- MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to the game, loader, server, and installed dependencies.
+- Runtime self-integrity verification and bytecode obfuscation are not enabled in this build; they require separate compatibility testing so Fabric entrypoints, reflection, and Minecraft mappings are not broken.
+
 ## Source and licensing
 
 The current KillAura and Mace Hitter implementations were written for MORGUE rather than copied from AUTISM Client source. MORGUE does not import AUTISM Client classes or require that client at runtime. Review third-party dependencies and their licenses before redistribution.
