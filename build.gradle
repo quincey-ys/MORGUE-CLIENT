@@ -84,6 +84,10 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     dontshrink()
     dontoptimize()
     dontpreverify()
+    // ProGuard may report unresolved optional references from platform libraries.
+    // Keep these visible in verbose CI logs; no shrinking or optimization is done.
+    verbose()
+    ignorewarnings()
     allowaccessmodification()
     keepdirectories('**')
     keepattributes('Exceptions,InnerClasses,Signature,Deprecated,*Annotation*,EnclosingMethod,Record,NestMembers,NestHost,PermittedSubclasses,MethodParameters')
