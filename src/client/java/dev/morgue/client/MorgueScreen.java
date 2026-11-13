@@ -137,7 +137,7 @@ public final class MorgueScreen extends Screen {
         int moduleY = panelY + 104;
         for (String module : MODULES.getOrDefault(selectedCategory, List.of())) {
             addRenderableWidget(Button.builder(
-                    Component.literal((ENABLED.getOrDefault(module, false) ? "ON   " : "OFF   ") + module),
+                    Component.literal((isModuleEnabled(module) ? "ON   " : "OFF   ") + module),
                     button -> {
                         toggleModule(module);
                         rebuildWidgets();
@@ -211,6 +211,7 @@ public final class MorgueScreen extends Screen {
         Set<String> selected = module.getSelectedEntityTypes();
         addRenderableWidget(Button.builder(Component.literal("TARGET MODE: " + module.getTargetMode()), button -> {
             module.setTargetMode(nextTargetMode(module.getTargetMode()));
+            MorgueConfig.save();
             rebuildWidgets();
         }).bounds(panelX + 150, panelY + 102, panelWidth - 176, 26).build());
 
@@ -353,8 +354,17 @@ public final class MorgueScreen extends Screen {
         }).bounds(panelX + 150, panelY + panelHeight - 42, 160, 24).build());
     }
 
+    private static boolean isModuleEnabled(String module) {
+        return switch (module) {
+            case "Mace Hitter" -> MorgueClient.maceHitter().isEnabled();
+            case "KillAura" -> MorgueClient.killAura().isEnabled();
+            case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
+            default -> ENABLED.getOrDefault(module, false);
+        };
+    }
+
     private void toggleModule(String module) {
-        boolean enabled = !ENABLED.getOrDefault(module, false);
+        boolean enabled = !isModuleEnabled(module);
         ENABLED.put(module, enabled);
         if ("Mace Hitter".equals(module)) {
             MorgueClient.maceHitter().setEnabled(enabled);
