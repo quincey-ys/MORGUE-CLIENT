@@ -100,7 +100,7 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
 // Add embedded hashes after obfuscation. All regular JAR entries except this
 // manifest are hashed so the runtime can detect changed, missing, or extra files.
 tasks.register('packageProtectedRelease') {
-    dependsOn tasks.named('obfuscateRemappedJar'), tasks.named('cyclonedxBom')
+    dependsOn tasks.named('obfuscateClientJar'), tasks.named('cyclonedxBom')
 
     doLast {
         def inputJar = obfuscatedJar.get().asFile
