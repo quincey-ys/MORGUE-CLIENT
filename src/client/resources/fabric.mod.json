@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "morgue",
+  "version": "${version}",
+  "name": "MORGUE-CLIENT",
+  "description": "A standalone client-side Minecraft interface and utility framework.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.morgue.client.MorgueClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
