@@ -3,6 +3,7 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
+import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -18,6 +19,7 @@ public final class MorgueClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        MorgueConfig.load();
         KeyMapping.Category category = KeyMapping.Category.register(
                 Identifier.fromNamespaceAndPath("morgue", "main")
         );
