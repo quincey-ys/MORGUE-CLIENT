@@ -36,7 +36,7 @@ Build with:
 gradle build
 ```
 
-The output JAR is written to `build/libs/`. GitHub Actions uploads it as a workflow artifact when the build succeeds.
+The normal Loom JAR and sources JAR are written to `build/libs/`. The protected distributable, SHA-256 checksum, build metadata, and CycloneDX SBOM are written to `build/release/` and uploaded by GitHub Actions. Install the JAR from `build/release/`.
 
 ## Controls
 
@@ -58,13 +58,17 @@ The Resource Pack Manager changes local client pack selections. Server-required 
 
 ## Protection and release integrity
 
-MORGUE's protection work focuses on protecting distributed builds and making local behavior transparent, not hiding cheats from server moderation.
+MORGUE protects its distributed build and makes package changes visible; these controls do **not** hide the client from servers or defeat anti-cheat systems.
 
-- GitHub Actions generates a SHA-256 sidecar checksum for each built JAR and includes build metadata (commit, workflow run, and Java version) in the release artifact.
-- Verify a downloaded JAR with `sha256sum -c MORGUE-CLIENT-0.1.0.jar.sha256` (use the matching JAR filename/version).
-- A matching checksum confirms that the file matches the artifact used to generate that checksum; it does **not** prove that a build is safe, undetectable, or accepted by a server.
-- MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to the game, loader, server, and installed dependencies.
-- Runtime self-integrity verification and bytecode obfuscation are not enabled in this build; they require separate compatibility testing so Fabric entrypoints, reflection, and Minecraft mappings are not broken.
+- **Bytecode obfuscation:** the release pipeline uses ProGuard 7.10.0 to repackage and obfuscate MORGUE's internal implementation classes. The Fabric entrypoint class and required callback are retained. Shrinking and optimization are disabled to reduce compatibility risk. The mapping file is kept locally at `build/reports/morgue/proguard-mapping.txt` and is not distributed.
+- **Runtime integrity check:** at startup, MORGUE compares every packaged JAR entry (except its own manifest) against embedded SHA-256 values. Missing, unexpected, duplicated, or modified entries mark the package as failed and block MORGUE gameplay-module activation. Development runs from class folders are explicitly marked as skipped and remain usable.
+- **Integrity limitation:** an embedded checksum manifest is not a digital signature. A determined person who modifies the code can also replace the manifest or patch the verifier. Use the separately distributed release checksum to compare a downloaded JAR against the build output.
+- **External SHA-256:** the release bundle contains a `.sha256` sidecar. Verify it with `sha256sum -c MORGUE-CLIENT-0.1.0.jar.sha256` (use the matching versioned filename).
+- **Software Bill of Materials:** the build produces CycloneDX JSON and XML SBOM files listing the resolved project dependencies.
+- **Source separation:** the distributable release bundle contains the obfuscated runtime JAR and build metadata, not the unobfuscated sources JAR. The source JAR remains a local build output under `build/libs`.
+- MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to Minecraft, Fabric Loader, the server, and installed dependencies.
+
+GitHub artifact attestations are conditionally enabled only for public repositories. This repository is currently private; GitHub's artifact-attestation service requires an Enterprise Cloud plan for private/internal repositories.
 
 ## Source and licensing
 

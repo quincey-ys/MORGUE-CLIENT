@@ -82,7 +82,7 @@ public final class MorgueScreen extends Screen {
         MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
         MODULES.put("World", List.of("World Info", "Environment", "World Settings"));
         MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities"));
-        MODULES.put("Privacy", List.of("Privacy Dashboard", "Screenshot Privacy", "Client Metadata"));
+        MODULES.put("Privacy", List.of("Privacy Dashboard", "Build Integrity", "Screenshot Privacy", "Client Metadata"));
         MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme"));
         MODULES.values().forEach(list -> list.forEach(name -> ENABLED.put(name, false)));
     }
@@ -159,6 +159,8 @@ public final class MorgueScreen extends Screen {
             buildResourcePackManager();
         } else if ("Privacy Dashboard".equals(selectedModule)) {
             buildPrivacyDashboard();
+        } else if ("Build Integrity".equals(selectedModule)) {
+            buildIntegrityDashboard();
         } else if ("Keybinds".equals(selectedModule)) {
             buildKeybindSettings();
         } else if ("Profiles".equals(selectedModule)) {
@@ -419,8 +421,8 @@ public final class MorgueScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.literal("AUTO TOTEM STATUS: " + (module.isEnabled() ? "ON" : "OFF")),
                 button -> {
-                    module.toggle();
-                    ENABLED.put("Auto Totem", module.isEnabled());
+                    MorgueClient.setAutoTotemEnabled(!module.isEnabled());
+                    ENABLED.put("Auto Totem", MorgueClient.autoTotem().isEnabled());
                     MorgueConfig.save();
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
@@ -457,6 +459,28 @@ public final class MorgueScreen extends Screen {
                 button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
         addRenderableWidget(Button.builder(Component.literal("No anti-cheat evasion, fake responses, or required-pack bypass is active."),
                 button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildIntegrityDashboard() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addRenderableWidget(Button.builder(Component.literal(
+                "PACKAGE STATUS: " + dev.morgue.client.security.MorgueIntegrity.getStatus()), button -> {})
+                .bounds(x, y, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "DETAIL: " + dev.morgue.client.security.MorgueIntegrity.getDetails()), button -> {})
+                .bounds(x, y + 36, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "SCOPE: all packaged JAR entries except this manifest"), button -> {})
+                .bounds(x, y + 72, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "LIMIT: local tamper check, not a cryptographic signature"), button -> {})
+                .bounds(x, y + 108, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("RUN CHECK AGAIN"), button -> {
+            dev.morgue.client.security.MorgueIntegrity.verify();
+            rebuildWidgets();
+        }).bounds(x, y + 152, panelWidth - 176, 28).build());
         addBackButton();
     }
 
@@ -523,7 +547,7 @@ public final class MorgueScreen extends Screen {
         } else if ("KillAura".equals(module)) {
             MorgueClient.setKillAuraEnabled(enabled);
         } else if ("Auto Totem".equals(module)) {
-            MorgueClient.autoTotem().setEnabled(enabled);
+            MorgueClient.setAutoTotemEnabled(enabled);
         }
         MorgueConfig.save();
     }

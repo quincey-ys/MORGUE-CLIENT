@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,25 +24,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.8.0'
-      - name: Build mod
+      - name: Build protected mod and SBOM
         run: gradle build
-      - name: Generate release integrity files
+      - name: Verify protected release package
         shell: bash
         run: |
           set -euo pipefail
-          for jar in build/libs/*.jar; do
-            sha256sum "$jar" > "$jar.sha256"
-          done
-          {
-            echo "commit=$GITHUB_SHA"
-            echo "workflow_run=$GITHUB_RUN_ID"
-            echo "java=25"
-          } > build/libs/BUILD-INFO.txt
-      - name: Upload JAR and integrity files
+          jar_file="$(find build/release -maxdepth 1 -type f -name '*.jar' -print -quit)"
+          test -n "$jar_file"
+          test -s "$jar_file.sha256"
+          sha256sum -c "$jar_file.sha256"
+          unzip -t "$jar_file"
+          jar tf "$jar_file" > build/release/jar-contents.txt
+          grep -Fxq 'fabric.mod.json' build/release/jar-contents.txt
+          grep -Fxq 'dev/morgue/client/MorgueClient.class' build/release/jar-contents.txt
+          grep -Fxq 'META-INF/morgue-integrity.sha256' build/release/jar-contents.txt
+          grep -Eq '^morgue/internal/[^/]+\.class$' build/release/jar-contents.txt
+          test -s build/release/sbom.cyclonedx.json
+          echo "Protected release structure, checksum, and SBOM verified."
+      - name: Generate build provenance for public repositories
+        if: ${{ github.event.repository.private == false }}
+        uses: actions/attest@v4
+        with:
+          subject-path: 'build/release/*.jar'
+      - name: Upload protected release
         uses: actions/upload-artifact@v4
         with:
           name: MORGUE-CLIENT
-          path: |
-            build/libs/*.jar
-            build/libs/*.jar.sha256
-            build/libs/BUILD-INFO.txt
+          path: build/release/*

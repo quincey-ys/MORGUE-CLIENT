@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.config.MorgueConfig;
+import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -22,7 +23,12 @@ public final class MorgueClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        MorgueConfig.load();
+        MorgueIntegrity.verify();
+        if (MorgueIntegrity.isActivationAllowed()) {
+            MorgueConfig.load();
+        } else {
+            System.err.println("[MORGUE] Integrity verification failed; gameplay modules remain locked.");
+        }
         KeyMapping.Category category = KeyMapping.Category.register(
                 Identifier.fromNamespaceAndPath("morgue", "main")
         );
@@ -54,7 +60,7 @@ public final class MorgueClient implements ClientModInitializer {
                     MorgueConfig.save();
                 }
                 while (toggleAutoTotem.consumeClick()) {
-                    AUTO_TOTEM.toggle();
+                    setAutoTotemEnabled(!AUTO_TOTEM.isEnabled());
                     MorgueConfig.save();
                 }
             }
@@ -74,6 +80,10 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static void setMaceHitterEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
         MACE_HITTER.setEnabled(enabled);
         if (enabled) {
             KILL_AURA.setEnabled(false);
@@ -81,10 +91,22 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static void setKillAuraEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
         KILL_AURA.setEnabled(enabled);
         if (enabled) {
             MACE_HITTER.setEnabled(false);
         }
+    }
+
+    public static void setAutoTotemEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AUTO_TOTEM.setEnabled(enabled);
     }
 
     public static KillAuraModule killAura() {

@@ -1,6 +1,16 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.10.0'
+    }
+}
+
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
+    id 'org.cyclonedx.bom' version '3.6.0'
 }
 
 version = project.mod_version
@@ -49,4 +59,153 @@ java {
         languageVersion = JavaLanguageVersion.of(25)
     }
     withSourcesJar()
+}
+
+// Build a separately obfuscated distributable from Loom's remapped JAR.
+// Fabric's entrypoint class and callback are retained; internal implementation
+// classes are repackaged. Shrinking and optimization are disabled for safety.
+def obfuscatedJar = layout.buildDirectory.file("obfuscated/${project.archives_base_name}-${project.version}.jar")
+def obfuscationMap = layout.buildDirectory.file("reports/morgue/proguard-mapping.txt")
+
+tasks.register('obfuscateRemappedJar', proguard.gradle.ProGuardTask) {
+    dependsOn tasks.named('remapJar')
+
+    injars(tasks.named('remapJar').get().archiveFile.get().asFile)
+    outjars(obfuscatedJar.get().asFile)
+
+    // JDK modules plus the compile classpath used by the client source set.
+    fileTree("${System.getProperty('java.home')}/jmods").matching {
+        include '*.jmod'
+    }.files.each { jmod ->
+        libraryjars("${jmod.absolutePath}(!**.jar;!module-info.class)")
+    }
+    libraryjars(sourceSets.client.compileClasspath)
+
+    dontshrink()
+    dontoptimize()
+    dontpreverify()
+    allowaccessmodification()
+    keepdirectories('**')
+    keepattributes('Exceptions,InnerClasses,Signature,Deprecated,*Annotation*,EnclosingMethod,Record,NestMembers,NestHost,PermittedSubclasses,MethodParameters')
+
+    // Fabric loads this class by its name from fabric.mod.json.
+    keep('public class dev.morgue.client.MorgueClient { public <init>(); public void onInitializeClient(); }')
+
+    repackageclasses('morgue.internal')
+    adaptresourcefilecontents('fabric.mod.json')
+    printmapping(obfuscationMap.get().asFile)
+}
+
+// Add embedded hashes after obfuscation. All regular JAR entries except this
+// manifest are hashed so the runtime can detect changed, missing, or extra files.
+tasks.register('packageProtectedRelease') {
+    dependsOn tasks.named('obfuscateRemappedJar'), tasks.named('cyclonedxBom')
+
+    doLast {
+        def inputJar = obfuscatedJar.get().asFile
+        if (!inputJar.isFile()) {
+            throw new GradleException("Obfuscated JAR was not produced: ${inputJar}")
+        }
+
+        def releaseDir = layout.buildDirectory.dir('release').get().asFile
+        releaseDir.mkdirs()
+        def releaseName = "${project.archives_base_name}-${project.version}.jar"
+        def releaseJar = new File(releaseDir, releaseName)
+        def tempJar = new File(releaseDir, releaseName + ".tmp")
+        def integrityEntryName = 'META-INF/morgue-integrity.sha256'
+        def entryHashes = new TreeMap<String, String>()
+
+        new java.util.jar.JarFile(inputJar).withCloseable { archive ->
+            def entries = archive.entries()
+            while (entries.hasMoreElements()) {
+                def entry = entries.nextElement()
+                if (entry.isDirectory() || entry.name == integrityEntryName) {
+                    continue
+                }
+                def digest = java.security.MessageDigest.getInstance('SHA-256')
+                archive.getInputStream(entry).withCloseable { stream ->
+                    stream.transferTo(new java.security.DigestOutputStream(
+                            java.io.OutputStream.nullOutputStream(), digest))
+                }
+                if (entryHashes.put(entry.name, java.util.HexFormat.of().formatHex(digest.digest())) != null) {
+                    throw new GradleException("Duplicate JAR entry detected: ${entry.name}")
+                }
+            }
+        }
+
+        new java.util.jar.JarFile(inputJar).withCloseable { archive ->
+            new java.util.jar.JarOutputStream(
+                    new java.io.BufferedOutputStream(new java.io.FileOutputStream(tempJar))
+            ).withCloseable { output ->
+                def entries = archive.entries()
+                while (entries.hasMoreElements()) {
+                    def sourceEntry = entries.nextElement()
+                    if (sourceEntry.name == integrityEntryName) {
+                        continue
+                    }
+                    def destinationEntry = new java.util.jar.JarEntry(sourceEntry.name)
+                    if (sourceEntry.time >= 0) {
+                        destinationEntry.setTime(sourceEntry.time)
+                    }
+                    output.putNextEntry(destinationEntry)
+                    if (!sourceEntry.isDirectory()) {
+                        archive.getInputStream(sourceEntry).withCloseable { stream ->
+                            stream.transferTo(output)
+                        }
+                    }
+                    output.closeEntry()
+                }
+
+                def integrityEntry = new java.util.jar.JarEntry(integrityEntryName)
+                output.putNextEntry(integrityEntry)
+                def manifestText = entryHashes.collect { name, hash -> "${hash}  ${name}" }.join("\n") + "\n"
+                output.write(manifestText.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                output.closeEntry()
+            }
+        }
+
+        java.nio.file.Files.move(tempJar.toPath(), releaseJar.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+
+        def releaseDigest = java.security.MessageDigest.getInstance('SHA-256')
+        java.nio.file.Files.newInputStream(releaseJar.toPath()).withCloseable { stream ->
+            stream.transferTo(new java.security.DigestOutputStream(
+                    java.io.OutputStream.nullOutputStream(), releaseDigest))
+        }
+        def releaseHash = java.util.HexFormat.of().formatHex(releaseDigest.digest())
+        new File(releaseDir, releaseName + '.sha256').text =
+                "${releaseHash}  ${releaseName}\n"
+
+        new File(releaseDir, 'BUILD-INFO.txt').text = [
+                "mod_version=${project.version}",
+                "minecraft=${project.minecraft_version}",
+                "java=${System.getProperty('java.version')}",
+                "commit=${System.getenv('GITHUB_SHA') ?: 'local'}",
+                "workflow_run=${System.getenv('GITHUB_RUN_ID') ?: 'local'}",
+                "obfuscator=ProGuard 7.10.0",
+                "integrity=embedded SHA-256 entry manifest"
+        ].join("\n") + "\n"
+
+        def bomJson = file("${buildDir}/reports/cyclonedx/bom.json")
+        def bomXml = file("${buildDir}/reports/cyclonedx/bom.xml")
+        if (bomJson.isFile()) {
+            java.nio.file.Files.copy(bomJson.toPath(),
+                    new File(releaseDir, 'sbom.cyclonedx.json').toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+        if (bomXml.isFile()) {
+            java.nio.file.Files.copy(bomXml.toPath(),
+                    new File(releaseDir, 'sbom.cyclonedx.xml').toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+
+        if (!new File(releaseDir, 'sbom.cyclonedx.json').isFile()) {
+            throw new GradleException('CycloneDX JSON SBOM was not generated.')
+        }
+        logger.lifecycle("Protected MORGUE release packaged at ${releaseJar}")
+    }
+}
+
+tasks.named('build') {
+    finalizedBy tasks.named('packageProtectedRelease')
 }
