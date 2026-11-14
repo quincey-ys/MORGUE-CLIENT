@@ -132,14 +132,22 @@ tasks.register('compileProtectedBytecodeSmokeTest', JavaCompile) {
     source = files('tools/ProtectedBytecodeSmokeTest.java')
     classpath = files()
     destinationDirectory = layout.buildDirectory.dir('verification-runner')
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
     options.release = 25
     options.encoding = 'UTF-8'
 }
 
 tasks.register('verifyProtectedBytecode', JavaExec) {
     dependsOn tasks.named('compileProtectedBytecodeSmokeTest'), tasks.named('obfuscateClientJar')
+    inputs.file(obfuscatedJar)
+    inputs.files(sourceSets.client.compileClasspath)
     classpath = files(layout.buildDirectory.dir('verification-runner'))
     mainClass = 'ProtectedBytecodeSmokeTest'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
     jvmArgs '-Xverify:all'
     args obfuscatedJar.get().asFile.absolutePath, sourceSets.client.compileClasspath.asPath
 }
