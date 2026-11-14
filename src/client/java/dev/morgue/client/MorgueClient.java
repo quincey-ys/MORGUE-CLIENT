@@ -6,6 +6,7 @@ import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
+import dev.morgue.client.modules.movement.SprintModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -20,6 +21,7 @@ public final class MorgueClient implements ClientModInitializer {
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
+    private static final SprintModule SPRINT = new SprintModule();
 
     @Override
     public void onInitializeClient() {
@@ -77,6 +79,7 @@ public final class MorgueClient implements ClientModInitializer {
             MACE_HITTER.tick(client);
             KILL_AURA.tick(client);
             AUTO_TOTEM.tick(client);
+            SPRINT.tick(client);
         });
     }
 
@@ -103,6 +106,16 @@ public final class MorgueClient implements ClientModInitializer {
         }
         AUTO_TOTEM.setEnabled(enabled);
     }
+
+    public static void setSprintEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        SPRINT.setEnabled(enabled);
+    }
+
+    public static SprintModule sprint() { return SPRINT; }
 
     public static KillAuraModule killAura() {
         return KILL_AURA;
