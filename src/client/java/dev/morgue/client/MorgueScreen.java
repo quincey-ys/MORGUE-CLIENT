@@ -165,6 +165,15 @@ public final class MorgueScreen extends Screen {
             buildSafeWalkSettings();
         } else if ("Inventory Helper".equals(selectedModule)) {
             buildInventoryHelperSettings();
+        } else if ("Movement Settings".equals(selectedModule)) {
+            buildMovementSettings();
+        } else if ("Module List".equals(selectedModule)) {
+            buildEnabledModuleList();
+        } else if ("Environment".equals(selectedModule)) {
+            buildEnvironmentInfo();
+        } else if ("Visual Settings".equals(selectedModule)) {
+            buildVisualSettings();
+        }
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -217,7 +226,8 @@ public final class MorgueScreen extends Screen {
             int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
                     || "Credits".equals(module) || "World Info".equals(module)
-                    || "Client Metadata".equals(module);
+                    || "Client Metadata".equals(module) || "Module List".equals(module)
+                    || "Environment".equals(module) || "Visual Settings".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -577,6 +587,80 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
+        addBackButton();
+    }
+
+    private void buildMovementSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addSettingButton(x, y, toggleLabel("Auto Sprint", MorgueClient.sprint().isEnabled()),
+                () -> MorgueClient.setSprintEnabled(!MorgueClient.sprint().isEnabled()));
+        addSettingButton(x, y + 36, toggleLabel("Safe Walk", MorgueClient.safeWalk().isEnabled()),
+                () -> MorgueClient.setSafeWalkEnabled(!MorgueClient.safeWalk().isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Both options use normal client movement state and respect the server's movement rules."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildEnabledModuleList() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "MACE HITTER: " + (MorgueClient.maceHitter().isEnabled() ? "ON" : "OFF"),
+                "KILLAURA: " + (MorgueClient.killAura().isEnabled() ? "ON" : "OFF"),
+                "AUTO TOTEM: " + (MorgueClient.autoTotem().isEnabled() ? "ON" : "OFF"),
+                "SPRINT: " + (MorgueClient.sprint().isEnabled() ? "ON" : "OFF"),
+                "SAFE WALK: " + (MorgueClient.safeWalk().isEnabled() ? "ON" : "OFF"),
+                "INVENTORY HELPER: " + (MorgueClient.inventoryHelper().isEnabled() ? "ON" : "OFF")
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
+        addBackButton();
+    }
+
+    private void buildEnvironmentInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        if (minecraft == null || minecraft.level == null) {
+            addRenderableWidget(Button.builder(Component.literal("ENVIRONMENT: No world loaded."),
+                    button -> {}).bounds(x, y, width, 28).build());
+        } else {
+            addRenderableWidget(Button.builder(Component.literal("RAINING: "
+                    + (minecraft.level.isRaining() ? "YES" : "NO")),
+                    button -> {}).bounds(x, y, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("THUNDER: "
+                    + (minecraft.level.isThundering() ? "YES" : "NO")),
+                    button -> {}).bounds(x, y + 36, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("WORLD GAME TIME: "
+                    + minecraft.level.getGameTime()),
+                    button -> {}).bounds(x, y + 72, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildVisualSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
+                "PANEL: DEEP NAVY / BLACK",
+                "ACCENT: ICY STEEL BLUE",
+                "TYPOGRAPHY: MATHEMATICAL DOUBLE-STRUCK",
+                "ANIMATION: ENABLED",
+                "THEME EDITOR: CUSTOM COLOR PICKER NOT IMPLEMENTED"
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
         addBackButton();
     }
 
