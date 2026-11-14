@@ -123,3 +123,9 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 ## Patch 24 — Additional functional status and settings screens
 - [24a — Add Movement Settings, live enabled-module list, Environment status, and Visual Settings pages](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ffb0f755589e11decd2862e1819f654e302560eb).
 - [24b — Document the new pages](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e50d9b87ef4aad3c7aec094a43a813e01f3e58e5).
+
+## Patch 25 — Local action notifications
+- [25a — Add local-only notification helper](https://github.com/quincey-ys/MORGUE-CLIENT/commit/7df846b8db0426f7605bc5e52a03c3d72a15b051).
+- [25b–25c — Notify on AutoTotem and inventory refill actions](https://github.com/quincey-ys/MORGUE-CLIENT/commit/26eb24bd530e20cf55087a726064ebc5fee0934a).
+- [25d–25e — Persist notification preference and expose it in ClickGUI](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9fa9df0a654b9deae5ffbc1fe85bf0ff4edf2321).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9c71b13ec4e046219959d17361b0c2247840e8b7).
