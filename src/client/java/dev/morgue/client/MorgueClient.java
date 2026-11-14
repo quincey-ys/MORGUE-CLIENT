@@ -7,6 +7,7 @@ import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import dev.morgue.client.modules.player.InventoryHelperModule;
+import dev.morgue.client.modules.player.AutoEatModule;
 import dev.morgue.client.modules.movement.SprintModule;
 import dev.morgue.client.modules.movement.SafeWalkModule;
 import net.fabricmc.api.ClientModInitializer;
@@ -24,6 +25,7 @@ public final class MorgueClient implements ClientModInitializer {
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
     private static final InventoryHelperModule INVENTORY_HELPER = new InventoryHelperModule();
+    private static final AutoEatModule AUTO_EAT = new AutoEatModule();
     private static final SprintModule SPRINT = new SprintModule();
     private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
 
@@ -84,6 +86,7 @@ public final class MorgueClient implements ClientModInitializer {
             KILL_AURA.tick(client);
             AUTO_TOTEM.tick(client);
             INVENTORY_HELPER.tick(client);
+            AUTO_EAT.tick(client);
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
         });
@@ -132,6 +135,16 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static InventoryHelperModule inventoryHelper() { return INVENTORY_HELPER; }
+
+    public static void setAutoEatEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AUTO_EAT.setEnabled(enabled);
+    }
+
+    public static AutoEatModule autoEat() { return AUTO_EAT; }
 
     public static void setSafeWalkEnabled(boolean enabled) {
         if (enabled && !MorgueIntegrity.isActivationAllowed()) {
