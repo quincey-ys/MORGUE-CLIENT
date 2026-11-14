@@ -100,10 +100,7 @@ public final class MorgueConfig {
         aura.setPriority(enumValue(values, "aura.priority", KillAuraModule.Priority.class,
                 KillAuraModule.Priority.CLOSEST));
 
-        // Both combat modules can be configured, but only one may own attacks at a time.
-        if (mace.isEnabled() && aura.isEnabled()) {
-            aura.setEnabled(false);
-        }
+        // Both modules may remain enabled; CombatActionCoordinator arbitrates attacks.
     }
 
     public static void save() {
