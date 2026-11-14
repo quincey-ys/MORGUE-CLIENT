@@ -133,3 +133,8 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 ## Patch 26 — Replace additional placeholder screens
 - [26a — Add Client Utilities navigation, Screenshot Privacy disclosure, World Settings disclosure, Item Use status, and HUD Editor status](https://github.com/quincey-ys/MORGUE-CLIENT/commit/af8ae2bfe8cb88f706079138f9c50b077c64a43a).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f864108c69721845bbe057a03cbf9f75e22c0a81).
+
+## Patch 27 — AutoTotem prediction and offhand restoration
+- [27a — Add recent-damage and fall-damage health estimates plus displaced-offhand restoration](https://github.com/quincey-ys/MORGUE-CLIENT/commit/659b5c532177d5c2c90a1ae8d0ad9be2edef987b).
+- [27b–27c — Persist and expose the new AutoTotem options](https://github.com/quincey-ys/MORGUE-CLIENT/commit/1de340f8e5aba65a7041f21198eb137712ae70b9).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/52caa7ee929bd92de88141a13d80276b04160eca).
