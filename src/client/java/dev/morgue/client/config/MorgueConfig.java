@@ -24,6 +24,40 @@ public final class MorgueConfig {
     private MorgueConfig() {
     }
 
+    private static Path profileFile(String name) {
+        if (name == null || !name.matches("[A-Za-z0-9_-]{1,32}")) {
+            throw new IllegalArgumentException("Invalid profile name");
+        }
+        return FabricLoader.getInstance().getConfigDir()
+                .resolve("morgue-client").resolve("profiles").resolve(name + ".properties");
+    }
+
+    public static boolean exportProfile(String name) {
+        try {
+            save();
+            Path destination = profileFile(name);
+            Files.createDirectories(destination.getParent());
+            Files.copy(FILE, destination, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException | IllegalArgumentException exception) {
+            System.err.println("[MORGUE] Could not export profile: " + exception.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean importProfile(String name) {
+        try {
+            Path source = profileFile(name);
+            if (!Files.isRegularFile(source)) return false;
+            Files.copy(source, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            load();
+            return true;
+        } catch (IOException | IllegalArgumentException exception) {
+            System.err.println("[MORGUE] Could not import profile: " + exception.getMessage());
+            return false;
+        }
+    }
+
     public static void load() {
         if (!Files.exists(FILE)) {
             save();
