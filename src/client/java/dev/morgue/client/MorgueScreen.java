@@ -89,7 +89,7 @@ public final class MorgueScreen extends Screen {
         MODULES.put("Player", List.of("Auto Totem", "Inventory Helper", "Item Use"));
         MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
         MODULES.put("World", List.of("World Info", "Environment", "World Settings"));
-        MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities"));
+        MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities", "Credits"));
         MODULES.put("Privacy", List.of("Privacy Dashboard", "Build Integrity", "Screenshot Privacy", "Client Metadata"));
         MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme"));
         MODULES.values().forEach(list -> list.forEach(name -> ENABLED.put(name, false)));
@@ -166,6 +166,8 @@ public final class MorgueScreen extends Screen {
             buildKillAuraSettings();
         } else if ("AI Brain".equals(selectedModule)) {
             buildAiBrainSettings();
+        } else if ("Credits".equals(selectedModule)) {
+            buildCredits();
         } else if ("Resource Pack Manager".equals(selectedModule)) {
             buildResourcePackManager();
         } else if ("Privacy Dashboard".equals(selectedModule)) {
@@ -202,7 +204,8 @@ public final class MorgueScreen extends Screen {
         for (int i = moduleScrollOffset; i < end; i++) {
             String module = filtered.get(i);
             int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
-            boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module);
+            boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
+                    || "Credits".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -504,6 +507,29 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
+        addBackButton();
+    }
+
+    private void buildCredits() {
+        int x = panelX + 150;
+        int y = panelY + 108;
+        int contentWidth = panelWidth - 176;
+        String[] credits = {
+                "PROJECT LEAD  /  quincey-ys",
+                "AI DEVELOPMENT SUPPORT  /  OpenAI ChatGPT",
+                "MINECRAFT JAVA  /  Mojang Studios, Microsoft",
+                "FABRIC LOADER + API  /  FabricMC",
+                "BUILD TOOLS  /  Gradle, Fabric Loom, ProGuard",
+                "SBOM TOOLING  /  CycloneDX Gradle plugin",
+                "RESEARCH  /  Meteor, LiquidBounce, Wurst",
+                "RESEARCH  /  Baritone, Anomoly, BleachHack",
+                "INDEPENDENT IMPLEMENTATION  /  No source intentionally copied"
+        };
+        for (int i = 0; i < credits.length; i++) {
+            String line = credits[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 30, contentWidth, 25).build());
+        }
         addBackButton();
     }
 
