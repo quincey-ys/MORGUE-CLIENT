@@ -5,6 +5,9 @@
   "name": "MORGUE-CLIENT",
   "description": "A standalone client-side Minecraft interface and utility framework.",
   "environment": "client",
+  "mixins": [
+    "morgue.mixins.json"
+  ],
   "entrypoints": {
     "client": [
       "dev.morgue.client.MorgueClient"
