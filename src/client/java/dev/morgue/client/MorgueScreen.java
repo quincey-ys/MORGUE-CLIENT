@@ -173,6 +173,8 @@ public final class MorgueScreen extends Screen {
             buildEnvironmentInfo();
         } else if ("Visual Settings".equals(selectedModule)) {
             buildVisualSettings();
+        } else if ("Notifications".equals(selectedModule)) {
+            buildNotificationsSettings();
         }
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
@@ -227,7 +229,8 @@ public final class MorgueScreen extends Screen {
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
                     || "Credits".equals(module) || "World Info".equals(module)
                     || "Client Metadata".equals(module) || "Module List".equals(module)
-                    || "Environment".equals(module) || "Visual Settings".equals(module);
+                    || "Environment".equals(module) || "Visual Settings".equals(module)
+                    || "Notifications".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -641,6 +644,22 @@ public final class MorgueScreen extends Screen {
                     + minecraft.level.getGameTime()),
                     button -> {}).bounds(x, y + 72, width, 28).build());
         }
+        addBackButton();
+    }
+
+    private void buildNotificationsSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addSettingButton(x, y, toggleLabel("Local Chat Notifications",
+                dev.morgue.client.ClientNotifications.isEnabled()),
+                () -> dev.morgue.client.ClientNotifications.setEnabled(
+                        !dev.morgue.client.ClientNotifications.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Notifications are local chat messages for AutoTotem and Inventory Helper actions."),
+                button -> {}).bounds(x, y + 40, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "No notification content is sent to a remote service."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
         addBackButton();
     }
 
