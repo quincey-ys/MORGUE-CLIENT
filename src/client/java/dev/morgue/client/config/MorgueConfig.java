@@ -12,10 +12,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Small dependency-free persistent configuration for MORGUE's first modules.
@@ -182,10 +179,18 @@ public final class MorgueConfig {
     }
 
     private static <E extends Enum<E>> E enumValue(Properties values, String key, Class<E> type, E fallback) {
-        try {
-            return Enum.valueOf(type, values.getProperty(key, fallback.name()).trim().toUpperCase());
-        } catch (IllegalArgumentException ignored) {
+        String requested = values.getProperty(key, fallback.name()).trim();
+        E[] constants = type.getEnumConstants();
+        if (constants == null) {
+            System.err.println("[MORGUE] Config enum " + type.getName()
+                    + " is unavailable; using default for " + key + ".");
             return fallback;
         }
+        for (E constant : constants) {
+            if (constant.name().equalsIgnoreCase(requested)) {
+                return constant;
+            }
+        }
+        return fallback;
     }
 }
