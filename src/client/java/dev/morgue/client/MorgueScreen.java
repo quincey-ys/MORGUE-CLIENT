@@ -598,6 +598,8 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPredictFallDamage(!module.isPredictFallDamage()));
         addSettingButton(rightX, y + 144, toggleLabel("Restore Displaced Offhand", module.isRestoreDisplacedOffhand()),
                 () -> module.setRestoreDisplacedOffhand(!module.isRestoreDisplacedOffhand()));
+        addSettingButton(rightX, y + 180, toggleLabel("Predict Nearby Threats", module.isPredictNearbyThreats()),
+                () -> module.setPredictNearbyThreats(!module.isPredictNearbyThreats()));
 
         addRenderableWidget(Button.builder(Component.literal("AUTO TOTEM STATUS: " + (module.isEnabled() ? "ON" : "OFF")),
                 button -> {
