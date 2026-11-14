@@ -22,7 +22,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
 - **World Info / Environment / Client Metadata:** local player coordinates, health, absorption, rain/thunder state, world time, target version, and privacy-scope information.
 - **Module List / Movement Settings / Visual Settings:** live module status and the current movement/theme configuration.
-- **HUD overlays:** optional gothic module-list and KillAura target-info panels using Fabric's HUD layer API; their positions are fixed for now.
+- **HUD overlays:** optional gothic module-list and KillAura target-info panels plus a short damage-cooldown-reset marker using Fabric's HUD layer API; positions are fixed for now. The marker is inferred from client-observed target state, not a server-confirmed hit receipt.
 - **Inventory Helper:** refills low-count hotbar stacks from matching main-inventory stacks through vanilla container input; AutoTotem has priority if both request an inventory action in the same tick.
 - **Auto Eat:** optionally selects the most nutritious hotbar food at a configurable hunger threshold, uses vanilla item-use input, and restores the previous slot after eating.
 - **Notifications:** optional local chat notices for AutoTotem and Inventory Helper actions; notifications remain on-device.
