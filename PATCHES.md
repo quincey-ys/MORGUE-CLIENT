@@ -191,3 +191,6 @@ The entries above link representative commits. These additional commits are part
 
 ## Patch 34 — Complete module-list HUD
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9e87de93419b2ae4ea472bbbb232e76a90215276) — adds Inventory Helper and Auto Eat states to the optional HUD list.
+
+## Patch 35 — AI Brain combat-controller status
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ed5ca08b7a39e6b369717a9c5380a873354223ca) — reports Mace Hitter as first-priority and KillAura as fallback when both are enabled.
