@@ -1,18 +1,18 @@
 package dev.morgue.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FontDescription;
-import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,9 +30,6 @@ public final class MorgueScreen extends Screen {
     private static final int RED_SOFT = 0xFF315A91;
     private static final int BUTTON_IDLE = 0xF00A1220;
     private static final int BUTTON_HOVER = 0xFF17263D;
-    private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
-            Identifier.fromNamespaceAndPath("morgue", "display"));
-
     private static final List<String> CATEGORIES = List.of(
             "Combat", "Movement", "Player", "Render", "World", "Misc", "Privacy", "Config"
     );
@@ -111,6 +108,12 @@ public final class MorgueScreen extends Screen {
     private int moduleTotalCount;
     private int moduleVisibleCount;
     private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
+    private String pendingKeybindModule;
+    private boolean moduleScrollDragging;
+    private int moduleScrollDragOffset;
+    private int moduleListTop;
+    private int moduleListBottom;
+    private static final int MODULE_ROW_HEIGHT = 36;
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -218,58 +221,112 @@ public final class MorgueScreen extends Screen {
         }
     }
 
-    private void buildModuleList() {
-        int moduleX = panelX + 150;
-        int listTop = panelY + 140;
-        int listBottom = panelY + panelHeight - 48;
-        int rowHeight = 36;
-        int buttonHeight = 28;
+    private List<String> filteredModules() {
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
-        List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
+        return MODULES.getOrDefault(selectedCategory, List.of()).stream()
                 .filter(module -> query.isEmpty()
                         || module.toLowerCase(java.util.Locale.ROOT).contains(query))
                 .toList();
+    }
+
+    private static boolean isViewOnlyModule(String module) {
+        return "AI Brain".equals(module) || "Build Integrity".equals(module)
+                || "Credits".equals(module) || "World Info".equals(module)
+                || "Client Metadata".equals(module) || "Module List".equals(module)
+                || "Environment".equals(module) || "Visual Settings".equals(module)
+                || "Notifications".equals(module) || "Client Utilities".equals(module)
+                || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
+                || "HUD Editor".equals(module);
+    }
+
+    private void buildModuleList() {
+        int moduleX = panelX + 150;
+        moduleListTop = panelY + 140;
+        moduleListBottom = panelY + panelHeight - 48;
+        int buttonHeight = 28;
+        int moduleWidth = Math.max(150, panelWidth - 182);
+        List<String> filtered = filteredModules();
 
         moduleTotalCount = filtered.size();
-        moduleVisibleCount = Math.min(4, Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1));
+        moduleVisibleCount = Math.max(1, (moduleListBottom - moduleListTop) / MODULE_ROW_HEIGHT);
         int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
         moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
 
         int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
         for (int i = moduleScrollOffset; i < end; i++) {
             String module = filtered.get(i);
-            int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
-            boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
-                    || "Credits".equals(module) || "World Info".equals(module)
-                    || "Client Metadata".equals(module) || "Module List".equals(module)
-                    || "Environment".equals(module) || "Visual Settings".equals(module)
-                    || "Notifications".equals(module) || "Client Utilities".equals(module)
-                    || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
-                    || "Item Use".equals(module) || "HUD Editor".equals(module);
-            addRenderableWidget(Button.builder(
-                    Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
-                    button -> {
-                        if (viewOnly) {
-                            selectedModule = module;
-                            entityPage = false;
-                        } else {
-                            toggleModule(module);
-                        }
-                        rebuildWidgets();
-                    }
-            ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), buttonHeight).build());
+            int moduleY = moduleListTop + (i - moduleScrollOffset) * MODULE_ROW_HEIGHT;
+            boolean viewOnly = isViewOnlyModule(module);
+            boolean enabled = isModuleEnabled(module);
+            String label;
+            if (module.equals(pendingKeybindModule)) {
+                label = "PRESS A KEY OR MOUSE BUTTON  /  ESC TO CANCEL  /  "
+                        + module.toUpperCase(java.util.Locale.ROOT);
+            } else {
+                String state = viewOnly ? "INFO" : (enabled ? "ON" : "OFF");
+                String keyLabel = MorgueClient.isModuleKeybindSupported(module)
+                        ? "   [" + MorgueClient.moduleKeybind(module).getTranslatedKeyMessage().getString() + "]"
+                        : "";
+                label = state + "   " + module + keyLabel;
+            }
 
-            addRenderableWidget(Button.builder(Component.literal("SETTINGS"), button -> {
-                selectedModule = module;
-                entityPage = false;
+            addRenderableWidget(Button.builder(Component.literal(label), button -> {
+                if (viewOnly) {
+                    selectedModule = module;
+                    entityPage = false;
+                } else {
+                    toggleModule(module);
+                }
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 112, moduleY, 88, buttonHeight).build());
+            }).bounds(moduleX, moduleY, moduleWidth, buttonHeight).build());
         }
 
         if (moduleTotalCount == 0) {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
-                    button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
+                    button -> {}).bounds(moduleX, moduleListTop, moduleWidth, buttonHeight).build());
         }
+    }
+
+    private String moduleAt(double mouseX, double mouseY) {
+        if (selectedModule != null || entityPage || moduleVisibleCount <= 0
+                || mouseX < panelX + 150 || mouseX > panelX + panelWidth - 26
+                || mouseY < moduleListTop || mouseY >= moduleListBottom) {
+            return null;
+        }
+        int row = (int) ((mouseY - moduleListTop) / MODULE_ROW_HEIGHT);
+        if (row < 0 || row >= moduleVisibleCount) {
+            return null;
+        }
+        int index = moduleScrollOffset + row;
+        List<String> filtered = filteredModules();
+        return index >= 0 && index < filtered.size() ? filtered.get(index) : null;
+    }
+
+    private int moduleScrollTrackX() {
+        return panelX + panelWidth - 17;
+    }
+
+    private int moduleScrollThumbHeight() {
+        int trackHeight = Math.max(1, moduleListBottom - moduleListTop);
+        return Math.max(22, trackHeight * moduleVisibleCount / Math.max(1, moduleTotalCount));
+    }
+
+    private int moduleScrollThumbY() {
+        int trackHeight = Math.max(1, moduleListBottom - moduleListTop);
+        int thumbHeight = moduleScrollThumbHeight();
+        int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
+        return moduleListTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
+    }
+
+    private void setModuleScrollFromMouseY(double mouseY) {
+        int trackHeight = Math.max(1, moduleListBottom - moduleListTop);
+        int thumbHeight = moduleScrollThumbHeight();
+        int travel = Math.max(1, trackHeight - thumbHeight);
+        int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
+        double fraction = (mouseY - moduleScrollDragOffset - moduleListTop) / travel;
+        fraction = Math.max(0.0, Math.min(1.0, fraction));
+        moduleScrollOffset = (int) Math.round(fraction * maxOffset);
+        rebuildWidgets();
     }
 
     private void buildInventoryHelperSettings() {
@@ -848,7 +905,7 @@ public final class MorgueScreen extends Screen {
                 "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
                 "PANEL: DEEP NAVY / BLACK",
                 "ACCENT: ICY STEEL BLUE",
-                "TYPOGRAPHY: MATHEMATICAL DOUBLE-STRUCK",
+                "TYPOGRAPHY: BOLD DEFAULT MINECRAFT FONT",
                 "ANIMATION: ENABLED",
                 "THEME EDITOR: CUSTOM COLOR PICKER NOT IMPLEMENTED"
         };
@@ -921,7 +978,7 @@ public final class MorgueScreen extends Screen {
                 "BUILD TOOLS  /  Gradle, Fabric Loom, ProGuard",
                 "SBOM TOOLING  /  CycloneDX Gradle plugin",
                 "RESEARCH  /  Meteor, LiquidBounce, Wurst",
-                "RESEARCH  /  Baritone, Anomoly, BleachHack",
+                "RESEARCH  /  Baritone, Anomaly, BleachHack",
                 "INDEPENDENT IMPLEMENTATION  /  No source intentionally copied"
         };
         for (int i = 0; i < credits.length; i++) {
@@ -993,6 +1050,10 @@ public final class MorgueScreen extends Screen {
         }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
         addRenderableWidget(Button.builder(Component.literal("MORGUE defaults: Right Shift / M / K / V"),
                 button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MIDDLE-CLICK ANY TOGGLEABLE MODULE ROW TO CHANGE ITS KEYBIND."),
+                button -> {}).bounds(x, panelY + 192, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("PRESS A KEY OR MOUSE BUTTON; ESC CANCELS. BINDS SAVE TO MINECRAFT CONTROLS."),
+                button -> {}).bounds(x, panelY + 228, panelWidth - 176, 28).build());
         addBackButton();
     }
 
@@ -1061,43 +1122,18 @@ public final class MorgueScreen extends Screen {
     }
 
     private static boolean isModuleEnabled(String module) {
-        return switch (module) {
-            case "Mace Hitter" -> MorgueClient.maceHitter().isEnabled();
-            case "KillAura" -> MorgueClient.killAura().isEnabled();
-            case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
-            case "Sprint" -> MorgueClient.sprint().isEnabled();
-            case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
-            case "Inventory Helper" -> MorgueClient.inventoryHelper().isEnabled();
-            case "Item Use" -> MorgueClient.autoEat().isEnabled();
-            case "Aim Assist" -> MorgueClient.aimAssist().isEnabled();
-            case "Click Assist" -> MorgueClient.clickAssist().isEnabled();
-            default -> ENABLED.getOrDefault(module, false);
-        };
+        return MorgueClient.isModuleKeybindSupported(module)
+                ? MorgueClient.isModuleEnabled(module)
+                : ENABLED.getOrDefault(module, false);
     }
 
     private void toggleModule(String module) {
-        boolean enabled = !isModuleEnabled(module);
-        ENABLED.put(module, enabled);
-        if ("Mace Hitter".equals(module)) {
-            MorgueClient.setMaceHitterEnabled(enabled);
-        } else if ("KillAura".equals(module)) {
-            MorgueClient.setKillAuraEnabled(enabled);
-        } else if ("Auto Totem".equals(module)) {
-            MorgueClient.setAutoTotemEnabled(enabled);
-        } else if ("Sprint".equals(module)) {
-            MorgueClient.setSprintEnabled(enabled);
-        } else if ("Safe Walk".equals(module)) {
-            MorgueClient.setSafeWalkEnabled(enabled);
-        } else if ("Inventory Helper".equals(module)) {
-            MorgueClient.setInventoryHelperEnabled(enabled);
-        } else if ("Item Use".equals(module)) {
-            MorgueClient.setAutoEatEnabled(enabled);
-        } else if ("Aim Assist".equals(module)) {
-            MorgueClient.setAimAssistEnabled(enabled);
-        } else if ("Click Assist".equals(module)) {
-            MorgueClient.setClickAssistEnabled(enabled);
+        if (MorgueClient.isModuleKeybindSupported(module)) {
+            MorgueClient.setModuleEnabled(module, !MorgueClient.isModuleEnabled(module));
+        } else {
+            ENABLED.put(module, !isModuleEnabled(module));
+            MorgueConfig.save();
         }
-        MorgueConfig.save();
     }
 
     private static MaceHitterModule.TargetMode nextTargetMode(MaceHitterModule.TargetMode mode) {
@@ -1122,45 +1158,11 @@ public final class MorgueScreen extends Screen {
         // Keep the live world visible; MORGUE draws only its own translucent panels.
     }
 
-    private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
-            Identifier.fromNamespaceAndPath("minecraft", "default"));
-
-    private static String doubleStruck(String value) {
-        StringBuilder result = new StringBuilder(value.length());
-        for (int offset = 0; offset < value.length();) {
-            int codePoint = value.codePointAt(offset);
-            offset += Character.charCount(codePoint);
-            if (codePoint >= 'A' && codePoint <= 'Z') {
-                int index = codePoint - 'A';
-                // Mathematical double-struck has legacy letter code points for several capitals.
-                int[] capitals = {
-                        0x1D538, 0x1D539, 0x2102, 0x1D53B, 0x1D53C, 0x1D53D, 0x1D53E,
-                        0x210D, 0x1D53F, 0x1D540, 0x1D541, 0x1D542, 0x1D543, 0x1D544,
-                        0x1D546, 0x2119, 0x211A, 0x211D, 0x1D54A, 0x1D54B, 0x1D54C,
-                        0x1D54D, 0x1D54E, 0x1D54F, 0x1D550, 0x2124
-                };
-                result.appendCodePoint(capitals[index]);
-            } else if (codePoint >= 'a' && codePoint <= 'z') {
-                int index = codePoint - 'a';
-                int[] lowercase = {
-                        0x1D552, 0x1D553, 0x1D554, 0x1D555, 0x1D556, 0x1D557, 0x1D558,
-                        0x1D559, 0x1D55A, 0x1D55B, 0x1D55C, 0x1D55D, 0x1D55E, 0x1D55F,
-                        0x1D560, 0x1D561, 0x1D562, 0x1D563, 0x1D564, 0x1D565, 0x1D566,
-                        0x1D567, 0x1D568, 0x1D569, 0x1D56A, 0x1D56B
-                };
-                result.appendCodePoint(lowercase[index]);
-            } else if (codePoint >= '0' && codePoint <= '9') {
-                result.appendCodePoint(0x1D7D8 + codePoint - '0');
-            } else {
-                result.appendCodePoint(codePoint);
-            }
-        }
-        return result.toString();
-    }
-
     private static Component displayText(String value) {
-        return Component.literal(doubleStruck(value))
-                .withStyle(style -> style.withFont(DOUBLE_STRUCK_FONT).withBold(false));
+        // Use ordinary ASCII/Unicode text with Minecraft's default font.
+        // Bold styling gives the labels weight without unsupported mathematical
+        // double-struck glyphs, which render as boxed symbols on many clients.
+        return Component.literal(value).withStyle(style -> style.withBold(true));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
@@ -1319,8 +1321,8 @@ public final class MorgueScreen extends Screen {
                 panelX + panelWidth - 3, panelY + panelHeight - 3, BORDER);
         graphics.text(font, displayText("MORGUE-CLIENT"), panelX + 17,
                 panelY + panelHeight - 24, MUTED);
-        graphics.text(font, displayText("RIGHT SHIFT  •  CLOSE"),
-                panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
+        graphics.text(font, displayText("LMB TOGGLE  •  RMB SETTINGS  •  MMB BIND"),
+                panelX + panelWidth - 244, panelY + panelHeight - 24, MUTED);
 
         // Suppress vanilla button captions before Minecraft renders widgets. We restore
         // them immediately afterward so input, accessibility, and click behavior stay intact.
@@ -1361,17 +1363,15 @@ public final class MorgueScreen extends Screen {
             }
         }
 
-        // A compact scroll track communicates that more modules are available.
+        // Drag handle and track for the module-list viewport.
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
-            int trackX = panelX + panelWidth - 17;
-            int trackTop = panelY + 140;
-            int trackBottom = panelY + panelHeight - 48;
-            int trackHeight = Math.max(1, trackBottom - trackTop);
-            int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
-            int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
-            int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
-            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0x805778A2);
-            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
+            int trackX = moduleScrollTrackX();
+            int thumbY = moduleScrollThumbY();
+            int thumbHeight = moduleScrollThumbHeight();
+            graphics.fill(trackX, moduleListTop, trackX + 2, moduleListBottom, 0x805778A2);
+            graphics.fill(trackX - 2, thumbY, trackX + 4, thumbY + thumbHeight,
+                    moduleScrollDragging ? 0xFFB8D5FF : RED);
+            graphics.fill(trackX - 1, thumbY + 2, trackX + 3, thumbY + thumbHeight - 2, 0xFF27496F);
         }
     }
 
@@ -1382,11 +1382,11 @@ public final class MorgueScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount
-                && mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 10
-                && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
+                && mouseX >= panelX + 150 && mouseX <= panelX + panelWidth - 20
+                && mouseY >= moduleListTop && mouseY <= moduleListBottom
                 && verticalAmount != 0.0) {
             int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
-            int step = Math.max(1, Math.abs((int) Math.signum(verticalAmount)));
+            int step = Math.max(1, (int) Math.ceil(Math.abs(verticalAmount)));
             moduleScrollOffset = Math.max(0, Math.min(maxOffset,
                     moduleScrollOffset - (verticalAmount > 0 ? step : -step)));
             rebuildWidgets();
@@ -1397,10 +1397,50 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 1) {
-            double mouseX = event.x();
-            double mouseY = event.y();
+        double mouseX = event.x();
+        double mouseY = event.y();
 
+        if (pendingKeybindModule != null) {
+            MorgueClient.setModuleKeybind(pendingKeybindModule,
+                    InputConstants.Type.MOUSE.getOrCreate(event.button()));
+            if (minecraft != null) {
+                minecraft.options.save();
+            }
+            pendingKeybindModule = null;
+            rebuildWidgets();
+            return true;
+        }
+
+        if (event.button() == 0 && selectedModule == null
+                && moduleTotalCount > moduleVisibleCount
+                && mouseX >= moduleScrollTrackX() - 5 && mouseX <= moduleScrollTrackX() + 6
+                && mouseY >= moduleListTop && mouseY <= moduleListBottom) {
+            int thumbY = moduleScrollThumbY();
+            int thumbHeight = moduleScrollThumbHeight();
+            moduleScrollDragging = true;
+            moduleScrollDragOffset = mouseY >= thumbY && mouseY <= thumbY + thumbHeight
+                    ? (int) mouseY - thumbY : thumbHeight / 2;
+            if (mouseY < thumbY || mouseY > thumbY + thumbHeight) {
+                setModuleScrollFromMouseY(mouseY);
+            }
+            return true;
+        }
+
+        String module = moduleAt(mouseX, mouseY);
+        if (event.button() == 1 && module != null) {
+            selectedModule = module;
+            entityPage = false;
+            pendingKeybindModule = null;
+            rebuildWidgets();
+            return true;
+        }
+        if (event.button() == 2 && module != null && MorgueClient.isModuleKeybindSupported(module)) {
+            pendingKeybindModule = module;
+            rebuildWidgets();
+            return true;
+        }
+
+        if (event.button() == 1) {
             if (mouseX >= panelX + panelWidth - 18 && mouseY >= panelY + panelHeight - 18) {
                 resizingPanel = true;
                 return true;
@@ -1416,7 +1456,31 @@ public final class MorgueScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (pendingKeybindModule != null) {
+            if (event.key() == InputConstants.KEY_ESCAPE) {
+                pendingKeybindModule = null;
+                rebuildWidgets();
+                return true;
+            }
+
+            MorgueClient.setModuleKeybind(pendingKeybindModule, InputConstants.getKey(event));
+            if (minecraft != null) {
+                minecraft.options.save();
+            }
+            pendingKeybindModule = null;
+            rebuildWidgets();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 0 && moduleScrollDragging) {
+            setModuleScrollFromMouseY(event.y());
+            return true;
+        }
         if (event.button() == 1 && draggingPanel) {
             panelX = Math.max(12, Math.min(width - panelWidth - 12, panelX + (int) Math.round(deltaX)));
             panelY = Math.max(12, Math.min(height - panelHeight - 12, panelY + (int) Math.round(deltaY)));
@@ -1442,6 +1506,7 @@ public final class MorgueScreen extends Screen {
     public boolean mouseReleased(MouseButtonEvent event) {
         draggingPanel = false;
         resizingPanel = false;
+        moduleScrollDragging = false;
         return super.mouseReleased(event);
     }
 
