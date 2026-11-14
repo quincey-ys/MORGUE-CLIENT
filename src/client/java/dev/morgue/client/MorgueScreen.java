@@ -594,8 +594,45 @@ public final class MorgueScreen extends Screen {
         // Keep the live world visible; MORGUE draws only its own translucent panels.
     }
 
+    private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
+            Identifier.fromNamespaceAndPath("minecraft", "default"));
+
+    private static String doubleStruck(String value) {
+        StringBuilder result = new StringBuilder(value.length());
+        for (int offset = 0; offset < value.length();) {
+            int codePoint = value.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+            if (codePoint >= 'A' && codePoint <= 'Z') {
+                int index = codePoint - 'A';
+                // Mathematical double-struck has legacy letter code points for several capitals.
+                int[] capitals = {
+                        0x1D538, 0x1D539, 0x2102, 0x1D53B, 0x1D53C, 0x1D53D, 0x1D53E,
+                        0x210D, 0x1D53F, 0x1D540, 0x1D541, 0x1D542, 0x1D543, 0x1D544,
+                        0x1D546, 0x2119, 0x211A, 0x211D, 0x1D54A, 0x1D54B, 0x1D54C,
+                        0x1D54D, 0x1D54E, 0x1D54F, 0x1D550, 0x2124
+                };
+                result.appendCodePoint(capitals[index]);
+            } else if (codePoint >= 'a' && codePoint <= 'z') {
+                int index = codePoint - 'a';
+                int[] lowercase = {
+                        0x1D552, 0x1D553, 0x1D554, 0x1D555, 0x1D556, 0x1D557, 0x1D558,
+                        0x1D559, 0x1D55A, 0x1D55B, 0x1D55C, 0x1D55D, 0x1D55E, 0x1D55F,
+                        0x1D560, 0x1D561, 0x1D562, 0x1D563, 0x1D564, 0x1D565, 0x1D566,
+                        0x1D567, 0x1D568, 0x1D569, 0x1D56A, 0x1D56B
+                };
+                result.appendCodePoint(lowercase[index]);
+            } else if (codePoint >= '0' && codePoint <= '9') {
+                result.appendCodePoint(0x1D7D8 + codePoint - '0');
+            } else {
+                result.appendCodePoint(codePoint);
+            }
+        }
+        return result.toString();
+    }
+
     private static Component displayText(String value) {
-        return Component.literal(value).withStyle(style -> style.withFont(DISPLAY_FONT).withBold(true));
+        return Component.literal(doubleStruck(value))
+                .withStyle(style -> style.withFont(DOUBLE_STRUCK_FONT).withBold(false));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
