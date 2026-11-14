@@ -766,12 +766,16 @@ public final class MorgueScreen extends Screen {
                 dev.morgue.client.MorgueHud.isTargetInfoEnabled()),
                 () -> dev.morgue.client.MorgueHud.setTargetInfoEnabled(
                         !dev.morgue.client.MorgueHud.isTargetInfoEnabled()));
+        addSettingButton(x, y + 72, toggleLabel("Damage Hit Marker",
+                dev.morgue.client.MorgueHud.isHitMarkerEnabled()),
+                () -> dev.morgue.client.MorgueHud.setHitMarkerEnabled(
+                        !dev.morgue.client.MorgueHud.isHitMarkerEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
-                "Overlays use the standard Fabric HUD layer and remain local to your client."),
-                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
-        addRenderableWidget(Button.builder(Component.literal(
-                "Positions are currently fixed to the upper corners; drag-and-drop editing is not implemented."),
+                "The marker appears briefly when the selected target's damage cooldown resets."),
                 button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Overlay positions are fixed to the upper corners; drag-and-drop editing is not implemented."),
+                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
         addBackButton();
     }
 
