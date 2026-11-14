@@ -118,6 +118,9 @@ public final class MorgueConfig {
         totem.setSwitchDelayMillis(integer(values, "totem.switchDelayMillis", 0));
         totem.setPauseWhileUsingItem(bool(values, "totem.pauseWhileUsingItem", true));
         totem.setActivationHealth((float) decimal(values, "totem.activationHealth", 20.0));
+        totem.setPredictRecentDamage(bool(values, "totem.predictRecentDamage", true));
+        totem.setPredictFallDamage(bool(values, "totem.predictFallDamage", true));
+        totem.setRestoreDisplacedOffhand(bool(values, "totem.restoreDisplacedOffhand", true));
 
         KillAuraModule aura = MorgueClient.killAura();
         aura.setEnabled(bool(values, "aura.enabled", false));
@@ -186,6 +189,9 @@ public final class MorgueConfig {
         put(values, "totem.switchDelayMillis", totem.getSwitchDelayMillis());
         put(values, "totem.pauseWhileUsingItem", totem.isPauseWhileUsingItem());
         put(values, "totem.activationHealth", totem.getActivationHealth());
+        put(values, "totem.predictRecentDamage", totem.isPredictRecentDamage());
+        put(values, "totem.predictFallDamage", totem.isPredictFallDamage());
+        put(values, "totem.restoreDisplacedOffhand", totem.isRestoreDisplacedOffhand());
 
         KillAuraModule aura = MorgueClient.killAura();
         put(values, "aura.enabled", aura.isEnabled());
