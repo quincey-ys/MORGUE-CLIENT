@@ -163,6 +163,8 @@ public final class MorgueScreen extends Screen {
             buildSprintSettings();
         } else if ("Safe Walk".equals(selectedModule)) {
             buildSafeWalkSettings();
+        } else if ("Inventory Helper".equals(selectedModule)) {
+            buildInventoryHelperSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -240,6 +242,23 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
                     button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
         }
+    }
+
+    private void buildInventoryHelperSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.inventoryHelper();
+        addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
+                () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Refill At: " + module.getRefillAt() + " items",
+                () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Swaps matching low-count hotbar stacks with main-inventory stacks."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla container input; item components must match."),
+                button -> {}).bounds(x, y + 112, panelWidth - 176, 28).build());
+        addBackButton();
     }
 
     private void buildSafeWalkSettings() {
@@ -768,6 +787,7 @@ public final class MorgueScreen extends Screen {
             case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
             case "Sprint" -> MorgueClient.sprint().isEnabled();
             case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
+            case "Inventory Helper" -> MorgueClient.inventoryHelper().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -785,6 +805,8 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setSprintEnabled(enabled);
         } else if ("Safe Walk".equals(module)) {
             MorgueClient.setSafeWalkEnabled(enabled);
+        } else if ("Inventory Helper".equals(module)) {
+            MorgueClient.setInventoryHelperEnabled(enabled);
         }
         MorgueConfig.save();
     }
