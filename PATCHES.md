@@ -1,6 +1,6 @@
 # MORGUE Patch Index
 
-These changes are separate commits on `main`. The index keeps each patch identifiable.
+These changes are separate commits on `feature/complete-module-suite`, proposed for merge through PR #5. The index keeps each patch identifiable.
 The full fix is the combined stack; the CI workflow patch depends on the enum smoke-test file.
 
 ## Patch 01 — Preserve enum classes in ProGuard
@@ -153,3 +153,24 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dd937dae03b85d883011f649acb123f2c8a25172).
 
 - [28g — Correct the 26.3 FoodProperties package](https://github.com/quincey-ys/MORGUE-CLIENT/commit/817013e4c46e86e31fb06ac903a8d07f9b1178c3).
+
+## Complete commit references
+
+The entries above link representative commits. These additional commits are part of the same numbered patch groups:
+
+- Patch 14: [14b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/98b33046278201ae236b2192cc3d3141dbc582e4), [14d](https://github.com/quincey-ys/MORGUE-CLIENT/commit/561cd9f38171fea2951cea74635c58e69768b02d), [14e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5357a939b6412c1e1b1857c835d3d5f6ca4b063b).
+- Patch 15: [15b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/538acbc7f63da8a4168d507ba847367ead9d5df7), [15c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/0d43fb972609ae4779cc9c8ea2acd4c845096e9d).
+- Patch 16: [16c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/a78d771b53bd61c28b2ee5b8752b02923d33a1bf), [16e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f25fd6c57f5446ba6906693dc218ac484258d8fd), [16f](https://github.com/quincey-ys/MORGUE-CLIENT/commit/564513785f7d5a155056fcbd181e0fa56e5b5b5b), [16g](https://github.com/quincey-ys/MORGUE-CLIENT/commit/c175c9010eed1c097a5a4d90e81b9ebe2e94827f).
+- Patch 17: [17b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9a8c8277f380b2d5ea5ab084f2b8df393ae45c6f), [17c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/39107ce7b1a1d377f78ff6f953b4ba33b46345d9).
+- Patch 19: [19a](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e8114acaa367e07dd189bc20a2d639f57fa6045d), [19c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/43feafc52242494154916fec12ec40298ba09201).
+- Patch 20: [20c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/39620560a471e0893dbfa3757ccd49a9e3b53050).
+- Patch 21: [21b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/1141d7a83b8d89d5392bab6d0517935e007976f0), [21c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9dd630a2d7ff95a6042848afb8c9cc17fe9cd8df).
+- Patch 22: [22b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/fe546a2ddd96382bb9f6a8219a9018337a1f8333), [22c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4235c5872baf137ab81fb0c60e73abe5d00a4de7).
+- Patch 23: [23b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4feba81b1b71a47f2b6cef09acb4cd1a3f0c8217), [23d](https://github.com/quincey-ys/MORGUE-CLIENT/commit/59503188655f2b5bbcc5cd4e96fc7f4d33b6b99b), [23e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/a1e2bd0e7618851ada54fb37f6686baf7c3b2d0c).
+- Patch 24: [24c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/874b310718304e642faf0a68764f60a869f9c308).
+- Patch 25: [25b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/fc0cf2f70bfbbeefa8b03d196f522121345601e5), [25c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/26eb24bd530e20cf55087a726064ebc5fee0934a), [25d](https://github.com/quincey-ys/MORGUE-CLIENT/commit/c8473351b3294ee7dbfa7dfb51fcda4cba1b359d), [25f](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9c71b13ec4e046219959d17361b0c2247840e8b7), [25g](https://github.com/quincey-ys/MORGUE-CLIENT/commit/a51fb1adf96fc853663e863ca25bdb8b5e7815a2), [25h](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dcae6628e1f12a73125404149e4efba9fba14d80).
+- Patch 26: [26b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f864108c69721845bbe057a03cbf9f75e22c0a81), [26c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5bfd5320b4103e4a1e73332860ab415d4c9749c8).
+- Patch 27: [27b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/48e465212eb9deff1fe058d8682495027de4411a), [27d](https://github.com/quincey-ys/MORGUE-CLIENT/commit/52caa7ee929bd92de88141a13d80276b04160eca), [27e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/d7ff636f179bfc6b1b44a62b5fda10dc259022a4), [27f](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f057e4252c61694df9e679f2ee052fc77d65e09a), [27g](https://github.com/quincey-ys/MORGUE-CLIENT/commit/6664ec875c56273bf57c0b20632fe00e75c938e2), [27i](https://github.com/quincey-ys/MORGUE-CLIENT/commit/6dca4d2dbe245abf046478e4efa260c04a433424), [27j](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ddcbf12b90e7d90f34f1252e716f69ba5de1c61a).
+- Patch 28: [28b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/75c6034c87ac9d60560596d8a7b5c79a8c6ed5a6), [28c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4f528bf7e48bda3994d0de92f15a6d1702311fa8), [28g](https://github.com/quincey-ys/MORGUE-CLIENT/commit/817013e4c46e86e31fb06ac903a8d07f9b1178c3), [28h](https://github.com/quincey-ys/MORGUE-CLIENT/commit/cc51d66f1c150858fb1823d2993a58888b0d7d7d).
+- Patch 29: [29b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/16fe49cdaa0211c9fba6e26c67127d5d0398e474).
+
