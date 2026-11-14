@@ -10,6 +10,8 @@ import net.minecraft.world.entity.LivingEntity;
 public final class MorgueHud {
     private static boolean moduleListEnabled;
     private static boolean targetInfoEnabled;
+    private static boolean hitMarkerEnabled;
+    private static long hitMarkerUntil;
     private static boolean registered;
 
     private MorgueHud() {}
@@ -45,6 +47,21 @@ public final class MorgueHud {
             }
         }
 
+        if (hitMarkerEnabled && System.nanoTime() < hitMarkerUntil) {
+            int centerX = client.getWindow().getGuiScaledWidth() / 2;
+            int centerY = client.getWindow().getGuiScaledHeight() / 2;
+            for (int i = 0; i < 5; i++) {
+                graphics.fill(centerX - 7 + i, centerY - 7 + i,
+                        centerX - 4 + i, centerY - 4 + i, 0xFFB8D6FF);
+                graphics.fill(centerX + 4 - i, centerY - 7 + i,
+                        centerX + 7 - i, centerY - 4 + i, 0xFFB8D6FF);
+                graphics.fill(centerX - 7 + i, centerY + 4 - i,
+                        centerX - 4 + i, centerY + 7 - i, 0xFFB8D6FF);
+                graphics.fill(centerX + 4 - i, centerY + 4 - i,
+                        centerX + 7 - i, centerY + 7 - i, 0xFFB8D6FF);
+            }
+        }
+
         if (targetInfoEnabled) {
             LivingEntity target = MorgueClient.killAura().getLastTarget();
             if (target != null && target.isAlive() && !target.isRemoved()) {
@@ -64,6 +81,11 @@ public final class MorgueHud {
     private static String state(boolean enabled) { return enabled ? "ON" : "OFF"; }
     public static boolean isModuleListEnabled() { return moduleListEnabled; }
     public static void setModuleListEnabled(boolean value) { moduleListEnabled = value; }
+    public static boolean isHitMarkerEnabled() { return hitMarkerEnabled; }
+    public static void setHitMarkerEnabled(boolean value) { hitMarkerEnabled = value; }
+    public static void triggerHitMarker() {
+        if (hitMarkerEnabled) hitMarkerUntil = System.nanoTime() + 180_000_000L;
+    }
     public static boolean isTargetInfoEnabled() { return targetInfoEnabled; }
     public static void setTargetInfoEnabled(boolean value) { targetInfoEnabled = value; }
 }
