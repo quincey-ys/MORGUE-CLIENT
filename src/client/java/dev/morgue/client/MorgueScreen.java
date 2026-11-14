@@ -905,7 +905,7 @@ public final class MorgueScreen extends Screen {
                 "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
                 "PANEL: DEEP NAVY / BLACK",
                 "ACCENT: ICY STEEL BLUE",
-                "TYPOGRAPHY: MATHEMATICAL DOUBLE-STRUCK",
+                "TYPOGRAPHY: BOLD DEFAULT MINECRAFT FONT",
                 "ANIMATION: ENABLED",
                 "THEME EDITOR: CUSTOM COLOR PICKER NOT IMPLEMENTED"
         };
@@ -1050,6 +1050,10 @@ public final class MorgueScreen extends Screen {
         }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
         addRenderableWidget(Button.builder(Component.literal("MORGUE defaults: Right Shift / M / K / V"),
                 button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MIDDLE-CLICK ANY TOGGLEABLE MODULE ROW TO CHANGE ITS KEYBIND."),
+                button -> {}).bounds(x, panelY + 192, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("PRESS A KEY OR MOUSE BUTTON; ESC CANCELS. BINDS SAVE TO MINECRAFT CONTROLS."),
+                button -> {}).bounds(x, panelY + 228, panelWidth - 176, 28).build());
         addBackButton();
     }
 
