@@ -2,7 +2,6 @@ package dev.morgue.client.modules.combat;
 
 import dev.morgue.client.ai.TargetIntelligence;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -115,9 +114,20 @@ public final class KillAuraModule {
                         && (!teamsCheck || !player.isAlliedTo(candidate))
                         && (ignoreWalls || player.hasLineOfSight(candidate))
                         && (!fovCheck || isWithinFov(player, candidate)),
-                TargetIntelligence.Priority.valueOf(priority.name()),
+                toIntelligencePriority(priority),
                 range
         );
+    }
+
+    private static TargetIntelligence.Priority toIntelligencePriority(Priority value) {
+        if (value == null) {
+            return TargetIntelligence.Priority.CLOSEST;
+        }
+        return switch (value) {
+            case CLOSEST -> TargetIntelligence.Priority.CLOSEST;
+            case LOWEST_HEALTH -> TargetIntelligence.Priority.LOWEST_HEALTH;
+            case THREAT -> TargetIntelligence.Priority.THREAT;
+        };
     }
 
     private boolean isAllowed(LivingEntity entity) {
@@ -126,7 +136,7 @@ public final class KillAuraModule {
         }
         return switch (targetMode) {
             case PLAYERS -> false;
-            case HOSTILE_MOBS -> entity.getType().getCategory().isFriendly() == false;
+            case HOSTILE_MOBS -> !entity.getType().getCategory().isFriendly();
             case ALL_LIVING -> true;
         };
     }
