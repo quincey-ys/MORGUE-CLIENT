@@ -175,6 +175,16 @@ public final class MorgueScreen extends Screen {
             buildVisualSettings();
         } else if ("Notifications".equals(selectedModule)) {
             buildNotificationsSettings();
+        } else if ("Client Utilities".equals(selectedModule)) {
+            buildClientUtilities();
+        } else if ("Screenshot Privacy".equals(selectedModule)) {
+            buildScreenshotPrivacy();
+        } else if ("World Settings".equals(selectedModule)) {
+            buildWorldSettings();
+        } else if ("Item Use".equals(selectedModule)) {
+            buildItemUseInfo();
+        } else if ("HUD Editor".equals(selectedModule)) {
+            buildHudEditorInfo();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -229,7 +239,9 @@ public final class MorgueScreen extends Screen {
                     || "Credits".equals(module) || "World Info".equals(module)
                     || "Client Metadata".equals(module) || "Module List".equals(module)
                     || "Environment".equals(module) || "Visual Settings".equals(module)
-                    || "Notifications".equals(module);
+                    || "Notifications".equals(module) || "Client Utilities".equals(module)
+                    || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
+                    || "Item Use".equals(module) || "HUD Editor".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -643,6 +655,88 @@ public final class MorgueScreen extends Screen {
                     + minecraft.level.getGameTime()),
                     button -> {}).bounds(x, y + 72, width, 28).build());
         }
+        addBackButton();
+    }
+
+    private void buildClientUtilities() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("OPEN RESOURCE PACK MANAGER"), button -> {
+            selectedModule = "Resource Pack Manager";
+            rebuildWidgets();
+        }).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("OPEN KEYBIND SETTINGS"), button -> {
+            selectedModule = "Keybinds";
+            rebuildWidgets();
+        }).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("OPEN CONFIGURATION PROFILES"), button -> {
+            selectedModule = "Profiles";
+            rebuildWidgets();
+        }).bounds(x, y + 72, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("RUN PACKAGE INTEGRITY CHECK"), button -> {
+            dev.morgue.client.security.MorgueIntegrity.verify();
+            selectedModule = "Build Integrity";
+            rebuildWidgets();
+        }).bounds(x, y + 108, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildScreenshotPrivacy() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "SCREENSHOT PRIVACY: STANDARD GAME CAPTURE",
+                "MORGUE DOES NOT HIDE MODULES OR ALTER SCREENSHOTS",
+                "NO SCREEN-SHARE OR STREAMING CONCEALMENT IS ACTIVE",
+                "USE YOUR OPERATING SYSTEM'S NORMAL SCREENSHOT CONTROLS",
+                "LOCAL CLIENT PRIVACY DOES NOT OVERRIDE SERVER MODERATION"
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 34, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildWorldSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("WORLD RULES ARE CONTROLLED BY THE WORLD OWNER OR SERVER."),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MORGUE DOES NOT OVERRIDE SERVER GAME RULES OR DIFFICULTY."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("USE VANILLA WORLD OPTIONS FOR PERMITTED LOCAL SETTINGS."),
+                button -> {}).bounds(x, y + 72, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildItemUseInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("ITEM USE: VANILLA INPUT ONLY"),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("NO AUTOMATIC FOOD, POTION, OR PROJECTILE USE IS ENABLED."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("THIS PAGE IS RESERVED FOR A FUTURE USER-CONFIGURABLE ITEM-USE MODULE."),
+                button -> {}).bounds(x, y + 72, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildHudEditorInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("HUD EDITOR: CUSTOM OVERLAY LAYOUT IS NOT IMPLEMENTED."),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("USE MODULE LIST TO VIEW THE CURRENT MODULE STATES."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MORGUE DOES NOT DRAW A CUSTOM TARGET HUD YET."),
+                button -> {}).bounds(x, y + 72, width, 28).build());
         addBackButton();
     }
 
