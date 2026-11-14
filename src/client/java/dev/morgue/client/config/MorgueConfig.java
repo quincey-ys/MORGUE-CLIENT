@@ -89,6 +89,10 @@ public final class MorgueConfig {
         aura.setIgnoreWalls(bool(values, "aura.ignoreWalls", false));
         aura.setTeamsCheck(bool(values, "aura.teamsCheck", true));
         aura.setFovCheck(bool(values, "aura.fovCheck", true));
+        aura.setIgnoreHurtTime(bool(values, "aura.ignoreHurtTime", false));
+        aura.setMinimumAgeTicks((int) integer(values, "aura.minimumAgeTicks", 0));
+        aura.setCriticalOnly(bool(values, "aura.criticalOnly", false));
+        aura.setPauseOnThrowables(bool(values, "aura.pauseOnThrowables", true));
         aura.setTargetMode(enumValue(values, "aura.targetMode", KillAuraModule.TargetMode.class,
                 KillAuraModule.TargetMode.PLAYERS));
         for (String id : aura.getSelectedEntityTypes()) {
@@ -147,6 +151,10 @@ public final class MorgueConfig {
         put(values, "aura.ignoreWalls", aura.isIgnoreWalls());
         put(values, "aura.teamsCheck", aura.isTeamsCheck());
         put(values, "aura.fovCheck", aura.isFovCheck());
+        put(values, "aura.ignoreHurtTime", aura.isIgnoreHurtTime());
+        put(values, "aura.minimumAgeTicks", aura.getMinimumAgeTicks());
+        put(values, "aura.criticalOnly", aura.isCriticalOnly());
+        put(values, "aura.pauseOnThrowables", aura.isPauseOnThrowables());
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
