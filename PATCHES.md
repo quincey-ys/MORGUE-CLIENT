@@ -197,3 +197,10 @@ The entries above link representative commits. These additional commits are part
 
 ## Patch 36 — Roll back unclaimed KillAura weapon swaps
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/994f684e8345b66137f28b3a6e2e9666e9402a6f) — restores the original hotbar slot whenever the shared coordinator denies an attack, even when post-attack switch-back is disabled.
+
+## Patch 39 — Aim Assist and Click Assist
+- [39a — Add visible manual-input Aim Assist](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5cde46f836d7a08470ddfd0cd4da934c1fe1accd).
+- [39b — Add fixed-rate manual-input Click Assist](https://github.com/quincey-ys/MORGUE-CLIENT/commit/68e2425176fe6fc89798d600ff2bc6edee322190).
+- [39c — Register both modules and persist settings](https://github.com/quincey-ys/MORGUE-CLIENT/commit/496d7f3d3d07f4e597ad142bca11de26890af158).
+- [39d — Add both to the HUD module list](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dff7d973b0509c0f3dac8d7a25103d39af41eb1d).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/c5e6ba6883a00541ceb38442074f819d48f3b88d).
