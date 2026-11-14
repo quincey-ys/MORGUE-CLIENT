@@ -105,6 +105,9 @@ public final class MorgueConfig {
         }
 
         ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
+        MorgueClient.setAimAssistEnabled(bool(values, "combat.aimAssist.enabled", false));
+        MorgueClient.setClickAssistEnabled(bool(values, "combat.clickAssist.enabled", false));
+        MorgueClient.clickAssist().setClicksPerSecond((int) integer(values, "combat.clickAssist.cps", 8));
         MorgueHud.setModuleListEnabled(bool(values, "hud.moduleList", false));
         MorgueHud.setTargetInfoEnabled(bool(values, "hud.targetInfo", false));
         MorgueHud.setHitMarkerEnabled(bool(values, "hud.hitMarker", false));
@@ -185,6 +188,9 @@ public final class MorgueConfig {
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
         put(values, "notifications.enabled", ClientNotifications.isEnabled());
+        put(values, "combat.aimAssist.enabled", MorgueClient.aimAssist().isEnabled());
+        put(values, "combat.clickAssist.enabled", MorgueClient.clickAssist().isEnabled());
+        put(values, "combat.clickAssist.cps", MorgueClient.clickAssist().getClicksPerSecond());
         put(values, "hud.moduleList", MorgueHud.isModuleListEnabled());
         put(values, "hud.targetInfo", MorgueHud.isTargetInfoEnabled());
         put(values, "hud.hitMarker", MorgueHud.isHitMarkerEnabled());
