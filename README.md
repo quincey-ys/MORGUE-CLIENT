@@ -7,7 +7,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 ## Current implementation
 
 - Independent Fabric client with no AUTISM Client runtime dependency.
-- Gothic midnight-blue and black ClickGUI with mathematical double-struck typography, steel-blue borders, icy-blue accents, animated controls, and a scrollable module list.
+- Gothic midnight-blue and black ClickGUI with bold, readable typography, steel-blue borders, icy-blue accents, animated controls, and a scrollable module list.
 - Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, configurable health activation threshold, recent-damage, fall-damage, and nearby-hostile pressure heuristics, and optional restoration of the displaced offhand item after the totem is consumed.
