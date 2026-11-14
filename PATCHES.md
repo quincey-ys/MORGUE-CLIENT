@@ -42,3 +42,8 @@ All six commits are on `main` already. Use the latest main build for testing; do
 - File: `src/client/java/dev/morgue/client/MorgueScreen.java`
 - Temporarily suppresses vanilla button captions while the base widgets render, then restores their labels and draws the custom MORGUE controls once. This removes the doubled text visible in the screenshot.
 - Adds mouse-wheel scrolling and a compact scroll indicator to the module list; the header and category sidebar remain fixed.
+
+## Patch 08 — Keep the module list in a compact scroll viewport
+- Commit: [9d1bd67e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9d1bd67e911895c98aaa28a3a57ed52565914c77)
+- File: `src/client/java/dev/morgue/client/MorgueScreen.java`
+- Caps the visible module rows at four so the Combat page can scroll even when the window is tall. Mouse-wheel scrolling moves through the remaining modules while the surrounding UI stays fixed.
