@@ -110,6 +110,7 @@ public final class MorgueScreen extends Screen {
     private int moduleScrollOffset;
     private int moduleTotalCount;
     private int moduleVisibleCount;
+    private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -158,12 +159,46 @@ public final class MorgueScreen extends Screen {
             buildModuleList();
         } else if (entityPage) {
             buildEntitySelector();
+        } else if ("Sprint".equals(selectedModule)) {
+            buildSprintSettings();
+        } else if ("Safe Walk".equals(selectedModule)) {
+            buildSafeWalkSettings();
+        } else if ("Inventory Helper".equals(selectedModule)) {
+            buildInventoryHelperSettings();
+        } else if ("Movement Settings".equals(selectedModule)) {
+            buildMovementSettings();
+        } else if ("Module List".equals(selectedModule)) {
+            buildEnabledModuleList();
+        } else if ("Environment".equals(selectedModule)) {
+            buildEnvironmentInfo();
+        } else if ("Visual Settings".equals(selectedModule)) {
+            buildVisualSettings();
+        } else if ("Notifications".equals(selectedModule)) {
+            buildNotificationsSettings();
+        } else if ("Client Utilities".equals(selectedModule)) {
+            buildClientUtilities();
+        } else if ("Screenshot Privacy".equals(selectedModule)) {
+            buildScreenshotPrivacy();
+        } else if ("World Settings".equals(selectedModule)) {
+            buildWorldSettings();
+        } else if ("Item Use".equals(selectedModule)) {
+            buildAutoEatSettings();
+        } else if ("HUD Editor".equals(selectedModule)) {
+            buildHudEditorInfo();
+        } else if ("Aim Assist".equals(selectedModule)) {
+            buildAimAssistSettings();
+        } else if ("Click Assist".equals(selectedModule)) {
+            buildClickAssistSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
             buildAutoTotemSettings();
         } else if ("KillAura".equals(selectedModule)) {
             buildKillAuraSettings();
+        } else if ("World Info".equals(selectedModule)) {
+            buildWorldInfo();
+        } else if ("Client Metadata".equals(selectedModule)) {
+            buildClientMetadata();
         } else if ("AI Brain".equals(selectedModule)) {
             buildAiBrainSettings();
         } else if ("Credits".equals(selectedModule)) {
@@ -205,7 +240,12 @@ public final class MorgueScreen extends Screen {
             String module = filtered.get(i);
             int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
-                    || "Credits".equals(module);
+                    || "Credits".equals(module) || "World Info".equals(module)
+                    || "Client Metadata".equals(module) || "Module List".equals(module)
+                    || "Environment".equals(module) || "Visual Settings".equals(module)
+                    || "Notifications".equals(module) || "Client Utilities".equals(module)
+                    || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
+                    || "Item Use".equals(module) || "HUD Editor".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -230,6 +270,92 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
                     button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
         }
+    }
+
+    private void buildInventoryHelperSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.inventoryHelper();
+        addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
+                () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Refill At: " + module.getRefillAt() + " items",
+                () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Swaps matching low-count hotbar stacks with main-inventory stacks."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla container input; item components must match."),
+                button -> {}).bounds(x, y + 112, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildSafeWalkSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.safeWalk();
+        addSettingButton(x, y, toggleLabel("Safe Walk", module.isEnabled()),
+                () -> MorgueClient.setSafeWalkEnabled(!module.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically crouches when movement projects beyond a supported block edge."),
+                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Your physical sneak key takes priority over automatic edge protection."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildSprintSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.sprint();
+        addSettingButton(x, y, toggleLabel("Auto Sprint", module.isEnabled()),
+                () -> MorgueClient.setSprintEnabled(!module.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically sprints while horizontal movement is detected."),
+                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses normal player sprint state; it does not alter packets or bypass server rules."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildAimAssistSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.aimAssist();
+        addSettingButton(x, y, toggleLabel("Visible Aim Assist", module.isEnabled()),
+                () -> MorgueClient.setAimAssistEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Range: " + format(module.getRange()),
+                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.5));
+        addSettingButton(x, y + 72, "FOV: " + format(module.getFov()),
+                () -> module.setFov(module.getFov() >= 180.0 ? 15.0 : module.getFov() + 15.0));
+        addSettingButton(x, y + 108, "Smoothing: " + format(module.getSmoothing()),
+                () -> module.setSmoothing(module.getSmoothing() >= 1.0F ? 0.05F : module.getSmoothing() + 0.05F));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Only assists while you hold attack, targets visible players, and rotates visibly."),
+                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically disables its steering while Mace Hitter or KillAura is enabled."),
+                button -> {}).bounds(x, y + 186, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildClickAssistSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.clickAssist();
+        addSettingButton(x, y, toggleLabel("Click Assist", module.isEnabled()),
+                () -> MorgueClient.setClickAssistEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Rate: " + module.getClicksPerSecond() + " CPS",
+                () -> module.setClicksPerSecond(module.getClicksPerSecond() >= 20
+                        ? 1 : module.getClicksPerSecond() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Repeats your held attack input against the entity under your crosshair."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla attack cooldown and shared combat arbitration; no packet spoofing."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+        addBackButton();
     }
 
     private void buildMaceHitterSettings() {
@@ -389,19 +515,19 @@ public final class MorgueScreen extends Screen {
         int leftRow = 0;
         int rightRow = 0;
 
-        addSettingButton(leftX, y + leftRow++ * 34, "Range: " + format(module.getRange()) + "  (+0.2)",
+        addSettingButton(leftX, y + leftRow++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
                 () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
-        addSettingButton(leftX, y + leftRow++ * 34, "FOV: " + format(module.getFov()) + "  (+15)",
+        addSettingButton(leftX, y + leftRow++ * 27, "FOV: " + format(module.getFov()) + "  (+15)",
                 () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(leftX, y + leftRow++ * 34, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
+        addSettingButton(leftX, y + leftRow++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
                 () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
-        addSettingButton(leftX, y + leftRow++ * 34, "Priority: " + module.getPriority(),
+        addSettingButton(leftX, y + leftRow++ * 27, "Priority: " + module.getPriority(),
                 () -> module.setPriority(switch (module.getPriority()) {
                     case CLOSEST -> dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH;
                     case LOWEST_HEALTH -> dev.morgue.client.modules.combat.KillAuraModule.Priority.THREAT;
                     case THREAT -> dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST;
                 }));
-        addSettingButton(leftX, y + leftRow++ * 34, "Targets: " + module.getTargetMode(),
+        addSettingButton(leftX, y + leftRow++ * 27, "Targets: " + module.getTargetMode(),
                 () -> module.setTargetMode(switch (module.getTargetMode()) {
                     case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
                     case HOSTILE_MOBS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.ALL_LIVING;
@@ -413,22 +539,32 @@ public final class MorgueScreen extends Screen {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX, y + leftRow * 34, panelWidth / 2 - 170, 26).build());
+        }).bounds(leftX, y + leftRow * 27, panelWidth / 2 - 170, 26).build());
 
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Rotation", module.isRotate()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Auto Sword", module.isAutoSword()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Auto Sword", module.isAutoSword()),
                 () -> module.setAutoSword(!module.isAutoSword()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Switch Back", module.isSwitchBack()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Switch Back", module.isSwitchBack()),
                 () -> module.setSwitchBack(!module.isSwitchBack()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Shield Break", module.isShieldBreak()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Shield Break", module.isShieldBreak()),
                 () -> module.setShieldBreak(!module.isShieldBreak()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
                 () -> module.setIgnoreWalls(!module.isIgnoreWalls()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("FOV Check", module.isFovCheck()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("FOV Check", module.isFovCheck()),
                 () -> module.setFovCheck(!module.isFovCheck()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Team Check", module.isTeamsCheck()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Team Check", module.isTeamsCheck()),
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Ignore Hurt Time", module.isIgnoreHurtTime()),
+                () -> module.setIgnoreHurtTime(!module.isIgnoreHurtTime()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Vanilla Critical Only", module.isCriticalOnly()),
+                () -> module.setCriticalOnly(!module.isCriticalOnly()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Pause on Throwables", module.isPauseOnThrowables()),
+                () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Attack Sound", module.isAttackSound()),
+                () -> module.setAttackSound(!module.isAttackSound()));
+        addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
+                () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
 
         addBackButton();
     }
@@ -438,7 +574,9 @@ public final class MorgueScreen extends Screen {
         int y = panelY + 108;
         var assessment = dev.morgue.client.ai.TargetIntelligence.getLatestAssessment();
 
-        String activeCombat = MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
+        String activeCombat = MorgueClient.maceHitter().isEnabled() && MorgueClient.killAura().isEnabled()
+                ? "Mace Hitter priority / KillAura fallback"
+                : MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
                 : MorgueClient.killAura().isEnabled() ? "KillAura" : "No combat module active";
         addRenderableWidget(Button.builder(Component.literal("ENGINE: LOCAL TARGET INTELLIGENCE  /  READY"),
                 button -> {}).bounds(x, y, panelWidth - 176, 27).build());
@@ -496,8 +634,19 @@ public final class MorgueScreen extends Screen {
         addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
             module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
         });
+        addSettingButton(leftX, y + 108, "Activation Health: " + format(module.getActivationHealth()),
+                () -> module.setActivationHealth(module.getActivationHealth() <= 0.0F ? 20.0F
+                        : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
+        addSettingButton(rightX, y + 72, toggleLabel("Predict Recent Damage", module.isPredictRecentDamage()),
+                () -> module.setPredictRecentDamage(!module.isPredictRecentDamage()));
+        addSettingButton(rightX, y + 108, toggleLabel("Predict Fall Damage", module.isPredictFallDamage()),
+                () -> module.setPredictFallDamage(!module.isPredictFallDamage()));
+        addSettingButton(rightX, y + 144, toggleLabel("Restore Displaced Offhand", module.isRestoreDisplacedOffhand()),
+                () -> module.setRestoreDisplacedOffhand(!module.isRestoreDisplacedOffhand()));
+        addSettingButton(rightX, y + 180, toggleLabel("Predict Nearby Threats", module.isPredictNearbyThreats()),
+                () -> module.setPredictNearbyThreats(!module.isPredictNearbyThreats()));
 
         addRenderableWidget(Button.builder(Component.literal("AUTO TOTEM STATUS: " + (module.isEnabled() ? "ON" : "OFF")),
                 button -> {
@@ -507,6 +656,256 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
+        addBackButton();
+    }
+
+    private void buildMovementSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addSettingButton(x, y, toggleLabel("Auto Sprint", MorgueClient.sprint().isEnabled()),
+                () -> MorgueClient.setSprintEnabled(!MorgueClient.sprint().isEnabled()));
+        addSettingButton(x, y + 36, toggleLabel("Safe Walk", MorgueClient.safeWalk().isEnabled()),
+                () -> MorgueClient.setSafeWalkEnabled(!MorgueClient.safeWalk().isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Both options use normal client movement state and respect the server's movement rules."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildEnabledModuleList() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "MACE HITTER: " + (MorgueClient.maceHitter().isEnabled() ? "ON" : "OFF"),
+                "KILLAURA: " + (MorgueClient.killAura().isEnabled() ? "ON" : "OFF"),
+                "AUTO TOTEM: " + (MorgueClient.autoTotem().isEnabled() ? "ON" : "OFF"),
+                "SPRINT: " + (MorgueClient.sprint().isEnabled() ? "ON" : "OFF"),
+                "SAFE WALK: " + (MorgueClient.safeWalk().isEnabled() ? "ON" : "OFF"),
+                "INVENTORY HELPER: " + (MorgueClient.inventoryHelper().isEnabled() ? "ON" : "OFF")
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
+        addBackButton();
+    }
+
+    private void buildEnvironmentInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        if (minecraft == null || minecraft.level == null) {
+            addRenderableWidget(Button.builder(Component.literal("ENVIRONMENT: No world loaded."),
+                    button -> {}).bounds(x, y, width, 28).build());
+        } else {
+            addRenderableWidget(Button.builder(Component.literal("RAINING: "
+                    + (minecraft.level.isRaining() ? "YES" : "NO")),
+                    button -> {}).bounds(x, y, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("THUNDER: "
+                    + (minecraft.level.isThundering() ? "YES" : "NO")),
+                    button -> {}).bounds(x, y + 36, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("WORLD GAME TIME: "
+                    + minecraft.level.getGameTime()),
+                    button -> {}).bounds(x, y + 72, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildClientUtilities() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("OPEN RESOURCE PACK MANAGER"), button -> {
+            selectedModule = "Resource Pack Manager";
+            rebuildWidgets();
+        }).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("OPEN KEYBIND SETTINGS"), button -> {
+            selectedModule = "Keybinds";
+            rebuildWidgets();
+        }).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("OPEN CONFIGURATION PROFILES"), button -> {
+            selectedModule = "Profiles";
+            rebuildWidgets();
+        }).bounds(x, y + 72, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("RUN PACKAGE INTEGRITY CHECK"), button -> {
+            dev.morgue.client.security.MorgueIntegrity.verify();
+            selectedModule = "Build Integrity";
+            rebuildWidgets();
+        }).bounds(x, y + 108, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildScreenshotPrivacy() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "SCREENSHOT PRIVACY: STANDARD GAME CAPTURE",
+                "MORGUE DOES NOT HIDE MODULES OR ALTER SCREENSHOTS",
+                "NO SCREEN-SHARE OR STREAMING CONCEALMENT IS ACTIVE",
+                "USE YOUR OPERATING SYSTEM'S NORMAL SCREENSHOT CONTROLS",
+                "LOCAL CLIENT PRIVACY DOES NOT OVERRIDE SERVER MODERATION"
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 34, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildWorldSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("WORLD RULES ARE CONTROLLED BY THE WORLD OWNER OR SERVER."),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MORGUE DOES NOT OVERRIDE SERVER GAME RULES OR DIFFICULTY."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("USE VANILLA WORLD OPTIONS FOR PERMITTED LOCAL SETTINGS."),
+                button -> {}).bounds(x, y + 72, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildAutoEatSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.autoEat();
+        addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
+                () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Hunger Threshold: " + module.getHungerThreshold(),
+                () -> module.setHungerThreshold(module.getHungerThreshold() >= 19
+                        ? 1 : module.getHungerThreshold() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Selects the most nutritious food already in your hotbar."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla item-use input and restores your previous hotbar slot after eating."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildItemUseInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("ITEM USE: VANILLA INPUT ONLY"),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("NO AUTOMATIC FOOD, POTION, OR PROJECTILE USE IS ENABLED."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("THIS PAGE IS RESERVED FOR A FUTURE USER-CONFIGURABLE ITEM-USE MODULE."),
+                button -> {}).bounds(x, y + 72, width, 28).build());
+        addBackButton();
+    }
+
+    private void buildHudEditorInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addSettingButton(x, y, toggleLabel("Module List Overlay",
+                dev.morgue.client.MorgueHud.isModuleListEnabled()),
+                () -> dev.morgue.client.MorgueHud.setModuleListEnabled(
+                        !dev.morgue.client.MorgueHud.isModuleListEnabled()));
+        addSettingButton(x, y + 36, toggleLabel("KillAura Target Info",
+                dev.morgue.client.MorgueHud.isTargetInfoEnabled()),
+                () -> dev.morgue.client.MorgueHud.setTargetInfoEnabled(
+                        !dev.morgue.client.MorgueHud.isTargetInfoEnabled()));
+        addSettingButton(x, y + 72, toggleLabel("Damage Hit Marker",
+                dev.morgue.client.MorgueHud.isHitMarkerEnabled()),
+                () -> dev.morgue.client.MorgueHud.setHitMarkerEnabled(
+                        !dev.morgue.client.MorgueHud.isHitMarkerEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "The marker appears briefly when the selected target's damage cooldown resets."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Overlay positions are fixed to the upper corners; drag-and-drop editing is not implemented."),
+                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildNotificationsSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        addSettingButton(x, y, toggleLabel("Local Chat Notifications",
+                dev.morgue.client.ClientNotifications.isEnabled()),
+                () -> dev.morgue.client.ClientNotifications.setEnabled(
+                        !dev.morgue.client.ClientNotifications.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Notifications are local chat messages for AutoTotem and Inventory Helper actions."),
+                button -> {}).bounds(x, y + 40, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "No notification content is sent to a remote service."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildVisualSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] lines = {
+                "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
+                "PANEL: DEEP NAVY / BLACK",
+                "ACCENT: ICY STEEL BLUE",
+                "TYPOGRAPHY: MATHEMATICAL DOUBLE-STRUCK",
+                "ANIMATION: ENABLED",
+                "THEME EDITOR: CUSTOM COLOR PICKER NOT IMPLEMENTED"
+        };
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
+        addBackButton();
+    }
+
+    private void buildWorldInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        if (minecraft == null || minecraft.player == null || minecraft.level == null) {
+            addRenderableWidget(Button.builder(Component.literal("WORLD STATUS: No world is currently loaded."),
+                    button -> {}).bounds(x, y, width, 28).build());
+        } else {
+            var player = minecraft.player;
+            var position = player.blockPosition();
+            addRenderableWidget(Button.builder(Component.literal("PLAYER POSITION: "
+                    + position.getX() + "  /  " + position.getY() + "  /  " + position.getZ()),
+                    button -> {}).bounds(x, y, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("PRECISE POSITION: "
+                    + String.format(java.util.Locale.ROOT, "%.2f / %.2f / %.2f",
+                    player.getX(), player.getY(), player.getZ())),
+                    button -> {}).bounds(x, y + 36, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("HEALTH: "
+                    + format(player.getHealth()) + "  /  " + format(player.getMaxHealth())
+                    + "    ABSORPTION: " + format(player.getAbsorptionAmount())),
+                    button -> {}).bounds(x, y + 72, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("WORLD TIME: "
+                    + minecraft.level.getGameTime()),
+                    button -> {}).bounds(x, y + 108, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildClientMetadata() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] details = {
+                "CLIENT: MORGUE-CLIENT",
+                "TARGET: MINECRAFT JAVA 26.3",
+                "RUNTIME: JAVA 25  /  FABRIC LOADER 0.20.1+",
+                "INTERFACE: GOTHIC MIDNIGHT BLUE",
+                "NETWORK: NORMAL MINECRAFT / FABRIC CONNECTION",
+                "PRIVACY: NO CUSTOM TELEMETRY OR REMOTE ACCOUNT SERVICE",
+                "NOTE: SERVER MODERATION AND NETWORK INSPECTION STILL APPLY"
+        };
+        for (int i = 0; i < details.length; i++) {
+            String line = details[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
         addBackButton();
     }
 
@@ -599,12 +998,40 @@ public final class MorgueScreen extends Screen {
 
     private void buildProfileSettings() {
         int x = panelX + 150;
-        addRenderableWidget(Button.builder(Component.literal("ACTIVE PROFILE: DEFAULT"),
-                button -> {}).bounds(x, panelY + 116, panelWidth - 176, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("Settings save automatically to config/morgue-client.properties."),
-                button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("Named profile import/export is not implemented yet."),
-                button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 1"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-1")
+                    ? "Saved profile slot 1." : "Could not save profile slot 1.";
+            rebuildWidgets();
+        }).bounds(x, y, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 1"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-1")
+                    ? "Loaded profile slot 1." : "Profile slot 1 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 31, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 2"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-2")
+                    ? "Saved profile slot 2." : "Could not save profile slot 2.";
+            rebuildWidgets();
+        }).bounds(x, y + 62, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 2"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-2")
+                    ? "Loaded profile slot 2." : "Profile slot 2 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 93, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 3"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-3")
+                    ? "Saved profile slot 3." : "Could not save profile slot 3.";
+            rebuildWidgets();
+        }).bounds(x, y + 124, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 3"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-3")
+                    ? "Loaded profile slot 3." : "Profile slot 3 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 155, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal(profileStatus), button -> {})
+                .bounds(x, y + 190, width, 28).build());
         addBackButton();
     }
 
@@ -638,6 +1065,12 @@ public final class MorgueScreen extends Screen {
             case "Mace Hitter" -> MorgueClient.maceHitter().isEnabled();
             case "KillAura" -> MorgueClient.killAura().isEnabled();
             case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
+            case "Sprint" -> MorgueClient.sprint().isEnabled();
+            case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
+            case "Inventory Helper" -> MorgueClient.inventoryHelper().isEnabled();
+            case "Item Use" -> MorgueClient.autoEat().isEnabled();
+            case "Aim Assist" -> MorgueClient.aimAssist().isEnabled();
+            case "Click Assist" -> MorgueClient.clickAssist().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -651,6 +1084,18 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setKillAuraEnabled(enabled);
         } else if ("Auto Totem".equals(module)) {
             MorgueClient.setAutoTotemEnabled(enabled);
+        } else if ("Sprint".equals(module)) {
+            MorgueClient.setSprintEnabled(enabled);
+        } else if ("Safe Walk".equals(module)) {
+            MorgueClient.setSafeWalkEnabled(enabled);
+        } else if ("Inventory Helper".equals(module)) {
+            MorgueClient.setInventoryHelperEnabled(enabled);
+        } else if ("Item Use".equals(module)) {
+            MorgueClient.setAutoEatEnabled(enabled);
+        } else if ("Aim Assist".equals(module)) {
+            MorgueClient.setAimAssistEnabled(enabled);
+        } else if ("Click Assist".equals(module)) {
+            MorgueClient.setClickAssistEnabled(enabled);
         }
         MorgueConfig.save();
     }

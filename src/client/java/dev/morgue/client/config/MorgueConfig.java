@@ -1,9 +1,12 @@
 package dev.morgue.client.config;
 
 import dev.morgue.client.MorgueClient;
+import dev.morgue.client.ClientNotifications;
+import dev.morgue.client.MorgueHud;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
+import dev.morgue.client.modules.movement.SprintModule;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -22,6 +25,40 @@ public final class MorgueConfig {
             .resolve("morgue-client.properties");
 
     private MorgueConfig() {
+    }
+
+    private static Path profileFile(String name) {
+        if (name == null || !name.matches("[A-Za-z0-9_-]{1,32}")) {
+            throw new IllegalArgumentException("Invalid profile name");
+        }
+        return FabricLoader.getInstance().getConfigDir()
+                .resolve("morgue-client").resolve("profiles").resolve(name + ".properties");
+    }
+
+    public static boolean exportProfile(String name) {
+        try {
+            save();
+            Path destination = profileFile(name);
+            Files.createDirectories(destination.getParent());
+            Files.copy(FILE, destination, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException | IllegalArgumentException exception) {
+            System.err.println("[MORGUE] Could not export profile: " + exception.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean importProfile(String name) {
+        try {
+            Path source = profileFile(name);
+            if (!Files.isRegularFile(source)) return false;
+            Files.copy(source, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            load();
+            return true;
+        } catch (IOException | IllegalArgumentException exception) {
+            System.err.println("[MORGUE] Could not import profile: " + exception.getMessage());
+            return false;
+        }
     }
 
     public static void load() {
@@ -67,6 +104,20 @@ public final class MorgueConfig {
             mace.setEntityTypeSelected(id.trim(), true);
         }
 
+        ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
+        MorgueClient.setAimAssistEnabled(bool(values, "combat.aimAssist.enabled", false));
+        MorgueClient.setClickAssistEnabled(bool(values, "combat.clickAssist.enabled", false));
+        MorgueClient.clickAssist().setClicksPerSecond((int) integer(values, "combat.clickAssist.cps", 8));
+        MorgueHud.setModuleListEnabled(bool(values, "hud.moduleList", false));
+        MorgueHud.setTargetInfoEnabled(bool(values, "hud.targetInfo", false));
+        MorgueHud.setHitMarkerEnabled(bool(values, "hud.hitMarker", false));
+        MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
+        MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
+        MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
+        MorgueClient.setAutoEatEnabled(bool(values, "player.autoEat.enabled", false));
+        MorgueClient.autoEat().setHungerThreshold((int) integer(values, "player.autoEat.hungerThreshold", 16));
+        MorgueClient.inventoryHelper().setRefillAt((int) integer(values, "player.inventoryHelper.refillAt", 1));
+
         AutoTotemModule totem = MorgueClient.autoTotem();
         totem.setEnabled(bool(values, "totem.enabled", false));
         totem.setMode(enumValue(values, "totem.mode", AutoTotemModule.Mode.class,
@@ -75,6 +126,11 @@ public final class MorgueConfig {
                 AutoTotemModule.SearchPriority.class, AutoTotemModule.SearchPriority.HOTBAR_FIRST));
         totem.setSwitchDelayMillis(integer(values, "totem.switchDelayMillis", 0));
         totem.setPauseWhileUsingItem(bool(values, "totem.pauseWhileUsingItem", true));
+        totem.setActivationHealth((float) decimal(values, "totem.activationHealth", 20.0));
+        totem.setPredictRecentDamage(bool(values, "totem.predictRecentDamage", true));
+        totem.setPredictFallDamage(bool(values, "totem.predictFallDamage", true));
+        totem.setPredictNearbyThreats(bool(values, "totem.predictNearbyThreats", true));
+        totem.setRestoreDisplacedOffhand(bool(values, "totem.restoreDisplacedOffhand", true));
 
         KillAuraModule aura = MorgueClient.killAura();
         aura.setEnabled(bool(values, "aura.enabled", false));
@@ -88,6 +144,11 @@ public final class MorgueConfig {
         aura.setIgnoreWalls(bool(values, "aura.ignoreWalls", false));
         aura.setTeamsCheck(bool(values, "aura.teamsCheck", true));
         aura.setFovCheck(bool(values, "aura.fovCheck", true));
+        aura.setIgnoreHurtTime(bool(values, "aura.ignoreHurtTime", false));
+        aura.setMinimumAgeTicks((int) integer(values, "aura.minimumAgeTicks", 0));
+        aura.setCriticalOnly(bool(values, "aura.criticalOnly", false));
+        aura.setPauseOnThrowables(bool(values, "aura.pauseOnThrowables", true));
+        aura.setAttackSound(bool(values, "aura.attackSound", false));
         aura.setTargetMode(enumValue(values, "aura.targetMode", KillAuraModule.TargetMode.class,
                 KillAuraModule.TargetMode.PLAYERS));
         for (String id : aura.getSelectedEntityTypes()) {
@@ -100,10 +161,7 @@ public final class MorgueConfig {
         aura.setPriority(enumValue(values, "aura.priority", KillAuraModule.Priority.class,
                 KillAuraModule.Priority.CLOSEST));
 
-        // Both combat modules can be configured, but only one may own attacks at a time.
-        if (mace.isEnabled() && aura.isEnabled()) {
-            aura.setEnabled(false);
-        }
+        // Both modules may remain enabled; CombatActionCoordinator arbitrates attacks.
     }
 
     public static void save() {
@@ -129,12 +187,31 @@ public final class MorgueConfig {
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
+        put(values, "notifications.enabled", ClientNotifications.isEnabled());
+        put(values, "combat.aimAssist.enabled", MorgueClient.aimAssist().isEnabled());
+        put(values, "combat.clickAssist.enabled", MorgueClient.clickAssist().isEnabled());
+        put(values, "combat.clickAssist.cps", MorgueClient.clickAssist().getClicksPerSecond());
+        put(values, "hud.moduleList", MorgueHud.isModuleListEnabled());
+        put(values, "hud.targetInfo", MorgueHud.isTargetInfoEnabled());
+        put(values, "hud.hitMarker", MorgueHud.isHitMarkerEnabled());
+        put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
+        put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
+        put(values, "player.inventoryHelper.enabled", MorgueClient.inventoryHelper().isEnabled());
+        put(values, "player.inventoryHelper.refillAt", MorgueClient.inventoryHelper().getRefillAt());
+        put(values, "player.autoEat.enabled", MorgueClient.autoEat().isEnabled());
+        put(values, "player.autoEat.hungerThreshold", MorgueClient.autoEat().getHungerThreshold());
+
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
         put(values, "totem.mode", totem.getMode());
         put(values, "totem.searchPriority", totem.getSearchPriority());
         put(values, "totem.switchDelayMillis", totem.getSwitchDelayMillis());
         put(values, "totem.pauseWhileUsingItem", totem.isPauseWhileUsingItem());
+        put(values, "totem.activationHealth", totem.getActivationHealth());
+        put(values, "totem.predictRecentDamage", totem.isPredictRecentDamage());
+        put(values, "totem.predictFallDamage", totem.isPredictFallDamage());
+        put(values, "totem.predictNearbyThreats", totem.isPredictNearbyThreats());
+        put(values, "totem.restoreDisplacedOffhand", totem.isRestoreDisplacedOffhand());
 
         KillAuraModule aura = MorgueClient.killAura();
         put(values, "aura.enabled", aura.isEnabled());
@@ -148,6 +225,11 @@ public final class MorgueConfig {
         put(values, "aura.ignoreWalls", aura.isIgnoreWalls());
         put(values, "aura.teamsCheck", aura.isTeamsCheck());
         put(values, "aura.fovCheck", aura.isFovCheck());
+        put(values, "aura.ignoreHurtTime", aura.isIgnoreHurtTime());
+        put(values, "aura.minimumAgeTicks", aura.getMinimumAgeTicks());
+        put(values, "aura.criticalOnly", aura.isCriticalOnly());
+        put(values, "aura.pauseOnThrowables", aura.isPauseOnThrowables());
+        put(values, "aura.attackSound", aura.isAttackSound());
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());

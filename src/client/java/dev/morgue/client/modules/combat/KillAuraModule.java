@@ -1,12 +1,14 @@
 package dev.morgue.client.modules.combat;
 
 import dev.morgue.client.ai.TargetIntelligence;
+import dev.morgue.client.MorgueHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.LinkedHashSet;
@@ -41,6 +43,11 @@ public final class KillAuraModule {
     private boolean ignoreWalls;
     private boolean teamsCheck = true;
     private boolean fovCheck = true;
+    private boolean ignoreHurtTime;
+    private boolean criticalOnly;
+    private boolean pauseOnThrowables = true;
+    private boolean attackSound;
+    private int minimumAgeTicks;
     private double range = 3.2;
     private double fov = 180.0;
     private long attackDelayMillis;
@@ -48,6 +55,8 @@ public final class KillAuraModule {
     private TargetMode targetMode = TargetMode.PLAYERS;
     private Priority priority = Priority.CLOSEST;
     private LivingEntity lastTarget;
+    private LivingEntity observedTarget;
+    private int observedDamageCooldown;
     private final Set<String> selectedEntityTypes = new LinkedHashSet<>(Set.of("minecraft:player"));
     private static final Set<String> KNOWN_ENTITY_TYPES = Set.of(
             "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper", "minecraft:spider",
@@ -73,14 +82,28 @@ public final class KillAuraModule {
             return;
         }
 
-        LivingEntity target = selectTarget(client);
-        lastTarget = target;
-        if (target == null) {
+        if (pauseOnThrowables && (isThrowable(player.getMainHandItem().getItem())
+                || isThrowable(player.getOffhandItem().getItem()))) {
             return;
         }
 
+        LivingEntity target = selectTarget(client);
+        lastTarget = target;
+        if (target == null) {
+            observedTarget = null;
+            observedDamageCooldown = 0;
+            return;
+        }
+        int currentDamageCooldown = target.damageCooldownTime;
+        if (observedTarget == target && currentDamageCooldown > observedDamageCooldown + 1) {
+            MorgueHud.triggerHitMarker();
+        }
+        observedTarget = target;
+        observedDamageCooldown = currentDamageCooldown;
+
         long now = System.currentTimeMillis();
-        if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F) {
+        if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F
+                || (criticalOnly && !canLandVanillaCritical(player))) {
             return;
         }
 
@@ -101,11 +124,17 @@ public final class KillAuraModule {
             }
         }
 
+        if (!CombatActionCoordinator.tryClaim(client)) {
+            // No attack was made, so always undo a temporary weapon selection.
+            if (changedSlot) player.getInventory().setSelectedSlot(originalSlot);
+            return;
+        }
         if (rotate) {
             faceTarget(player, target);
         }
 
         client.gameMode.attack(player, target);
+        if (attackSound) player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.45F, 1.55F);
         player.swing(net.minecraft.world.InteractionHand.MAIN_HAND,
                 player.getMainHandItem().getAttackAnimation(), true);
 
@@ -128,12 +157,27 @@ public final class KillAuraModule {
                 player,
                 candidates,
                 candidate -> isAllowed(candidate)
+                        && (!ignoreHurtTime || candidate.damageCooldownTime <= 10)
+                        && candidate.tickCount >= minimumAgeTicks
                         && (!teamsCheck || !player.isAlliedTo(candidate))
                         && (ignoreWalls || player.hasLineOfSight(candidate))
                         && (!fovCheck || isWithinFov(player, candidate)),
                 toIntelligencePriority(priority),
                 range
         );
+    }
+
+
+    private static boolean isThrowable(Item item) {
+        return item == Items.SNOWBALL || item == Items.EGG || item == Items.ENDER_PEARL
+                || item == Items.FIREWORK_ROCKET || item == Items.SPLASH_POTION
+                || item == Items.LINGERING_POTION;
+    }
+
+    /** Uses vanilla player state only; it does not spoof critical hits. */
+    private static boolean canLandVanillaCritical(Player player) {
+        return !player.onGround() && player.fallDistance > 0.0F
+                && !player.isInWater() && !player.isPassenger() && !player.onClimbable();
     }
 
     private static TargetIntelligence.Priority toIntelligencePriority(Priority value) {
@@ -260,5 +304,15 @@ public final class KillAuraModule {
     }
     public Priority getPriority() { return priority; }
     public void setPriority(Priority value) { priority = value == null ? Priority.CLOSEST : value; }
+    public boolean isIgnoreHurtTime() { return ignoreHurtTime; }
+    public void setIgnoreHurtTime(boolean value) { ignoreHurtTime = value; }
+    public int getMinimumAgeTicks() { return minimumAgeTicks; }
+    public void setMinimumAgeTicks(int value) { minimumAgeTicks = Math.max(0, Math.min(12000, value)); }
+    public boolean isCriticalOnly() { return criticalOnly; }
+    public void setCriticalOnly(boolean value) { criticalOnly = value; }
+    public boolean isAttackSound() { return attackSound; }
+    public void setAttackSound(boolean value) { attackSound = value; }
+    public boolean isPauseOnThrowables() { return pauseOnThrowables; }
+    public void setPauseOnThrowables(boolean value) { pauseOnThrowables = value; }
     public LivingEntity getLastTarget() { return lastTarget; }
 }

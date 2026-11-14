@@ -3,9 +3,15 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
+import dev.morgue.client.modules.combat.AimAssistModule;
+import dev.morgue.client.modules.combat.ClickAssistModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
+import dev.morgue.client.modules.player.InventoryHelperModule;
+import dev.morgue.client.modules.player.AutoEatModule;
+import dev.morgue.client.modules.movement.SprintModule;
+import dev.morgue.client.modules.movement.SafeWalkModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -19,10 +25,17 @@ public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping toggleAutoTotem;
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
+    private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
+    private static final ClickAssistModule CLICK_ASSIST = new ClickAssistModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
+    private static final InventoryHelperModule INVENTORY_HELPER = new InventoryHelperModule();
+    private static final AutoEatModule AUTO_EAT = new AutoEatModule();
+    private static final SprintModule SPRINT = new SprintModule();
+    private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
 
     @Override
     public void onInitializeClient() {
+        MorgueHud.register();
         MorgueIntegrity.verify();
         if (MorgueIntegrity.isActivationAllowed()) {
             MorgueConfig.load();
@@ -73,9 +86,16 @@ public final class MorgueClient implements ClientModInitializer {
                 }
             }
 
-            KILL_AURA.tick(client);
+            // Mace Hitter gets first claim when a falling smash is ready.
             MACE_HITTER.tick(client);
+            KILL_AURA.tick(client);
+            AIM_ASSIST.tick(client);
+            CLICK_ASSIST.tick(client);
             AUTO_TOTEM.tick(client);
+            INVENTORY_HELPER.tick(client);
+            AUTO_EAT.tick(client);
+            SPRINT.tick(client);
+            SAFE_WALK.tick(client);
         });
     }
 
@@ -85,9 +105,6 @@ public final class MorgueClient implements ClientModInitializer {
             return;
         }
         MACE_HITTER.setEnabled(enabled);
-        if (enabled) {
-            KILL_AURA.setEnabled(false);
-        }
     }
 
     public static void setKillAuraEnabled(boolean enabled) {
@@ -96,9 +113,6 @@ public final class MorgueClient implements ClientModInitializer {
             return;
         }
         KILL_AURA.setEnabled(enabled);
-        if (enabled) {
-            MACE_HITTER.setEnabled(false);
-        }
     }
 
     public static void setAutoTotemEnabled(boolean enabled) {
@@ -109,9 +123,69 @@ public final class MorgueClient implements ClientModInitializer {
         AUTO_TOTEM.setEnabled(enabled);
     }
 
+    public static void setSprintEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        SPRINT.setEnabled(enabled);
+    }
+
+    public static SprintModule sprint() { return SPRINT; }
+
+    public static void setInventoryHelperEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        INVENTORY_HELPER.setEnabled(enabled);
+    }
+
+    public static InventoryHelperModule inventoryHelper() { return INVENTORY_HELPER; }
+
+    public static void setAutoEatEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AUTO_EAT.setEnabled(enabled);
+    }
+
+    public static AutoEatModule autoEat() { return AUTO_EAT; }
+
+    public static void setSafeWalkEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        SAFE_WALK.setEnabled(enabled);
+    }
+
+    public static SafeWalkModule safeWalk() { return SAFE_WALK; }
+
     public static KillAuraModule killAura() {
         return KILL_AURA;
     }
+
+    public static void setAimAssistEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AIM_ASSIST.setEnabled(enabled);
+    }
+
+    public static AimAssistModule aimAssist() { return AIM_ASSIST; }
+
+    public static void setClickAssistEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        CLICK_ASSIST.setEnabled(enabled);
+    }
+
+    public static ClickAssistModule clickAssist() { return CLICK_ASSIST; }
 
     public static MaceHitterModule maceHitter() {
         return MACE_HITTER;
