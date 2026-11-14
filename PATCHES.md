@@ -174,3 +174,8 @@ The entries above link representative commits. These additional commits are part
 - Patch 28: [28b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/75c6034c87ac9d60560596d8a7b5c79a8c6ed5a6), [28c](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4f528bf7e48bda3994d0de92f15a6d1702311fa8), [28g](https://github.com/quincey-ys/MORGUE-CLIENT/commit/817013e4c46e86e31fb06ac903a8d07f9b1178c3), [28h](https://github.com/quincey-ys/MORGUE-CLIENT/commit/cc51d66f1c150858fb1823d2993a58888b0d7d7d).
 - Patch 29: [29b](https://github.com/quincey-ys/MORGUE-CLIENT/commit/16fe49cdaa0211c9fba6e26c67127d5d0398e474).
 
+## Patch 31 — Functional HUD overlays
+- [31a — Add optional module-list and target-info HUD overlays](https://github.com/quincey-ys/MORGUE-CLIENT/commit/09aca9de4ae8b53bc7a04f3ae0917dbe64ae229f).
+- [31b — Register the Fabric HUD layer](https://github.com/quincey-ys/MORGUE-CLIENT/commit/2fa548d6b0c959e9e26f29517184600fe8d41182).
+- [31c–31d — Persist and expose overlay controls](https://github.com/quincey-ys/MORGUE-CLIENT/commit/85af45755e96f050cbe7fbb4df44649b383c7de3).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/48d4ae202943ee3e73ad03b996d4567c6fb489f2).
