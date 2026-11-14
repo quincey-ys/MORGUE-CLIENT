@@ -106,3 +106,16 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 ## Patch 20 — World Info and Client Metadata
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f60e9bad3c8e1fb6f0b3e17a14a8fc34f246eadd) — adds live player coordinates, health, absorption, world time, client target version, and privacy-scope screens.
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e5f8d7f4ce7923d296b5904fe0f55e011e4372ab) — updates README with the new screens and remaining prototype list.
+
+## Patch 21 — Safe Walk
+- [21a — Add projected-edge crouch protection](https://github.com/quincey-ys/MORGUE-CLIENT/commit/8e8c666d089fe7289c7346b2cd52d83d48677db6) — checks the projected movement support block and uses the vanilla sneak state; user-held sneak takes precedence.
+- [21b–21d — Register, persist, and expose Safe Walk](https://github.com/quincey-ys/MORGUE-CLIENT/commit/b9e910d3e195a0342e7b3f5f8e8734a405b78a05).
+
+## Patch 22 — Inventory Helper
+- [22a — Add hotbar refill using normal container input](https://github.com/quincey-ys/MORGUE-CLIENT/commit/620c27eec351d890c2eb4423941ad1a9120ee553) — swaps low-count hotbar stacks with matching item-and-component stacks from the main inventory.
+- [22b–22d — Register, persist, and expose Inventory Helper](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9e6592c55e65e2b4b14776d1d571c7cdac3c1583).
+
+## Patch 23 — Serialize automated inventory actions
+- [23a — Add shared inventory action coordinator](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9e59308d6ac09cb156b5971a670dccd86a3f8615).
+- [23b–23c — Give AutoTotem priority and serialize Inventory Helper](https://github.com/quincey-ys/MORGUE-CLIENT/commit/3b317865d0175042a99f3be81dfc9a57dc1e976e).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/59503188655f2b5bbcc5cd4e96fc7f4d33b6b99b).
