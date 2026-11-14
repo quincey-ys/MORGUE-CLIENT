@@ -213,3 +213,9 @@ The entries above link representative commits. These additional commits are part
 
 ## Patch 40 — CI diagnostics
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/03d34bece7ee4acb3c2cfb8182bcd97eabc6fa0d) — enables Gradle stack traces in CI so protected-packaging failures expose their underlying cause.
+
+
+## Patch 42 — Bold, readable ClickGUI typography
+- Replace mathematical double-struck Unicode substitutions with the original text.
+- Use Minecraft's default font with bold styling so labels render cleanly without missing-glyph boxes.
+- Remove obsolete font-description references from the ClickGUI screen.
