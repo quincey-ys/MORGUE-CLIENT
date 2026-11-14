@@ -71,6 +71,7 @@ public final class AutoTotemModule {
 
         // InventoryMenu maps hotbar slots to 36..44 and main inventory to 9..35.
         int menuSlot = inventoryIndex < 9 ? inventoryIndex + 36 : inventoryIndex;
+        if (!InventoryActionCoordinator.tryClaim(client)) return;
         client.gameMode.handleContainerInput(
                 player.inventoryMenu.containerId,
                 menuSlot,
