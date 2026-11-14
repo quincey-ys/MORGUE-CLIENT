@@ -31,6 +31,7 @@ public final class MorgueClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        MorgueHud.register();
         MorgueIntegrity.verify();
         if (MorgueIntegrity.isActivationAllowed()) {
             MorgueConfig.load();
