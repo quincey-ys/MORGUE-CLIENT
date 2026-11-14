@@ -182,7 +182,7 @@ public final class MorgueScreen extends Screen {
         } else if ("World Settings".equals(selectedModule)) {
             buildWorldSettings();
         } else if ("Item Use".equals(selectedModule)) {
-            buildItemUseInfo();
+            buildAutoEatSettings();
         } else if ("HUD Editor".equals(selectedModule)) {
             buildHudEditorInfo();
         } else if ("Mace Hitter".equals(selectedModule)) {
@@ -722,6 +722,24 @@ public final class MorgueScreen extends Screen {
         addBackButton();
     }
 
+    private void buildAutoEatSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.autoEat();
+        addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
+                () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Hunger Threshold: " + module.getHungerThreshold(),
+                () -> module.setHungerThreshold(module.getHungerThreshold() >= 19
+                        ? 1 : module.getHungerThreshold() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Selects the most nutritious food already in your hotbar."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla item-use input and restores your previous hotbar slot after eating."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
     private void buildItemUseInfo() {
         int x = panelX + 150;
         int y = panelY + 112;
@@ -992,6 +1010,7 @@ public final class MorgueScreen extends Screen {
             case "Sprint" -> MorgueClient.sprint().isEnabled();
             case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
             case "Inventory Helper" -> MorgueClient.inventoryHelper().isEnabled();
+            case "Item Use" -> MorgueClient.autoEat().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -1011,6 +1030,8 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setSafeWalkEnabled(enabled);
         } else if ("Inventory Helper".equals(module)) {
             MorgueClient.setInventoryHelperEnabled(enabled);
+        } else if ("Item Use".equals(module)) {
+            MorgueClient.setAutoEatEnabled(enabled);
         }
         MorgueConfig.save();
     }
