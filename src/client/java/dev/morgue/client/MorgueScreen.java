@@ -159,6 +159,8 @@ public final class MorgueScreen extends Screen {
             buildModuleList();
         } else if (entityPage) {
             buildEntitySelector();
+        } else if ("Sprint".equals(selectedModule)) {
+            buildSprintSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -231,6 +233,21 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
                     button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
         }
+    }
+
+    private void buildSprintSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.sprint();
+        addSettingButton(x, y, toggleLabel("Auto Sprint", module.isEnabled()),
+                () -> MorgueClient.setSprintEnabled(!module.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically sprints while horizontal movement is detected."),
+                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses normal player sprint state; it does not alter packets or bypass server rules."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addBackButton();
     }
 
     private void buildMaceHitterSettings() {
@@ -678,6 +695,7 @@ public final class MorgueScreen extends Screen {
             case "Mace Hitter" -> MorgueClient.maceHitter().isEnabled();
             case "KillAura" -> MorgueClient.killAura().isEnabled();
             case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
+            case "Sprint" -> MorgueClient.sprint().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -691,6 +709,8 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setKillAuraEnabled(enabled);
         } else if ("Auto Totem".equals(module)) {
             MorgueClient.setAutoTotemEnabled(enabled);
+        } else if ("Sprint".equals(module)) {
+            MorgueClient.setSprintEnabled(enabled);
         }
         MorgueConfig.save();
     }
