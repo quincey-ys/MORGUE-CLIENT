@@ -410,7 +410,7 @@ public final class MorgueScreen extends Screen {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX, panelY + panelHeight - 76, panelWidth / 2 - 170, 26).build());
+        }).bounds(leftX, y + leftRow * 34, panelWidth / 2 - 170, 26).build());
 
         addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
