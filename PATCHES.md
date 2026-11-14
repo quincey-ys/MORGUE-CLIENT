@@ -57,3 +57,13 @@ All six commits are on `main` already. Use the latest main build for testing; do
 - Commit: [ae8f3869](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ae8f38697fe4d3a9764eb9b1cbf1052edf960aac)
 - File: `src/client/java/dev/morgue/client/modules/combat/MaceHitterModule.java`
 - Skips the client-side vanilla attack-strength cooldown gate when the player is already holding a mace. Mace Hitter's falling-smash conditions and its own Attack Delay setting are preserved. The server still controls whether an attack is accepted and deals damage.
+
+## Patch 11 — Configurable KillAura entity targets
+Implementation is split into ordered commits:
+- [11a — Add CUSTOM targeting and selected entity types](https://github.com/quincey-ys/MORGUE-CLIENT/commit/a16a49dd8d5f170a1cc3609bc008379129cdf51c) — `KillAuraModule.java`
+- [11b — Persist entity selections in config](https://github.com/quincey-ys/MORGUE-CLIENT/commit/febfa6180837c1d835a2881b29d0447c1cbe44d1) — `MorgueConfig.java`
+- [11c — Add entity selector UI](https://github.com/quincey-ys/MORGUE-CLIENT/commit/58104474b2b2a34f2c028c4705be7e2bfc1fbef2) — `MorgueScreen.java`
+- [11d — Align selector layout](https://github.com/quincey-ys/MORGUE-CLIENT/commit/7df424d454f12aa465c9fbaf814b0c2315ea1397) — `MorgueScreen.java`
+- [11e — Keep Other from implicitly selecting players](https://github.com/quincey-ys/MORGUE-CLIENT/commit/0d0795c7cae7d677b7bfe726225b9672784dc28e) — `KillAuraModule.java`
+
+KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses the shared paginated entity picker, persists selected registry IDs under `aura.entityTypes`, and keeps the player checkbox independent from the Other option.
