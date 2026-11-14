@@ -389,19 +389,19 @@ public final class MorgueScreen extends Screen {
         int leftRow = 0;
         int rightRow = 0;
 
-        addSettingButton(leftX, y + leftRow++ * 34, "Range: " + format(module.getRange()) + "  (+0.2)",
+        addSettingButton(leftX, y + leftRow++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
                 () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
-        addSettingButton(leftX, y + leftRow++ * 34, "FOV: " + format(module.getFov()) + "  (+15)",
+        addSettingButton(leftX, y + leftRow++ * 27, "FOV: " + format(module.getFov()) + "  (+15)",
                 () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(leftX, y + leftRow++ * 34, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
+        addSettingButton(leftX, y + leftRow++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
                 () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
-        addSettingButton(leftX, y + leftRow++ * 34, "Priority: " + module.getPriority(),
+        addSettingButton(leftX, y + leftRow++ * 27, "Priority: " + module.getPriority(),
                 () -> module.setPriority(switch (module.getPriority()) {
                     case CLOSEST -> dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH;
                     case LOWEST_HEALTH -> dev.morgue.client.modules.combat.KillAuraModule.Priority.THREAT;
                     case THREAT -> dev.morgue.client.modules.combat.KillAuraModule.Priority.CLOSEST;
                 }));
-        addSettingButton(leftX, y + leftRow++ * 34, "Targets: " + module.getTargetMode(),
+        addSettingButton(leftX, y + leftRow++ * 27, "Targets: " + module.getTargetMode(),
                 () -> module.setTargetMode(switch (module.getTargetMode()) {
                     case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
                     case HOSTILE_MOBS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.ALL_LIVING;
@@ -413,19 +413,19 @@ public final class MorgueScreen extends Screen {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX, y + leftRow * 34, panelWidth / 2 - 170, 26).build());
+        }).bounds(leftX, y + leftRow * 27, panelWidth / 2 - 170, 26).build());
 
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Rotation", module.isRotate()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Auto Sword", module.isAutoSword()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Auto Sword", module.isAutoSword()),
                 () -> module.setAutoSword(!module.isAutoSword()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Switch Back", module.isSwitchBack()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Switch Back", module.isSwitchBack()),
                 () -> module.setSwitchBack(!module.isSwitchBack()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Shield Break", module.isShieldBreak()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Shield Break", module.isShieldBreak()),
                 () -> module.setShieldBreak(!module.isShieldBreak()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Ignore Walls", module.isIgnoreWalls()),
                 () -> module.setIgnoreWalls(!module.isIgnoreWalls()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("FOV Check", module.isFovCheck()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("FOV Check", module.isFovCheck()),
                 () -> module.setFovCheck(!module.isFovCheck()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Team Check", module.isTeamsCheck()),
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
@@ -435,7 +435,7 @@ public final class MorgueScreen extends Screen {
                 () -> module.setCriticalOnly(!module.isCriticalOnly()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Pause on Throwables", module.isPauseOnThrowables()),
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
-        addSettingButton(leftX, y + (leftRow + 1) * 34, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
+        addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
                 () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
 
         addBackButton();
