@@ -978,7 +978,7 @@ public final class MorgueScreen extends Screen {
                 "BUILD TOOLS  /  Gradle, Fabric Loom, ProGuard",
                 "SBOM TOOLING  /  CycloneDX Gradle plugin",
                 "RESEARCH  /  Meteor, LiquidBounce, Wurst",
-                "RESEARCH  /  Baritone, Anomoly, BleachHack",
+                "RESEARCH  /  Baritone, Anomaly, BleachHack",
                 "INDEPENDENT IMPLEMENTATION  /  No source intentionally copied"
         };
         for (int i = 0; i < credits.length; i++) {
