@@ -11,6 +11,8 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, configurable health activation threshold, recent-damage, fall-damage, and nearby-hostile pressure heuristics, and optional restoration of the displaced offhand item after the totem is consumed.
+- **Aim Assist:** visible, smoothed player-only steering while the user holds attack; it yields whenever Mace Hitter or KillAura is enabled.
+- **Click Assist:** repeats the user's held attack input at a fixed configurable CPS against the entity under the crosshair, using vanilla cooldowns and shared combat arbitration.
 - **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, hurt-time and minimum-age filters, vanilla-critical-only option, throwable pause, rotation, auto-sword, shield breaking, switch-back, and optional local attack sound.
 - **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
 - **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
@@ -26,7 +28,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **Inventory Helper:** refills low-count hotbar stacks from matching main-inventory stacks through vanilla container input; AutoTotem has priority if both request an inventory action in the same tick.
 - **Auto Eat:** optionally selects the most nutritious hotbar food at a configurable hunger threshold, uses vanilla item-use input, and restores the previous slot after eating.
 - **Notifications:** optional local chat notices for AutoTotem and Inventory Helper actions; notifications remain on-device.
-- **Profiles:** three local configuration slots with import/export. Safe Walk and Inventory Helper are functional; World Settings, Screenshot Privacy, Client Utilities, and Notifications now have dedicated screens. Custom HUD layout, Aim Assist, Click Assist, Theme editing, and several other entries remain informational or unfinished.
+- **Profiles:** three local configuration slots with import/export. Safe Walk and Inventory Helper are functional; World Settings, Screenshot Privacy, Client Utilities, and Notifications now have dedicated screens. Custom HUD layout, Theme editing, drag-and-drop HUD positioning, and several other entries remain informational or unfinished.
 
 ## Development environment
 
