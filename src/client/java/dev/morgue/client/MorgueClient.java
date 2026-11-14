@@ -86,9 +86,6 @@ public final class MorgueClient implements ClientModInitializer {
             return;
         }
         MACE_HITTER.setEnabled(enabled);
-        if (enabled) {
-            KILL_AURA.setEnabled(false);
-        }
     }
 
     public static void setKillAuraEnabled(boolean enabled) {
