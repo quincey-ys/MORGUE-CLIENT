@@ -42,7 +42,10 @@ public final class MorgueConfig {
             Files.createDirectories(destination.getParent());
             Files.copy(FILE, destination, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             return true;
-        } catch (IOException | IllegalArgumentException exception) {
+        } catch (IOException exception) {
+            System.err.println("[MORGUE] Could not export profile: " + exception.getMessage());
+            return false;
+        } catch (IllegalArgumentException exception) {
             System.err.println("[MORGUE] Could not export profile: " + exception.getMessage());
             return false;
         }
@@ -55,7 +58,10 @@ public final class MorgueConfig {
             Files.copy(source, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             load();
             return true;
-        } catch (IOException | IllegalArgumentException exception) {
+        } catch (IOException exception) {
+            System.err.println("[MORGUE] Could not import profile: " + exception.getMessage());
+            return false;
+        } catch (IllegalArgumentException exception) {
             System.err.println("[MORGUE] Could not import profile: " + exception.getMessage());
             return false;
         }
