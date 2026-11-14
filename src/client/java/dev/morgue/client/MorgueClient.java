@@ -73,8 +73,9 @@ public final class MorgueClient implements ClientModInitializer {
                 }
             }
 
-            KILL_AURA.tick(client);
+            // Mace Hitter gets first claim when a falling smash is ready.
             MACE_HITTER.tick(client);
+            KILL_AURA.tick(client);
             AUTO_TOTEM.tick(client);
         });
     }
