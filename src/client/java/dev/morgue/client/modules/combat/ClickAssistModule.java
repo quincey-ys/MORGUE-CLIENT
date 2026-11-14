@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.EntityHitResult;
 
 /** Repeats the user's held attack input at a fixed CPS, respecting vanilla cooldowns. */
 public final class ClickAssistModule {
@@ -19,8 +18,7 @@ public final class ClickAssistModule {
         Player player = client.player;
         if (player.isSpectator() || player.isDeadOrDying()
                 || player.getAttackStrengthScale(0.5F) < 1.0F) return;
-        if (!(client.hitResult instanceof EntityHitResult hit)
-                || !(hit.getEntity() instanceof LivingEntity target)
+        if (!(client.crosshairPickEntity instanceof LivingEntity target)
                 || !target.isAlive() || target == player || !player.hasLineOfSight(target)) return;
 
         long now = System.currentTimeMillis();
