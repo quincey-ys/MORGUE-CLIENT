@@ -163,9 +163,20 @@ public final class MaceHitterModule {
                         && (!teamsCheck || !player.isAlliedTo(candidate))
                         && (ignoreWalls || player.hasLineOfSight(candidate))
                         && (!fovCheck || isWithinFov(player, candidate)),
-                TargetIntelligence.Priority.valueOf(priority.name()),
+                toIntelligencePriority(priority),
                 range
         );
+    }
+
+    private static TargetIntelligence.Priority toIntelligencePriority(Priority value) {
+        if (value == null) {
+            return TargetIntelligence.Priority.CLOSEST;
+        }
+        return switch (value) {
+            case CLOSEST -> TargetIntelligence.Priority.CLOSEST;
+            case LOWEST_HEALTH -> TargetIntelligence.Priority.LOWEST_HEALTH;
+            case THREAT -> TargetIntelligence.Priority.THREAT;
+        };
     }
 
     private boolean isTargetTypeAllowed(LivingEntity entity) {
