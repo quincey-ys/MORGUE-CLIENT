@@ -95,7 +95,7 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     // Keep these visible in verbose CI logs; no shrinking or optimization is done.
     verbose()
     ignorewarnings()
-    allowaccessmodification()
+    // Keep package visibility and package-relative verifier frames stable.
     keepdirectories('**')
     keepattributes('Exceptions,InnerClasses,Signature,Deprecated,*Annotation*,EnclosingMethod,Record,NestMembers,NestHost,PermittedSubclasses,MethodParameters,StackMapTable')
 
@@ -115,16 +115,40 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
         public static boolean isActivationAllowed();
     }''')
 
-    repackageclasses('morgue.internal')
+    // Obfuscate class/member names but preserve the original package hierarchy.
+    // Repackaging and access rewriting are unnecessary for this client and can
+    // make verifier failures harder to isolate on newer JVM class-file versions.
     adaptresourcefilecontents('fabric.mod.json')
     doFirst { obfuscationMap.get().asFile.parentFile.mkdirs() }
     printmapping(obfuscationMap.get().asFile)
 }
 
+
+
+// Verify every class in the obfuscated JAR with the target JVM verifier before
+// the protected release is packaged. The test class is deliberately compiled
+// separately and loads the JAR in an isolated class loader with the compile
+// dependencies available, without running any client static initializers.
+tasks.register('compileProtectedBytecodeSmokeTest', JavaCompile) {
+    source = files('tools/ProtectedBytecodeSmokeTest.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('verification-runner')
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+
+tasks.register('verifyProtectedBytecode', JavaExec) {
+    dependsOn tasks.named('compileProtectedBytecodeSmokeTest'), tasks.named('obfuscateClientJar')
+    classpath = files(layout.buildDirectory.dir('verification-runner'))
+    mainClass = 'ProtectedBytecodeSmokeTest'
+    jvmArgs '-Xverify:all'
+    args obfuscatedJar.get().asFile.absolutePath, sourceSets.client.compileClasspath.asPath
+}
+
 // Add embedded hashes after obfuscation. All regular JAR entries except this
 // manifest are hashed so the runtime can detect changed, missing, or extra files.
 tasks.register('packageProtectedRelease') {
-    dependsOn tasks.named('obfuscateClientJar'), tasks.named('cyclonedxBom')
+    dependsOn tasks.named('obfuscateClientJar'), tasks.named('verifyProtectedBytecode'), tasks.named('cyclonedxBom')
 
     doLast {
         def inputJar = obfuscatedJar.get().asFile
