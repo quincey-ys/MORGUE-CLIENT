@@ -52,3 +52,8 @@ All six commits are on `main` already. Use the latest main build for testing; do
 - Commit: [5d9ab099](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5d9ab099f04068fe0b53bac4abf8724a9fb2e7a3)
 - File: `src/client/java/dev/morgue/client/MorgueScreen.java`
 - Converts Latin letters and digits in rendered ClickGUI labels to the mathematical double-struck Unicode alphabet shown in the user's example. Uses Minecraft's default Unicode-capable font provider for those glyphs so the Oxanium TTF does not replace them with missing-glyph boxes.
+
+## Patch 10 — Do not block direct mace-in-hand attacks on vanilla cooldown
+- Commit: [ae8f3869](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ae8f38697fe4d3a9764eb9b1cbf1052edf960aac)
+- File: `src/client/java/dev/morgue/client/modules/combat/MaceHitterModule.java`
+- Skips the client-side vanilla attack-strength cooldown gate when the player is already holding a mace. Mace Hitter's falling-smash conditions and its own Attack Delay setting are preserved. The server still controls whether an attack is accepted and deals damage.
