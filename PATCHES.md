@@ -151,3 +151,5 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [29a — Add optional local strong-attack sound](https://github.com/quincey-ys/MORGUE-CLIENT/commit/eeddee92ca3e198379624950ea8d154ded7163b6).
 - [29b–29c — Persist and expose the sound option](https://github.com/quincey-ys/MORGUE-CLIENT/commit/7c78d57208508771215e5f8ee8a6c8890a5a36d0).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dd937dae03b85d883011f649acb123f2c8a25172).
+
+- [28g — Correct the 26.3 FoodProperties package](https://github.com/quincey-ys/MORGUE-CLIENT/commit/817013e4c46e86e31fb06ac903a8d07f9b1178c3).
