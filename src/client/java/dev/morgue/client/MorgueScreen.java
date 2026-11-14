@@ -175,7 +175,6 @@ public final class MorgueScreen extends Screen {
             buildVisualSettings();
         } else if ("Notifications".equals(selectedModule)) {
             buildNotificationsSettings();
-        }
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
