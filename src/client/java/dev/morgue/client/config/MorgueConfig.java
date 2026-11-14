@@ -141,6 +141,7 @@ public final class MorgueConfig {
         aura.setMinimumAgeTicks((int) integer(values, "aura.minimumAgeTicks", 0));
         aura.setCriticalOnly(bool(values, "aura.criticalOnly", false));
         aura.setPauseOnThrowables(bool(values, "aura.pauseOnThrowables", true));
+        aura.setAttackSound(bool(values, "aura.attackSound", false));
         aura.setTargetMode(enumValue(values, "aura.targetMode", KillAuraModule.TargetMode.class,
                 KillAuraModule.TargetMode.PLAYERS));
         for (String id : aura.getSelectedEntityTypes()) {
@@ -215,6 +216,7 @@ public final class MorgueConfig {
         put(values, "aura.minimumAgeTicks", aura.getMinimumAgeTicks());
         put(values, "aura.criticalOnly", aura.isCriticalOnly());
         put(values, "aura.pauseOnThrowables", aura.isPauseOnThrowables());
+        put(values, "aura.attackSound", aura.isAttackSound());
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
