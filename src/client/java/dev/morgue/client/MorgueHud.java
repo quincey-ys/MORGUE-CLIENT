@@ -38,7 +38,9 @@ public final class MorgueHud {
                     "SPRINT: " + state(MorgueClient.sprint().isEnabled()),
                     "SAFE WALK: " + state(MorgueClient.safeWalk().isEnabled()),
                     "REFILL: " + state(MorgueClient.inventoryHelper().isEnabled()),
-                    "AUTO EAT: " + state(MorgueClient.autoEat().isEnabled())
+                    "AUTO EAT: " + state(MorgueClient.autoEat().isEnabled()),
+                    "AIM ASSIST: " + state(MorgueClient.aimAssist().isEnabled()),
+                    "CLICK ASSIST: " + state(MorgueClient.clickAssist().isEnabled())
             };
             int height = lines.length * 12 + 8;
             graphics.fill(left, top, left + 124, top + height, 0xB8050914);
