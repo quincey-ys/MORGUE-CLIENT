@@ -104,6 +104,8 @@ public final class MorgueConfig {
 
         MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
         MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
+        MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
+        MorgueClient.inventoryHelper().setRefillAt((int) integer(values, "player.inventoryHelper.refillAt", 1));
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         totem.setEnabled(bool(values, "totem.enabled", false));
@@ -171,6 +173,8 @@ public final class MorgueConfig {
 
         put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
         put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
+        put(values, "player.inventoryHelper.enabled", MorgueClient.inventoryHelper().isEnabled());
+        put(values, "player.inventoryHelper.refillAt", MorgueClient.inventoryHelper().getRefillAt());
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
