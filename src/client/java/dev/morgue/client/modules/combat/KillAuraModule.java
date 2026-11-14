@@ -142,7 +142,7 @@ public final class KillAuraModule {
                 player,
                 candidates,
                 candidate -> isAllowed(candidate)
-                        && (!ignoreHurtTime || candidate.getHurtTime() == 0)
+                        && (!ignoreHurtTime || candidate.damageCooldownTime <= 10)
                         && candidate.tickCount >= minimumAgeTicks
                         && (!teamsCheck || !player.isAlliedTo(candidate))
                         && (ignoreWalls || player.hasLineOfSight(candidate))
