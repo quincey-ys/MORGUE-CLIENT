@@ -146,3 +146,8 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [28a — Add Auto Eat using food data components and vanilla item-use input](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ead4af1ae580d4a6f580eea1b727b565934e7144).
 - [28b–28d — Register, persist, and expose Auto Eat settings](https://github.com/quincey-ys/MORGUE-CLIENT/commit/50697c2090a29d94bc0840d07b5af64958c91de4).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/6e4f73bb4e1375be84dff279f5f94b3a0dd5dfb7).
+
+## Patch 29 — KillAura attack sound
+- [29a — Add optional local strong-attack sound](https://github.com/quincey-ys/MORGUE-CLIENT/commit/eeddee92ca3e198379624950ea8d154ded7163b6).
+- [29b–29c — Persist and expose the sound option](https://github.com/quincey-ys/MORGUE-CLIENT/commit/7c78d57208508771215e5f8ee8a6c8890a5a36d0).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dd937dae03b85d883011f649acb123f2c8a25172).
