@@ -107,6 +107,7 @@ public final class MorgueConfig {
         ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
         MorgueHud.setModuleListEnabled(bool(values, "hud.moduleList", false));
         MorgueHud.setTargetInfoEnabled(bool(values, "hud.targetInfo", false));
+        MorgueHud.setHitMarkerEnabled(bool(values, "hud.hitMarker", false));
         MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
         MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
         MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
@@ -186,6 +187,7 @@ public final class MorgueConfig {
         put(values, "notifications.enabled", ClientNotifications.isEnabled());
         put(values, "hud.moduleList", MorgueHud.isModuleListEnabled());
         put(values, "hud.targetInfo", MorgueHud.isTargetInfoEnabled());
+        put(values, "hud.hitMarker", MorgueHud.isHitMarkerEnabled());
         put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
         put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
         put(values, "player.inventoryHelper.enabled", MorgueClient.inventoryHelper().isEnabled());
