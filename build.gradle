@@ -102,6 +102,10 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     // Fabric loads this class by its name from fabric.mod.json.
     keep('public class dev.morgue.client.MorgueClient { public <init>(); public void onInitializeClient(); }')
 
+    // Mixin loads classes by the names stored in morgue.mixins.json.
+    // Preserve this class and its callback through ProGuard obfuscation.
+    keep('public class dev.morgue.client.mixin.InputConstantsMixin { *; }')
+
     // Enum.valueOf(Class, String) checks the JVM ACC_ENUM flag. Keep enum
     // classes and their constants intact through name obfuscation.
     keep('enum dev.morgue.client.** { *; }')
