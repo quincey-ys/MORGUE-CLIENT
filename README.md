@@ -7,11 +7,11 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 ## Current implementation
 
 - Independent Fabric client with no AUTISM Client runtime dependency.
-- Dark charcoal ClickGUI with white typography and restrained red accents.
+- Gothic midnight-blue and black ClickGUI with mathematical double-struck typography, steel-blue borders, icy-blue accents, animated controls, and a scrollable module list.
 - Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, and pause-while-using-item option.
-- **KillAura:** independent MORGUE implementation with player/hostile/all-living target modes, range/FOV, target priority, rotation, auto-sword, shield breaking, and switch-back settings.
+- **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, rotation, auto-sword, shield breaking, and switch-back settings.
 - **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
 - **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
 - Mace Hitter and KillAura are mutually exclusive to avoid competing attack loops.
@@ -70,6 +70,18 @@ MORGUE protects its distributed build and makes package changes visible; these c
 - MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to Minecraft, Fabric Loader, the server, and installed dependencies.
 
 GitHub artifact attestations are conditionally enabled only for public repositories. This repository is currently private; GitHub's artifact-attestation service requires an Enterprise Cloud plan for private/internal repositories.
+
+
+## Credits and acknowledgements
+
+- **Project lead and maintainer:** `quincey-ys` — project direction, feature requirements, testing feedback, and release decisions.
+- **AI-assisted development:** **OpenAI ChatGPT** — assisted with planning, code drafting, debugging, technical explanations, and interface iteration. This is an acknowledgement of AI assistance, not a claim that the model is the project owner or sole author.
+- **Minecraft:** Minecraft Java Edition is developed by Mojang Studios, part of Microsoft. MORGUE is an independent, unofficial project and is not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
+- **Mod platform:** Fabric Loader and Fabric API are maintained by the Fabric community / FabricMC.
+- **Build and protection tooling:** Gradle, Fabric Loom, and ProGuard (Guardsquare).
+- **Software bill of materials:** CycloneDX Gradle plugin and the CycloneDX project.
+
+The research projects listed in [References and inspiration](#references-and-inspiration) are credited separately as research references only; they are not presented as MORGUE contributors or runtime dependencies. Third-party dependency authors and their license terms remain applicable to the corresponding components.
 
 ## Source and licensing
 
