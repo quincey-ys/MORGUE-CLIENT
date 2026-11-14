@@ -167,6 +167,10 @@ public final class MorgueScreen extends Screen {
             buildAutoTotemSettings();
         } else if ("KillAura".equals(selectedModule)) {
             buildKillAuraSettings();
+        } else if ("World Info".equals(selectedModule)) {
+            buildWorldInfo();
+        } else if ("Client Metadata".equals(selectedModule)) {
+            buildClientMetadata();
         } else if ("AI Brain".equals(selectedModule)) {
             buildAiBrainSettings();
         } else if ("Credits".equals(selectedModule)) {
@@ -208,7 +212,8 @@ public final class MorgueScreen extends Screen {
             String module = filtered.get(i);
             int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
-                    || "Credits".equals(module);
+                    || "Credits".equals(module) || "World Info".equals(module)
+                    || "Client Metadata".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
                     button -> {
@@ -536,6 +541,55 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
 
+        addBackButton();
+    }
+
+    private void buildWorldInfo() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        if (minecraft == null || minecraft.player == null || minecraft.level == null) {
+            addRenderableWidget(Button.builder(Component.literal("WORLD STATUS: No world is currently loaded."),
+                    button -> {}).bounds(x, y, width, 28).build());
+        } else {
+            var player = minecraft.player;
+            var position = player.blockPosition();
+            addRenderableWidget(Button.builder(Component.literal("PLAYER POSITION: "
+                    + position.getX() + "  /  " + position.getY() + "  /  " + position.getZ()),
+                    button -> {}).bounds(x, y, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("PRECISE POSITION: "
+                    + String.format(java.util.Locale.ROOT, "%.2f / %.2f / %.2f",
+                    player.getX(), player.getY(), player.getZ())),
+                    button -> {}).bounds(x, y + 36, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("HEALTH: "
+                    + format(player.getHealth()) + "  /  " + format(player.getMaxHealth())
+                    + "    ABSORPTION: " + format(player.getAbsorptionAmount())),
+                    button -> {}).bounds(x, y + 72, width, 28).build());
+            addRenderableWidget(Button.builder(Component.literal("WORLD TIME: "
+                    + minecraft.level.getDayTime()),
+                    button -> {}).bounds(x, y + 108, width, 28).build());
+        }
+        addBackButton();
+    }
+
+    private void buildClientMetadata() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        String[] details = {
+                "CLIENT: MORGUE-CLIENT",
+                "TARGET: MINECRAFT JAVA 26.3",
+                "RUNTIME: JAVA 25  /  FABRIC LOADER 0.20.1+",
+                "INTERFACE: GOTHIC MIDNIGHT BLUE",
+                "NETWORK: NORMAL MINECRAFT / FABRIC CONNECTION",
+                "PRIVACY: NO CUSTOM TELEMETRY OR REMOTE ACCOUNT SERVICE",
+                "NOTE: SERVER MODERATION AND NETWORK INSPECTION STILL APPLY"
+        };
+        for (int i = 0; i < details.length; i++) {
+            String line = details[i];
+            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
+                    .bounds(x, y + i * 32, width, 27).build());
+        }
         addBackButton();
     }
 
