@@ -32,6 +32,7 @@ public final class AutoTotemModule {
     private long nextAttemptAt;
     private long pendingUntil;
     private boolean pauseWhileUsingItem = true;
+    private float activationHealth = 6.0F;
 
     public void tick(Minecraft client) {
         if (!enabled || client == null || client.player == null || client.level == null
@@ -44,6 +45,11 @@ public final class AutoTotemModule {
             return;
         }
         if (pauseWhileUsingItem && player.isUsingItem()) {
+            return;
+        }
+
+        float effectiveHealth = player.getHealth() + player.getAbsorptionAmount();
+        if (activationHealth > 0.0F && effectiveHealth > activationHealth) {
             return;
         }
 
@@ -131,6 +137,10 @@ public final class AutoTotemModule {
     public long getSwitchDelayMillis() { return switchDelayMillis; }
     public void setSwitchDelayMillis(long delay) {
         this.switchDelayMillis = Math.max(0L, Math.min(1000L, delay));
+    }
+    public float getActivationHealth() { return activationHealth; }
+    public void setActivationHealth(float health) {
+        activationHealth = Math.max(0.0F, Math.min(20.0F, health));
     }
     public boolean isPauseWhileUsingItem() { return pauseWhileUsingItem; }
     public void setPauseWhileUsingItem(boolean pause) { this.pauseWhileUsingItem = pause; }
