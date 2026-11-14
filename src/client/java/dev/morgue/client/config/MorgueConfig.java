@@ -103,6 +103,7 @@ public final class MorgueConfig {
         }
 
         MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
+        MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         totem.setEnabled(bool(values, "totem.enabled", false));
@@ -169,6 +170,7 @@ public final class MorgueConfig {
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
         put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
+        put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
