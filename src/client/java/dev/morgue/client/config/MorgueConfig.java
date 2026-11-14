@@ -1,6 +1,7 @@
 package dev.morgue.client.config;
 
 import dev.morgue.client.MorgueClient;
+import dev.morgue.client.ClientNotifications;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
@@ -102,6 +103,7 @@ public final class MorgueConfig {
             mace.setEntityTypeSelected(id.trim(), true);
         }
 
+        ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
         MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
         MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
         MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
@@ -171,6 +173,7 @@ public final class MorgueConfig {
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
+        put(values, "notifications.enabled", ClientNotifications.isEnabled());
         put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
         put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
         put(values, "player.inventoryHelper.enabled", MorgueClient.inventoryHelper().isEnabled());
