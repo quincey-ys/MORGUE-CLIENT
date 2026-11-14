@@ -76,3 +76,21 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 ## Patch 13 — Project and development credits
 - [13a — Add an in-client Credits page](https://github.com/quincey-ys/MORGUE-CLIENT/commit/2ac1f3c2c72806713a5c145243d0a79db515aa18) — `MorgueScreen.java`. Adds Credits under Misc, with project lead, AI-assisted development acknowledgement, Minecraft/Fabric attribution, build tooling, SBOM tooling, and research-reference acknowledgements.
 - [13b — Add README credits and acknowledgements](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5e01e8bcb532e4d1d615e4bba0610531c5049bf8) — `README.md`. Documents project ownership, ChatGPT development assistance, platform/tooling credits, and Minecraft non-affiliation.
+
+## Patch 14 — Shared combat action coordination
+- [14a — Add one-action-per-tick coordinator](https://github.com/quincey-ys/MORGUE-CLIENT/commit/1d6a6d2cdcc05256edfea13cf91e57dbcbf10db8) — new `CombatActionCoordinator.java`.
+- [14b–14c — Route Mace Hitter attacks through the coordinator](https://github.com/quincey-ys/MORGUE-CLIENT/commit/43e38f3343cb48424d23401d9330244f594fc740) — shield stun and falling smash share the action claim.
+- [14d–14f — Evaluate Mace Hitter before KillAura and allow both to stay enabled](https://github.com/quincey-ys/MORGUE-CLIENT/commit/7290cd3b8b76f55c2f98f104fcab79d4a7297e81) — KillAura can act when Mace Hitter has no eligible attack.
+- [14g — Persist both enabled states](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9a71667af52accbcd57dab78851ad65e311aa2ee) — removes the old startup mutual-exclusion rule.
+
+## Patch 15 — AutoTotem health activation
+- [15a — Add configurable effective-health threshold](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ac87e283c86325d52a479fa8aede3e2b8d6c9240) — threshold includes absorption hearts; setting 20 keeps the previous always-active behavior.
+- [15b–15d — Persist the threshold and preserve the default](https://github.com/quincey-ys/MORGUE-CLIENT/commit/31a768458aea41c144a764ae8363e15a66868812).
+
+## Patch 16 — Expanded KillAura controls
+- [16a — Add hurt-time filter, minimum entity age, vanilla-critical-only gate, throwable pause, and shared attack arbitration](https://github.com/quincey-ys/MORGUE-CLIENT/commit/6ea9af21ace84961f32d991cc725770bbb3c308b).
+- [16b — Persist the new KillAura settings](https://github.com/quincey-ys/MORGUE-CLIENT/commit/01226fbaebe3ac4db0c36e50f5b49e1537292965).
+- [16c–16d — Expose the settings in ClickGUI and correct row layout](https://github.com/quincey-ys/MORGUE-CLIENT/commit/2363c4f44c5614d0b88aee3a1846c5c1f3e655ed).
+
+## Patch 17 — Update feature and research documentation
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/d1f1789f3bf1d6d58f05e247d1ae57a466624b7b) — documents shared combat arbitration, new settings, remaining prototype screens, and AUTISM Client as a GPL-3.0 research reference only.
