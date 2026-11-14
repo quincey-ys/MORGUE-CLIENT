@@ -90,6 +90,13 @@ public final class MorgueConfig {
         aura.setFovCheck(bool(values, "aura.fovCheck", true));
         aura.setTargetMode(enumValue(values, "aura.targetMode", KillAuraModule.TargetMode.class,
                 KillAuraModule.TargetMode.PLAYERS));
+        for (String id : aura.getSelectedEntityTypes()) {
+            aura.setEntityTypeSelected(id, false);
+        }
+        String auraSelectedTypes = values.getProperty("aura.entityTypes", "minecraft:player");
+        for (String id : auraSelectedTypes.split(",")) {
+            aura.setEntityTypeSelected(id.trim(), true);
+        }
         aura.setPriority(enumValue(values, "aura.priority", KillAuraModule.Priority.class,
                 KillAuraModule.Priority.CLOSEST));
 
@@ -142,6 +149,7 @@ public final class MorgueConfig {
         put(values, "aura.teamsCheck", aura.isTeamsCheck());
         put(values, "aura.fovCheck", aura.isFovCheck());
         put(values, "aura.targetMode", aura.getTargetMode());
+        put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
 
         try {
