@@ -1,6 +1,7 @@
 package dev.morgue.client.modules.combat;
 
 import dev.morgue.client.ai.TargetIntelligence;
+import dev.morgue.client.MorgueHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
@@ -54,6 +55,8 @@ public final class KillAuraModule {
     private TargetMode targetMode = TargetMode.PLAYERS;
     private Priority priority = Priority.CLOSEST;
     private LivingEntity lastTarget;
+    private LivingEntity observedTarget;
+    private int observedDamageCooldown;
     private final Set<String> selectedEntityTypes = new LinkedHashSet<>(Set.of("minecraft:player"));
     private static final Set<String> KNOWN_ENTITY_TYPES = Set.of(
             "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper", "minecraft:spider",
@@ -87,8 +90,16 @@ public final class KillAuraModule {
         LivingEntity target = selectTarget(client);
         lastTarget = target;
         if (target == null) {
+            observedTarget = null;
+            observedDamageCooldown = 0;
             return;
         }
+        int currentDamageCooldown = target.damageCooldownTime;
+        if (observedTarget == target && currentDamageCooldown > observedDamageCooldown + 1) {
+            MorgueHud.triggerHitMarker();
+        }
+        observedTarget = target;
+        observedDamageCooldown = currentDamageCooldown;
 
         long now = System.currentTimeMillis();
         if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F
