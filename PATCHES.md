@@ -138,3 +138,6 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [27a — Add recent-damage and fall-damage health estimates plus displaced-offhand restoration](https://github.com/quincey-ys/MORGUE-CLIENT/commit/659b5c532177d5c2c90a1ae8d0ad9be2edef987b).
 - [27b–27c — Persist and expose the new AutoTotem options](https://github.com/quincey-ys/MORGUE-CLIENT/commit/1de340f8e5aba65a7041f21198eb137712ae70b9).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/52caa7ee929bd92de88141a13d80276b04160eca).
+
+- [27f–27h — Add, persist, and expose nearby-hostile pressure heuristic](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dbcf3df4455ac3326bffd8f46dd257cfd3fb340a).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/6dca4d2dbe245abf046478e4efa260c04a433424).
