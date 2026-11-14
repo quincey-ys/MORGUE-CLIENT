@@ -26,6 +26,16 @@ jobs:
           gradle-version: '9.8.0'
       - name: Build protected mod and SBOM
         run: gradle build --stacktrace
+      - name: Upload ProGuard diagnostics (including failed verification)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: MORGUE-CLIENT-proguard-diagnostics
+          if-no-files-found: warn
+          path: |
+            build/obfuscated/*.jar
+            build/reports/morgue/proguard-mapping.txt
+
       - name: Verify protected release package
         shell: bash
         run: |
