@@ -75,7 +75,7 @@ public final class MorgueConfig {
                 AutoTotemModule.SearchPriority.class, AutoTotemModule.SearchPriority.HOTBAR_FIRST));
         totem.setSwitchDelayMillis(integer(values, "totem.switchDelayMillis", 0));
         totem.setPauseWhileUsingItem(bool(values, "totem.pauseWhileUsingItem", true));
-        totem.setActivationHealth((float) decimal(values, "totem.activationHealth", 6.0));
+        totem.setActivationHealth((float) decimal(values, "totem.activationHealth", 20.0));
 
         KillAuraModule aura = MorgueClient.killAura();
         aura.setEnabled(bool(values, "aura.enabled", false));
