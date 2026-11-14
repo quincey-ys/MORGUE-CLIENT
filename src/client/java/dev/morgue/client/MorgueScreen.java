@@ -592,6 +592,12 @@ public final class MorgueScreen extends Screen {
                         : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
+        addSettingButton(rightX, y + 72, toggleLabel("Predict Recent Damage", module.isPredictRecentDamage()),
+                () -> module.setPredictRecentDamage(!module.isPredictRecentDamage()));
+        addSettingButton(rightX, y + 108, toggleLabel("Predict Fall Damage", module.isPredictFallDamage()),
+                () -> module.setPredictFallDamage(!module.isPredictFallDamage()));
+        addSettingButton(rightX, y + 144, toggleLabel("Restore Displaced Offhand", module.isRestoreDisplacedOffhand()),
+                () -> module.setRestoreDisplacedOffhand(!module.isRestoreDisplacedOffhand()));
 
         addRenderableWidget(Button.builder(Component.literal("AUTO TOTEM STATUS: " + (module.isEnabled() ? "ON" : "OFF")),
                 button -> {
