@@ -194,7 +194,7 @@ public final class MorgueScreen extends Screen {
                 .toList();
 
         moduleTotalCount = filtered.size();
-        moduleVisibleCount = Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1);
+        moduleVisibleCount = Math.min(4, Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1));
         int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
         moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
 
