@@ -18,11 +18,12 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping openClickGui;
-    private static KeyMapping toggleMaceHitter;
-    private static KeyMapping toggleKillAura;
-    private static KeyMapping toggleAutoTotem;
+    private static final Map<String, KeyMapping> MODULE_KEYBINDS = new LinkedHashMap<>();
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
@@ -52,29 +53,22 @@ public final class MorgueClient implements ClientModInitializer {
                 InputConstants.KEY_RSHIFT,
                 category
         ));
-        toggleMaceHitter = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.morgue.toggle_mace_hitter", InputConstants.Type.KEYBOARD, InputConstants.KEY_M, category
-        ));
-        toggleKillAura = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.morgue.toggle_kill_aura", InputConstants.Type.KEYBOARD, InputConstants.KEY_K, category
-        ));
-        toggleAutoTotem = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.morgue.toggle_auto_totem", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, category
-        ));
+        registerModuleKeybind("Mace Hitter", "mace_hitter", InputConstants.KEY_M, category);
+        registerModuleKeybind("KillAura", "kill_aura", InputConstants.KEY_K, category);
+        registerModuleKeybind("Auto Totem", "auto_totem", InputConstants.KEY_V, category);
+        registerModuleKeybind("Aim Assist", "aim_assist", -1, category);
+        registerModuleKeybind("Click Assist", "click_assist", -1, category);
+        registerModuleKeybind("Sprint", "sprint", -1, category);
+        registerModuleKeybind("Safe Walk", "safe_walk", -1, category);
+        registerModuleKeybind("Inventory Helper", "inventory_helper", -1, category);
+        registerModuleKeybind("Item Use", "item_use", -1, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
-                while (toggleMaceHitter.consumeClick()) {
-                    setMaceHitterEnabled(!MACE_HITTER.isEnabled());
-                    MorgueConfig.save();
-                }
-                while (toggleKillAura.consumeClick()) {
-                    setKillAuraEnabled(!KILL_AURA.isEnabled());
-                    MorgueConfig.save();
-                }
-                while (toggleAutoTotem.consumeClick()) {
-                    setAutoTotemEnabled(!AUTO_TOTEM.isEnabled());
-                    MorgueConfig.save();
+                for (Map.Entry<String, KeyMapping> entry : MODULE_KEYBINDS.entrySet()) {
+                    while (entry.getValue().consumeClick()) {
+                        toggleModule(entry.getKey());
+                    }
                 }
             }
 
@@ -97,6 +91,69 @@ public final class MorgueClient implements ClientModInitializer {
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
         });
+    }
+
+    private static void registerModuleKeybind(String module, String id, int defaultKey,
+                                               KeyMapping.Category category) {
+        KeyMapping mapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.morgue.module_" + id,
+                InputConstants.Type.KEYBOARD,
+                defaultKey,
+                category
+        ));
+        MODULE_KEYBINDS.put(module, mapping);
+    }
+
+    public static KeyMapping moduleKeybind(String module) {
+        return MODULE_KEYBINDS.get(module);
+    }
+
+    public static boolean isModuleKeybindSupported(String module) {
+        return MODULE_KEYBINDS.containsKey(module);
+    }
+
+    public static void setModuleKeybind(String module, InputConstants.Key key) {
+        KeyMapping mapping = MODULE_KEYBINDS.get(module);
+        if (mapping != null && key != null) {
+            mapping.setKey(key);
+        }
+    }
+
+    public static boolean isModuleEnabled(String module) {
+        return switch (module) {
+            case "Mace Hitter" -> MACE_HITTER.isEnabled();
+            case "KillAura" -> KILL_AURA.isEnabled();
+            case "Auto Totem" -> AUTO_TOTEM.isEnabled();
+            case "Aim Assist" -> AIM_ASSIST.isEnabled();
+            case "Click Assist" -> CLICK_ASSIST.isEnabled();
+            case "Sprint" -> SPRINT.isEnabled();
+            case "Safe Walk" -> SAFE_WALK.isEnabled();
+            case "Inventory Helper" -> INVENTORY_HELPER.isEnabled();
+            case "Item Use" -> AUTO_EAT.isEnabled();
+            default -> false;
+        };
+    }
+
+    public static void setModuleEnabled(String module, boolean enabled) {
+        switch (module) {
+            case "Mace Hitter" -> setMaceHitterEnabled(enabled);
+            case "KillAura" -> setKillAuraEnabled(enabled);
+            case "Auto Totem" -> setAutoTotemEnabled(enabled);
+            case "Aim Assist" -> setAimAssistEnabled(enabled);
+            case "Click Assist" -> setClickAssistEnabled(enabled);
+            case "Sprint" -> setSprintEnabled(enabled);
+            case "Safe Walk" -> setSafeWalkEnabled(enabled);
+            case "Inventory Helper" -> setInventoryHelperEnabled(enabled);
+            case "Item Use" -> setAutoEatEnabled(enabled);
+            default -> {
+                return;
+            }
+        }
+        MorgueConfig.save();
+    }
+
+    private static void toggleModule(String module) {
+        setModuleEnabled(module, !isModuleEnabled(module));
     }
 
     public static void setMaceHitterEnabled(boolean enabled) {
