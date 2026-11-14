@@ -148,15 +148,17 @@ public final class KillAuraModule {
     }
 
     private boolean isAllowed(LivingEntity entity) {
+        if (entity instanceof Player) {
+            return targetMode == TargetMode.CUSTOM
+                    ? selectedEntityTypes.contains("minecraft:player")
+                    : targetMode != TargetMode.HOSTILE_MOBS;
+        }
         if (targetMode == TargetMode.CUSTOM) {
             String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
             if (selectedEntityTypes.contains(id)) {
                 return true;
             }
             return selectedEntityTypes.contains("morgue:other") && !KNOWN_ENTITY_TYPES.contains(id);
-        }
-        if (entity instanceof Player) {
-            return targetMode != TargetMode.HOSTILE_MOBS;
         }
         return switch (targetMode) {
             case PLAYERS -> false;
