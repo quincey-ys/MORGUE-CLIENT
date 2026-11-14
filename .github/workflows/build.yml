@@ -26,6 +26,16 @@ jobs:
           gradle-version: '9.8.0'
       - name: Build protected mod and SBOM
         run: gradle build --stacktrace
+      - name: Upload ProGuard diagnostics (including failed verification)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: MORGUE-CLIENT-proguard-diagnostics
+          if-no-files-found: warn
+          path: |
+            build/obfuscated/*.jar
+            build/reports/morgue/proguard-mapping.txt
+
       - name: Verify protected release package
         shell: bash
         run: |
@@ -51,7 +61,10 @@ jobs:
             echo "fabric.mod.json still contains an unresolved version placeholder."
             exit 1
           fi
-          grep -Eq '^morgue/internal/[^/]+\.class$' build/release/jar-contents.txt
+          if ! grep -Eq '^dev/morgue/client/([^/]+/)*[a-z]\.class$' build/release/jar-contents.txt; then
+            echo "Expected obfuscated MORGUE class names under the preserved package hierarchy."
+            exit 1
+          fi
           test -s build/release/sbom.cyclonedx.json
           javac --release 25 -d "$RUNNER_TEMP/morgue-integrity-smoke" tools/IntegritySmokeTest.java
           java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$jar_file" VERIFIED true
@@ -62,7 +75,7 @@ jobs:
           printf 'intentional test modification\n' > "$RUNNER_TEMP/morgue-integrity-tamper.txt"
           jar --update --file "$tampered_jar" -C "$RUNNER_TEMP" morgue-integrity-tamper.txt
           java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$tampered_jar" FAILED false
-          echo "Protected release, enum runtime, metadata, integrity, tamper rejection, and SBOM verified."
+          echo "Protected release, full bytecode verification, enum runtime, metadata, integrity, tamper rejection, and SBOM verified."
       - name: Generate build provenance for public repositories
         if: ${{ github.event.repository.private == false }}
         uses: actions/attest@v4
