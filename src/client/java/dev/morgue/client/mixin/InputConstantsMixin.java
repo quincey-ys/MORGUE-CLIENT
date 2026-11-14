@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(InputConstants.class)
 public abstract class InputConstantsMixin {
-    @Inject(method = "isKeyDown(JI)Z", at = @At("HEAD"), cancellable = true)
-    private static void morgue$ignoreUnboundKey(long window, int key, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "isKeyDown(I)Z", at = @At("HEAD"), cancellable = true)
+    private static void morgue$ignoreUnboundKey(int key, CallbackInfoReturnable<Boolean> cir) {
         if (key < 0) {
             cir.setReturnValue(false);
         }
