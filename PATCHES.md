@@ -36,3 +36,9 @@ The full fix is the combined stack; the CI workflow patch depends on the enum sm
 ## Application note
 
 All six commits are on `main` already. Use the latest main build for testing; do not cherry-pick only Patch 05 without Patch 06, because the workflow invokes the smoke-test file added by Patch 06.
+
+## Patch 07 — Remove duplicate vanilla button captions and add module scrolling
+- Commit: [e72087ab](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e72087abaae8bbceec7f96a3ec8a826ffd07e500)
+- File: `src/client/java/dev/morgue/client/MorgueScreen.java`
+- Temporarily suppresses vanilla button captions while the base widgets render, then restores their labels and draws the custom MORGUE controls once. This removes the doubled text visible in the screenshot.
+- Adds mouse-wheel scrolling and a compact scroll indicator to the module list; the header and category sidebar remain fixed.
