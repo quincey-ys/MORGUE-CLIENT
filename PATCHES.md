@@ -206,3 +206,6 @@ The entries above link representative commits. These additional commits are part
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/c5e6ba6883a00541ceb38442074f819d48f3b88d).
 
 - [38b — Use Minecraft's direct crosshair entity reference](https://github.com/quincey-ys/MORGUE-CLIENT/commit/88e3cdcd8d24bc31bd38d708b78725cc89e2cc51) — avoids an unnecessary HitResult class reference in the protected packaging step.
+
+## Patch 40 — CI diagnostics
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/03d34bece7ee4acb3c2cfb8182bcd97eabc6fa0d) — enables Gradle stack traces in CI so protected-packaging failures expose their underlying cause.
