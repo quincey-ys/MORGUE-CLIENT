@@ -70,7 +70,7 @@ java {
 
 // Minecraft 26.3 is distributed without the legacy mapping-remap task; obfuscate the Loom client JAR.
 // Fabric's entrypoint class and callback are retained; internal implementation
-// classes are repackaged. Shrinking and optimization are disabled for safety.
+// class/member names are obfuscated while package hierarchy is preserved.
 def obfuscatedJar = layout.buildDirectory.file("obfuscated/${project.archives_base_name}-${project.version}.jar")
 def obfuscationMap = layout.buildDirectory.file("reports/morgue/proguard-mapping.txt")
 
@@ -103,8 +103,7 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     keep('public class dev.morgue.client.MorgueClient { public <init>(); public void onInitializeClient(); }')
 
     // Enum.valueOf(Class, String) checks the JVM ACC_ENUM flag. Keep enum
-    // classes and their constants intact: ProGuard's class repackaging must
-    // not turn a runtime enum into an ordinary class.
+    // classes and their constants intact through name obfuscation.
     keep('enum dev.morgue.client.** { *; }')
 
     // Keep the verifier's diagnostic API names stable for the CI smoke test.
