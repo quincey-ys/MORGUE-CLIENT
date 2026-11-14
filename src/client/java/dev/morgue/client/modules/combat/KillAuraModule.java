@@ -7,6 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.LinkedHashSet;
@@ -44,6 +45,7 @@ public final class KillAuraModule {
     private boolean ignoreHurtTime;
     private boolean criticalOnly;
     private boolean pauseOnThrowables = true;
+    private boolean attackSound;
     private int minimumAgeTicks;
     private double range = 3.2;
     private double fov = 180.0;
@@ -120,6 +122,7 @@ public final class KillAuraModule {
         }
 
         client.gameMode.attack(player, target);
+        if (attackSound) player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.45F, 1.55F);
         player.swing(net.minecraft.world.InteractionHand.MAIN_HAND,
                 player.getMainHandItem().getAttackAnimation(), true);
 
@@ -295,6 +298,8 @@ public final class KillAuraModule {
     public void setMinimumAgeTicks(int value) { minimumAgeTicks = Math.max(0, Math.min(12000, value)); }
     public boolean isCriticalOnly() { return criticalOnly; }
     public void setCriticalOnly(boolean value) { criticalOnly = value; }
+    public boolean isAttackSound() { return attackSound; }
+    public void setAttackSound(boolean value) { attackSound = value; }
     public boolean isPauseOnThrowables() { return pauseOnThrowables; }
     public void setPauseOnThrowables(boolean value) { pauseOnThrowables = value; }
     public LivingEntity getLastTarget() { return lastTarget; }
