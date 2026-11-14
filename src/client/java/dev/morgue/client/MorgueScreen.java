@@ -285,6 +285,56 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildEntitySelector() {
+        if ("KillAura".equals(selectedModule)) {
+            var module = MorgueClient.killAura();
+            Set<String> selected = module.getSelectedEntityTypes();
+            addRenderableWidget(Button.builder(Component.literal("TARGET MODE: " + module.getTargetMode()), button -> {
+                module.setTargetMode(switch (module.getTargetMode()) {
+                    case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
+                    case HOSTILE_MOBS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.ALL_LIVING;
+                    case ALL_LIVING -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.CUSTOM;
+                    case CUSTOM -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.PLAYERS;
+                });
+                MorgueConfig.save();
+                rebuildWidgets();
+            }).bounds(panelX + 150, panelY + 102, panelWidth - 176, 26).build());
+
+            int pageSize = 16;
+            int start = entityPageIndex * pageSize;
+            int end = Math.min(ENTITY_OPTIONS.size(), start + pageSize);
+            int leftX = panelX + 150;
+            int rightX = panelX + panelWidth / 2 + 12;
+            for (int i = start; i < end; i++) {
+                EntityOption option = ENTITY_OPTIONS.get(i);
+                int visibleIndex = i - start;
+                int columnX = visibleIndex < 8 ? leftX : rightX;
+                int rowY = panelY + 138 + (visibleIndex % 8) * 27;
+                boolean enabled = selected.contains(option.id());
+                addRenderableWidget(Button.builder(Component.literal((enabled ? "[x] " : "[ ] ") + option.name()),
+                        button -> {
+                            module.setEntityTypeSelected(option.id(), !enabled);
+                            module.setTargetMode(dev.morgue.client.modules.combat.KillAuraModule.TargetMode.CUSTOM);
+                            MorgueConfig.save();
+                            rebuildWidgets();
+                        }).bounds(columnX, rowY, panelWidth / 2 - 170, 23).build());
+            }
+
+            if (entityPageIndex > 0) {
+                addRenderableWidget(Button.builder(Component.literal("< PREVIOUS"), button -> {
+                    entityPageIndex--;
+                    rebuildWidgets();
+                }).bounds(leftX, panelY + panelHeight - 78, 104, 26).build());
+            }
+            if (end < ENTITY_OPTIONS.size()) {
+                addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
+                    entityPageIndex++;
+                    rebuildWidgets();
+                }).bounds(rightX + 80, panelY + panelHeight - 78, 90, 26).build());
+            }
+            addBackButton();
+            return;
+        }
+
         MaceHitterModule module = MorgueClient.maceHitter();
         Set<String> selected = module.getSelectedEntityTypes();
         addRenderableWidget(Button.builder(Component.literal("TARGET MODE: " + module.getTargetMode()), button -> {
@@ -352,8 +402,15 @@ public final class MorgueScreen extends Screen {
                 () -> module.setTargetMode(switch (module.getTargetMode()) {
                     case PLAYERS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.HOSTILE_MOBS;
                     case HOSTILE_MOBS -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.ALL_LIVING;
-                    case ALL_LIVING -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.PLAYERS;
+                    case ALL_LIVING -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.CUSTOM;
+                    case CUSTOM -> dev.morgue.client.modules.combat.KillAuraModule.TargetMode.PLAYERS;
                 }));
+
+        addRenderableWidget(Button.builder(Component.literal("CONFIGURE ENTITY TARGETS  >"), button -> {
+            entityPage = true;
+            entityPageIndex = 0;
+            rebuildWidgets();
+        }).bounds(leftX, panelY + panelHeight - 76, panelWidth / 2 - 170, 26).build());
 
         addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
