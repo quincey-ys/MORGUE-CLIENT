@@ -23,6 +23,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **World Info / Environment / Client Metadata:** local player coordinates, health, absorption, rain/thunder state, world time, target version, and privacy-scope information.
 - **Module List / Movement Settings / Visual Settings:** live module status and the current movement/theme configuration.
 - **Inventory Helper:** refills low-count hotbar stacks from matching main-inventory stacks through vanilla container input; AutoTotem has priority if both request an inventory action in the same tick.
+- **Notifications:** optional local chat notices for AutoTotem and Inventory Helper actions; notifications remain on-device.
 - **Profiles:** three local configuration slots with import/export. Safe Walk, Movement Settings, several Player/Render/World tools, and some Misc/Privacy entries remain prototypes or informational screens.
 
 ## Development environment
