@@ -110,6 +110,7 @@ public final class MaceHitterModule {
         if (shieldStun && target instanceof Player targetPlayer && targetPlayer.isBlocking()) {
             int axeSlot = findHotbarAxe(player);
             if (axeSlot >= 0) {
+                if (!CombatActionCoordinator.tryClaim(client)) return;
                 if (rotate) {
                     faceTarget(player, target);
                 }
