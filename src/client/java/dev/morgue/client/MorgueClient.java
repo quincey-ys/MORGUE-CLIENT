@@ -3,6 +3,8 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
+import dev.morgue.client.modules.combat.AimAssistModule;
+import dev.morgue.client.modules.combat.ClickAssistModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
@@ -23,6 +25,8 @@ public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping toggleAutoTotem;
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
+    private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
+    private static final ClickAssistModule CLICK_ASSIST = new ClickAssistModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
     private static final InventoryHelperModule INVENTORY_HELPER = new InventoryHelperModule();
     private static final AutoEatModule AUTO_EAT = new AutoEatModule();
@@ -85,6 +89,8 @@ public final class MorgueClient implements ClientModInitializer {
             // Mace Hitter gets first claim when a falling smash is ready.
             MACE_HITTER.tick(client);
             KILL_AURA.tick(client);
+            AIM_ASSIST.tick(client);
+            CLICK_ASSIST.tick(client);
             AUTO_TOTEM.tick(client);
             INVENTORY_HELPER.tick(client);
             AUTO_EAT.tick(client);
@@ -160,6 +166,26 @@ public final class MorgueClient implements ClientModInitializer {
     public static KillAuraModule killAura() {
         return KILL_AURA;
     }
+
+    public static void setAimAssistEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AIM_ASSIST.setEnabled(enabled);
+    }
+
+    public static AimAssistModule aimAssist() { return AIM_ASSIST; }
+
+    public static void setClickAssistEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        CLICK_ASSIST.setEnabled(enabled);
+    }
+
+    public static ClickAssistModule clickAssist() { return CLICK_ASSIST; }
 
     public static MaceHitterModule maceHitter() {
         return MACE_HITTER;
