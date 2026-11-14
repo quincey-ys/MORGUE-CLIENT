@@ -125,7 +125,8 @@ public final class KillAuraModule {
         }
 
         if (!CombatActionCoordinator.tryClaim(client)) {
-            if (changedSlot && switchBack) player.getInventory().setSelectedSlot(originalSlot);
+            // No attack was made, so always undo a temporary weapon selection.
+            if (changedSlot) player.getInventory().setSelectedSlot(originalSlot);
             return;
         }
         if (rotate) {
