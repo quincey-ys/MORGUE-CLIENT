@@ -107,6 +107,8 @@ public final class MorgueConfig {
         MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
         MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
         MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
+        MorgueClient.setAutoEatEnabled(bool(values, "player.autoEat.enabled", false));
+        MorgueClient.autoEat().setHungerThreshold((int) integer(values, "player.autoEat.hungerThreshold", 16));
         MorgueClient.inventoryHelper().setRefillAt((int) integer(values, "player.inventoryHelper.refillAt", 1));
 
         AutoTotemModule totem = MorgueClient.autoTotem();
@@ -182,6 +184,8 @@ public final class MorgueConfig {
         put(values, "movement.safeWalk.enabled", MorgueClient.safeWalk().isEnabled());
         put(values, "player.inventoryHelper.enabled", MorgueClient.inventoryHelper().isEnabled());
         put(values, "player.inventoryHelper.refillAt", MorgueClient.inventoryHelper().getRefillAt());
+        put(values, "player.autoEat.enabled", MorgueClient.autoEat().isEnabled());
+        put(values, "player.autoEat.hungerThreshold", MorgueClient.autoEat().getHungerThreshold());
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
