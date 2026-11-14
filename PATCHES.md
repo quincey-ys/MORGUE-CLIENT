@@ -67,3 +67,8 @@ Implementation is split into ordered commits:
 - [11e — Keep Other from implicitly selecting players](https://github.com/quincey-ys/MORGUE-CLIENT/commit/0d0795c7cae7d677b7bfe726225b9672784dc28e) — `KillAuraModule.java`
 
 KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses the shared paginated entity picker, persists selected registry IDs under `aura.entityTypes`, and keeps the player checkbox independent from the Other option.
+
+## Patch 12 — Gothic midnight-blue ClickGUI palette
+- Commit: [3ce2b362](https://github.com/quincey-ys/MORGUE-CLIENT/commit/3ce2b362951d747bce75b78fccf2ef859f7dcc1d)
+- File: `src/client/java/dev/morgue/client/MorgueScreen.java`
+- Replaces the crimson accents with icy blue highlights, shifts panels and controls to deeper black/navy tones, and recolors borders, hover sweeps, scanlines, corner brackets, search outlines, scroll thumb, and status indicator. Keeps the existing layout, typography, animation behavior, and module interactions.
