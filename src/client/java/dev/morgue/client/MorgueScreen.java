@@ -185,6 +185,10 @@ public final class MorgueScreen extends Screen {
             buildAutoEatSettings();
         } else if ("HUD Editor".equals(selectedModule)) {
             buildHudEditorInfo();
+        } else if ("Aim Assist".equals(selectedModule)) {
+            buildAimAssistSettings();
+        } else if ("Click Assist".equals(selectedModule)) {
+            buildClickAssistSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -312,6 +316,45 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses normal player sprint state; it does not alter packets or bypass server rules."),
                 button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildAimAssistSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.aimAssist();
+        addSettingButton(x, y, toggleLabel("Visible Aim Assist", module.isEnabled()),
+                () -> MorgueClient.setAimAssistEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Range: " + format(module.getRange()),
+                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.5));
+        addSettingButton(x, y + 72, "FOV: " + format(module.getFov()),
+                () -> module.setFov(module.getFov() >= 180.0 ? 15.0 : module.getFov() + 15.0));
+        addSettingButton(x, y + 108, "Smoothing: " + format(module.getSmoothing()),
+                () -> module.setSmoothing(module.getSmoothing() >= 1.0F ? 0.05F : module.getSmoothing() + 0.05F));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Only assists while you hold attack, targets visible players, and rotates visibly."),
+                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically disables its steering while Mace Hitter or KillAura is enabled."),
+                button -> {}).bounds(x, y + 186, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildClickAssistSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.clickAssist();
+        addSettingButton(x, y, toggleLabel("Click Assist", module.isEnabled()),
+                () -> MorgueClient.setClickAssistEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Rate: " + module.getClicksPerSecond() + " CPS",
+                () -> module.setClicksPerSecond(module.getClicksPerSecond() >= 20
+                        ? 1 : module.getClicksPerSecond() + 1));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Repeats your held attack input against the entity under your crosshair."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses vanilla attack cooldown and shared combat arbitration; no packet spoofing."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
         addBackButton();
     }
 
@@ -1026,6 +1069,8 @@ public final class MorgueScreen extends Screen {
             case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
             case "Inventory Helper" -> MorgueClient.inventoryHelper().isEnabled();
             case "Item Use" -> MorgueClient.autoEat().isEnabled();
+            case "Aim Assist" -> MorgueClient.aimAssist().isEnabled();
+            case "Click Assist" -> MorgueClient.clickAssist().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -1047,6 +1092,10 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setInventoryHelperEnabled(enabled);
         } else if ("Item Use".equals(module)) {
             MorgueClient.setAutoEatEnabled(enabled);
+        } else if ("Aim Assist".equals(module)) {
+            MorgueClient.setAimAssistEnabled(enabled);
+        } else if ("Click Assist".equals(module)) {
+            MorgueClient.setClickAssistEnabled(enabled);
         }
         MorgueConfig.save();
     }
