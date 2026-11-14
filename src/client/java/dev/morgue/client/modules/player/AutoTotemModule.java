@@ -1,5 +1,7 @@
 package dev.morgue.client.modules.player;
 
+import dev.morgue.client.ClientNotifications;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -80,6 +82,7 @@ public final class AutoTotemModule {
                 player
         );
 
+        ClientNotifications.post(client, "Totem swap requested.");
         nextAttemptAt = now + switchDelayMillis;
         // Wait for the authoritative inventory update before retrying.
         pendingUntil = now + 300L;
