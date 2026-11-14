@@ -119,3 +119,7 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [23a — Add shared inventory action coordinator](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9e59308d6ac09cb156b5971a670dccd86a3f8615).
 - [23b–23c — Give AutoTotem priority and serialize Inventory Helper](https://github.com/quincey-ys/MORGUE-CLIENT/commit/3b317865d0175042a99f3be81dfc9a57dc1e976e).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/59503188655f2b5bbcc5cd4e96fc7f4d33b6b99b).
+
+## Patch 24 — Additional functional status and settings screens
+- [24a — Add Movement Settings, live enabled-module list, Environment status, and Visual Settings pages](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ffb0f755589e11decd2862e1819f654e302560eb).
+- [24b — Document the new pages](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e50d9b87ef4aad3c7aec094a43a813e01f3e58e5).
