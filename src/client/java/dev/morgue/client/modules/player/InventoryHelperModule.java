@@ -1,5 +1,7 @@
 package dev.morgue.client.modules.player;
 
+import dev.morgue.client.ClientNotifications;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -36,6 +38,7 @@ public final class InventoryHelperModule {
                             ContainerInput.SWAP,
                             player
                     );
+                    ClientNotifications.post(client, "Hotbar refill requested.");
                     pendingUntil = System.currentTimeMillis() + 350L;
                     return;
                 }
