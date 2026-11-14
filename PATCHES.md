@@ -1,6 +1,6 @@
 # MORGUE Patch Index
 
-These changes are separate commits on `feature/complete-module-suite`, proposed for merge through PR #5. The index keeps each patch identifiable.
+These changes are separate commits on `main`, merged through PR #5. The index keeps each patch identifiable.
 The full fix is the combined stack; the CI workflow patch depends on the enum smoke-test file.
 
 ## Patch 01 — Preserve enum classes in ProGuard
@@ -153,6 +153,10 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dd937dae03b85d883011f649acb123f2c8a25172).
 
 - [28g — Correct the 26.3 FoodProperties package](https://github.com/quincey-ys/MORGUE-CLIENT/commit/817013e4c46e86e31fb06ac903a8d07f9b1178c3).
+
+## Merge record
+
+- PR [#5 — MORGUE: combat, inventory, movement, HUD and utility modules](https://github.com/quincey-ys/MORGUE-CLIENT/pull/5) merged with merge commit [db328ea2](https://github.com/quincey-ys/MORGUE-CLIENT/commit/db328ea25d013d9f9f90018cdb607812af72da58).
 
 ## Complete commit references
 
