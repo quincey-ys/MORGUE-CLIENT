@@ -94,3 +94,15 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 
 ## Patch 17 — Update feature and research documentation
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/d1f1789f3bf1d6d58f05e247d1ae57a466624b7b) — documents shared combat arbitration, new settings, remaining prototype screens, and AUTISM Client as a GPL-3.0 research reference only.
+
+## Patch 18 — Local configuration profiles
+- [18a — Add validated profile import/export](https://github.com/quincey-ys/MORGUE-CLIENT/commit/78257183b6ea9912e0c6ef4d2f7349489605a8a4) — saves and loads named properties snapshots under `config/morgue-client/profiles`; profile names are restricted to safe filename characters.
+- [18b — Add three profile slots in ClickGUI](https://github.com/quincey-ys/MORGUE-CLIENT/commit/94f5fce3135293898ee1b3e8502fb720ca939f02) — save/load slots 1–3 and display operation status.
+
+## Patch 19 — Functional Sprint module
+- [19a–19b — Add Sprint module and register its client tick](https://github.com/quincey-ys/MORGUE-CLIENT/commit/ab6972bd6979b63c2f98f104fcab79d4a7297e81) — enables sprint while horizontal movement is detected.
+- [19c–19d — Persist and expose Sprint controls](https://github.com/quincey-ys/MORGUE-CLIENT/commit/b02f9338872172ee791fc48b2848284b2c71e071).
+
+## Patch 20 — World Info and Client Metadata
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/f60e9bad3c8e1fb6f0b3e17a14a8fc34f246eadd) — adds live player coordinates, health, absorption, world time, client target version, and privacy-scope screens.
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/e5f8d7f4ce7923d296b5904fe0f55e011e4372ab) — updates README with the new screens and remaining prototype list.
