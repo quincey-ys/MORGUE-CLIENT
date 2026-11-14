@@ -114,3 +114,10 @@ These public projects were reviewed for architectural ideas, feature behavior, a
 
 The references above informed research and design discussions; they are not a list of MORGUE dependencies or code contributions. MORGUE's current combat and target-intelligence implementation is written for this project. No source code is intentionally copied from the projects listed above. If code is ever copied or adapted from any reference, its exact license, attribution requirements, source-disclosure obligations, and compatibility with MORGUE's distribution license must be reviewed before merging or distributing that change. A repository's license applies to its own covered code; dependencies and bundled components may have separate terms.
 
+
+
+### ClickGUI controls
+- Left-click a toggleable module row to enable or disable it.
+- Right-click a module row to open that module's settings.
+- Middle-click a toggleable module row to begin rebinding; press a keyboard key or mouse button, or press Escape to cancel.
+- Use the mouse wheel over the module list or drag the scrollbar thumb to browse the full category.
