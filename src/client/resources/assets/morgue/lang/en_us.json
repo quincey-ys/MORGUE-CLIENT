@@ -1,7 +1,13 @@
 {
   "key.category.morgue.main": "MORGUE",
   "key.morgue.clickgui": "Open MORGUE ClickGUI",
-  "key.morgue.toggle_mace_hitter": "Toggle Mace Hitter",
-  "key.morgue.toggle_kill_aura": "Toggle KillAura",
-  "key.morgue.toggle_auto_totem": "Toggle Auto Totem"
+  "key.morgue.module_mace_hitter": "Toggle Mace Hitter",
+  "key.morgue.module_kill_aura": "Toggle KillAura",
+  "key.morgue.module_auto_totem": "Toggle Auto Totem",
+  "key.morgue.module_aim_assist": "Toggle Aim Assist",
+  "key.morgue.module_click_assist": "Toggle Click Assist",
+  "key.morgue.module_sprint": "Toggle Sprint",
+  "key.morgue.module_safe_walk": "Toggle Safe Walk",
+  "key.morgue.module_inventory_helper": "Toggle Inventory Helper",
+  "key.morgue.module_item_use": "Toggle Item Use"
 }
