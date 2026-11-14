@@ -10,16 +10,16 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Gothic midnight-blue and black ClickGUI with mathematical double-struck typography, steel-blue borders, icy-blue accents, animated controls, and a scrollable module list.
 - Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
-- **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, and pause-while-using-item option.
-- **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, rotation, auto-sword, shield breaking, and switch-back settings.
+- **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, and configurable health activation threshold.
+- **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, hurt-time and minimum-age filters, vanilla-critical-only option, throwable pause, rotation, auto-sword, shield breaking, and switch-back settings.
 - **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
 - **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
-- Mace Hitter and KillAura are mutually exclusive to avoid competing attack loops.
+- **Shared Combat Action Coordinator:** Mace Hitter and KillAura may both be enabled. Mace Hitter gets first opportunity to claim one attack action per client tick; KillAura acts only when Mace Hitter does not attack.
 - Target Intelligence centralizes ranking only; each combat module retains its own target filters and action logic.
 - Settings persist in `config/morgue-client.properties`.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
-- Movement, Player, Render, World, and some Misc/Privacy/Config items are currently UI placeholders.
+- Movement, Player, Render, World, and some Misc/Privacy/Config entries still contain prototype or informational screens; they are not all functional gameplay modules yet.
 
 ## Development environment
 
@@ -98,7 +98,7 @@ These public projects were reviewed for architectural ideas, feature behavior, a
 | [Wurst 7](https://github.com/Wurst-Imperium/Wurst7) | FightBot/pathfinding concepts and how movement decisions can be separated from combat actions. | [GPL-3.0](https://github.com/Wurst-Imperium/Wurst7) |
 | [Baritone](https://github.com/cabaletta/baritone) | Goal-based navigation and pathfinding concepts for autonomous movement. | [LGPL-3.0](https://github.com/cabaletta/baritone) |
 | [Anomoly](https://github.com/DistilledSlop/anomoly) | Minecraft 26.3 Fabric project structure, ClickGUI ideas, and local server-profile diagnostics. | [CC0-1.0](https://github.com/DistilledSlop/anomoly) |
-| [BleachHack](https://github.com/BleachDev/BleachHack) | Historical Fabric utility-client patterns for GUI organization, AutoTotem, combat modules, and automation. This project is discontinued and targets older Minecraft versions. | See the repository's license and redistribution terms. |
+| [AUTISM Client](https://github.com/AutismDevelopment/Autism-Client) | AutoTotem and KillAura feature behavior and module architecture; reviewed as a research reference only, without copying its source code. | [GPL-3.0](https://github.com/AutismDevelopment/Autism-Client) |\n| [BleachHack](https://github.com/BleachDev/BleachHack) | Historical Fabric utility-client patterns for GUI organization, AutoTotem, combat modules, and automation. This project is discontinued and targets older Minecraft versions. | See the repository's license and redistribution terms. |
 
 ### Attribution and code-use note
 
