@@ -161,6 +161,8 @@ public final class MorgueScreen extends Screen {
             buildEntitySelector();
         } else if ("Sprint".equals(selectedModule)) {
             buildSprintSettings();
+        } else if ("Safe Walk".equals(selectedModule)) {
+            buildSafeWalkSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -238,6 +240,21 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
                     button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
         }
+    }
+
+    private void buildSafeWalkSettings() {
+        int x = panelX + 150;
+        int y = panelY + 112;
+        var module = MorgueClient.safeWalk();
+        addSettingButton(x, y, toggleLabel("Safe Walk", module.isEnabled()),
+                () -> MorgueClient.setSafeWalkEnabled(!module.isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Automatically crouches when movement projects beyond a supported block edge."),
+                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Your physical sneak key takes priority over automatic edge protection."),
+                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+        addBackButton();
     }
 
     private void buildSprintSettings() {
@@ -750,6 +767,7 @@ public final class MorgueScreen extends Screen {
             case "KillAura" -> MorgueClient.killAura().isEnabled();
             case "Auto Totem" -> MorgueClient.autoTotem().isEnabled();
             case "Sprint" -> MorgueClient.sprint().isEnabled();
+            case "Safe Walk" -> MorgueClient.safeWalk().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -765,6 +783,8 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setAutoTotemEnabled(enabled);
         } else if ("Sprint".equals(module)) {
             MorgueClient.setSprintEnabled(enabled);
+        } else if ("Safe Walk".equals(module)) {
+            MorgueClient.setSafeWalkEnabled(enabled);
         }
         MorgueConfig.save();
     }
