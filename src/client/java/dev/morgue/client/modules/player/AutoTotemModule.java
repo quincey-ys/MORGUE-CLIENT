@@ -90,7 +90,7 @@ public final class AutoTotemModule {
         if (lastEffectiveHealth >= 0.0F) {
             float damageThisTick = lastEffectiveHealth - effectiveHealth;
             if (damageThisTick > 0.0F) {
-                recentDamagePerTick = Math.max(recentDamagePerTick, damageThisTick);
+                recentDamagePerTick = Math.max(recentDamagePerTick, damageThisTick / 10.0F);
             } else {
                 recentDamagePerTick *= 0.88F;
             }
