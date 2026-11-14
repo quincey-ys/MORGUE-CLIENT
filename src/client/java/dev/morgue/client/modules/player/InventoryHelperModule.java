@@ -28,6 +28,7 @@ public final class InventoryHelperModule {
             for (int inventory = 9; inventory < 36; inventory++) {
                 ItemStack candidate = player.getInventory().getItem(inventory);
                 if (!candidate.isEmpty() && ItemStack.isSameItemSameComponents(current, candidate)) {
+                    if (!InventoryActionCoordinator.tryClaim(client)) return;
                     client.gameMode.handleContainerInput(
                             player.inventoryMenu.containerId,
                             inventory,
