@@ -142,6 +142,12 @@ public final class MaceHitterModule {
             return;
         }
 
+        if (!CombatActionCoordinator.tryClaim(client)) {
+            if (autoSwap && originalSlot != player.getInventory().getSelectedSlot()) {
+                player.getInventory().setSelectedSlot(originalSlot);
+            }
+            return;
+        }
         if (rotate) {
             faceTarget(player, target);
         }
