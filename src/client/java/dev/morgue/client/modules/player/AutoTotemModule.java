@@ -29,6 +29,7 @@ public final class AutoTotemModule {
     private float activationHealth = 20.0F;
     private boolean predictRecentDamage = true;
     private boolean predictFallDamage = true;
+    private boolean predictNearbyThreats = true;
     private boolean restoreDisplacedOffhand = true;
     private float lastEffectiveHealth = -1.0F;
     private float recentDamagePerTick;
@@ -101,6 +102,15 @@ public final class AutoTotemModule {
         if (predictFallDamage && player.fallDistance > 3.0F
                 && player.getDeltaMovement().y < 0.0) {
             predictedHealth -= Math.max(0.0F, player.fallDistance - 3.0F);
+        }
+        if (predictNearbyThreats) {
+            int nearbyHostiles = client.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.LivingEntity.class,
+                    player.getBoundingBox().inflate(5.0),
+                    entity -> entity != player && entity.isAlive()
+                            && !entity.getType().getCategory().isFriendly()
+            ).size();
+            predictedHealth -= Math.min(4.0F, nearbyHostiles * 1.5F);
         }
         if (activationHealth <= 0.0F || predictedHealth > activationHealth) return;
 
@@ -183,6 +193,8 @@ public final class AutoTotemModule {
     public void setPredictRecentDamage(boolean value) { predictRecentDamage = value; }
     public boolean isPredictFallDamage() { return predictFallDamage; }
     public void setPredictFallDamage(boolean value) { predictFallDamage = value; }
+    public boolean isPredictNearbyThreats() { return predictNearbyThreats; }
+    public void setPredictNearbyThreats(boolean value) { predictNearbyThreats = value; }
     public boolean isRestoreDisplacedOffhand() { return restoreDisplacedOffhand; }
     public void setRestoreDisplacedOffhand(boolean value) {
         restoreDisplacedOffhand = value;
