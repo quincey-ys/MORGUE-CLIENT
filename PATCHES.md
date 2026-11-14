@@ -72,3 +72,7 @@ KillAura now supports PLAYERS, HOSTILE_MOBS, ALL_LIVING, and CUSTOM. CUSTOM uses
 - Commit: [3ce2b362](https://github.com/quincey-ys/MORGUE-CLIENT/commit/3ce2b362951d747bce75b78fccf2ef859f7dcc1d)
 - File: `src/client/java/dev/morgue/client/MorgueScreen.java`
 - Replaces the crimson accents with icy blue highlights, shifts panels and controls to deeper black/navy tones, and recolors borders, hover sweeps, scanlines, corner brackets, search outlines, scroll thumb, and status indicator. Keeps the existing layout, typography, animation behavior, and module interactions.
+
+## Patch 13 — Project and development credits
+- [13a — Add an in-client Credits page](https://github.com/quincey-ys/MORGUE-CLIENT/commit/2ac1f3c2c72806713a5c145243d0a79db515aa18) — `MorgueScreen.java`. Adds Credits under Misc, with project lead, AI-assisted development acknowledgement, Minecraft/Fabric attribution, build tooling, SBOM tooling, and research-reference acknowledgements.
+- [13b — Add README credits and acknowledgements](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5e01e8bcb532e4d1d615e4bba0610531c5049bf8) — `README.md`. Documents project ownership, ChatGPT development assistance, platform/tooling credits, and Minecraft non-affiliation.
