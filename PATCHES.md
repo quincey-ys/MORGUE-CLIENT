@@ -204,3 +204,5 @@ The entries above link representative commits. These additional commits are part
 - [39c — Register both modules and persist settings](https://github.com/quincey-ys/MORGUE-CLIENT/commit/496d7f3d3d07f4e597ad142bca11de26890af158).
 - [39d — Add both to the HUD module list](https://github.com/quincey-ys/MORGUE-CLIENT/commit/dff7d973b0509c0f3dac8d7a25103d39af41eb1d).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/c5e6ba6883a00541ceb38442074f819d48f3b88d).
+
+- [38b — Use Minecraft's direct crosshair entity reference](https://github.com/quincey-ys/MORGUE-CLIENT/commit/88e3cdcd8d24bc31bd38d708b78725cc89e2cc51) — avoids an unnecessary HitResult class reference in the protected packaging step.
