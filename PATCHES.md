@@ -219,3 +219,5 @@ The entries above link representative commits. These additional commits are part
 - Replace mathematical double-struck Unicode substitutions with the original text.
 - Use Minecraft's default font with bold styling so labels render cleanly without missing-glyph boxes.
 - Remove obsolete font-description references from the ClickGUI screen.
+
+- **PATCH 42 — ClickGUI controls:** bold default-font typography, full-width module rows, left-click toggles, right-click settings, middle-click keybind capture, and wheel/drag scrolling for the module list.
