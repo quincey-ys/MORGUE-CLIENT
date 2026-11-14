@@ -602,7 +602,7 @@ public final class MorgueScreen extends Screen {
                     + "    ABSORPTION: " + format(player.getAbsorptionAmount())),
                     button -> {}).bounds(x, y + 72, width, 28).build());
             addRenderableWidget(Button.builder(Component.literal("WORLD TIME: "
-                    + minecraft.level.getDayTime()),
+                    + minecraft.level.getGameTime()),
                     button -> {}).bounds(x, y + 108, width, 28).build());
         }
         addBackButton();
