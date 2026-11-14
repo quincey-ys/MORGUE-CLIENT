@@ -4,6 +4,7 @@ import dev.morgue.client.MorgueClient;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
+import dev.morgue.client.modules.movement.SprintModule;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -101,6 +102,8 @@ public final class MorgueConfig {
             mace.setEntityTypeSelected(id.trim(), true);
         }
 
+        MorgueClient.setSprintEnabled(bool(values, "movement.sprint.enabled", false));
+
         AutoTotemModule totem = MorgueClient.autoTotem();
         totem.setEnabled(bool(values, "totem.enabled", false));
         totem.setMode(enumValue(values, "totem.mode", AutoTotemModule.Mode.class,
@@ -164,6 +167,8 @@ public final class MorgueConfig {
         put(values, "mace.priority", mace.getPriority());
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
+
+        put(values, "movement.sprint.enabled", MorgueClient.sprint().isEnabled());
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
