@@ -2,13 +2,16 @@ package dev.morgue.client.modules.combat;
 
 import dev.morgue.client.ai.TargetIntelligence;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * MORGUE-native KillAura implementation.
@@ -20,7 +23,8 @@ public final class KillAuraModule {
     public enum TargetMode {
         PLAYERS,
         HOSTILE_MOBS,
-        ALL_LIVING
+        ALL_LIVING,
+        CUSTOM
     }
 
     public enum Priority {
@@ -44,6 +48,19 @@ public final class KillAuraModule {
     private TargetMode targetMode = TargetMode.PLAYERS;
     private Priority priority = Priority.CLOSEST;
     private LivingEntity lastTarget;
+    private final Set<String> selectedEntityTypes = new LinkedHashSet<>(Set.of("minecraft:player"));
+    private static final Set<String> KNOWN_ENTITY_TYPES = Set.of(
+            "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper", "minecraft:spider",
+            "minecraft:cave_spider", "minecraft:enderman", "minecraft:witch", "minecraft:pillager",
+            "minecraft:drowned", "minecraft:husk", "minecraft:phantom", "minecraft:blaze",
+            "minecraft:wither_skeleton", "minecraft:slime", "minecraft:magma_cube", "minecraft:ghast",
+            "minecraft:piglin", "minecraft:piglin_brute", "minecraft:hoglin", "minecraft:zoglin",
+            "minecraft:ravager", "minecraft:guardian", "minecraft:elder_guardian", "minecraft:shulker",
+            "minecraft:vindicator", "minecraft:evoker", "minecraft:vex", "minecraft:warden",
+            "minecraft:wither", "minecraft:ender_dragon", "minecraft:villager", "minecraft:iron_golem",
+            "minecraft:wolf", "minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken",
+            "minecraft:horse"
+    );
 
     public void tick(Minecraft client) {
         if (!enabled || client == null || client.player == null || client.level == null
@@ -131,6 +148,13 @@ public final class KillAuraModule {
     }
 
     private boolean isAllowed(LivingEntity entity) {
+        if (targetMode == TargetMode.CUSTOM) {
+            String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+            if (selectedEntityTypes.contains(id)) {
+                return true;
+            }
+            return selectedEntityTypes.contains("morgue:other") && !KNOWN_ENTITY_TYPES.contains(id);
+        }
         if (entity instanceof Player) {
             return targetMode != TargetMode.HOSTILE_MOBS;
         }
@@ -138,6 +162,7 @@ public final class KillAuraModule {
             case PLAYERS -> false;
             case HOSTILE_MOBS -> !entity.getType().getCategory().isFriendly();
             case ALL_LIVING -> true;
+            case CUSTOM -> false;
         };
     }
 
@@ -225,6 +250,12 @@ public final class KillAuraModule {
     public void setAttackDelayMillis(long value) { attackDelayMillis = Math.max(0, Math.min(1000, value)); }
     public TargetMode getTargetMode() { return targetMode; }
     public void setTargetMode(TargetMode value) { targetMode = value == null ? TargetMode.PLAYERS : value; }
+    public Set<String> getSelectedEntityTypes() { return Set.copyOf(selectedEntityTypes); }
+    public void setEntityTypeSelected(String id, boolean selected) {
+        if (id == null || id.isBlank()) return;
+        if (selected) selectedEntityTypes.add(id);
+        else selectedEntityTypes.remove(id);
+    }
     public Priority getPriority() { return priority; }
     public void setPriority(Priority value) { priority = value == null ? Priority.CLOSEST : value; }
     public LivingEntity getLastTarget() { return lastTarget; }
