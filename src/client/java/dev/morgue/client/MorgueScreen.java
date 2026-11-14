@@ -427,8 +427,16 @@ public final class MorgueScreen extends Screen {
                 () -> module.setIgnoreWalls(!module.isIgnoreWalls()));
         addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("FOV Check", module.isFovCheck()),
                 () -> module.setFovCheck(!module.isFovCheck()));
-        addSettingButton(rightX, y + rightRow++ * 34, toggleLabel("Team Check", module.isTeamsCheck()),
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Team Check", module.isTeamsCheck()),
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Ignore Hurt Time", module.isIgnoreHurtTime()),
+                () -> module.setIgnoreHurtTime(!module.isIgnoreHurtTime()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Vanilla Critical Only", module.isCriticalOnly()),
+                () -> module.setCriticalOnly(!module.isCriticalOnly()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Pause on Throwables", module.isPauseOnThrowables()),
+                () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
+        addSettingButton(leftX, y + leftRow++ * 34, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
+                () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
 
         addBackButton();
     }
@@ -496,6 +504,9 @@ public final class MorgueScreen extends Screen {
         addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
             module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
         });
+        addSettingButton(leftX, y + 108, "Activation Health: " + format(module.getActivationHealth()),
+                () -> module.setActivationHealth(module.getActivationHealth() <= 0.0F ? 20.0F
+                        : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
 
