@@ -98,7 +98,8 @@ These public projects were reviewed for architectural ideas, feature behavior, a
 | [Wurst 7](https://github.com/Wurst-Imperium/Wurst7) | FightBot/pathfinding concepts and how movement decisions can be separated from combat actions. | [GPL-3.0](https://github.com/Wurst-Imperium/Wurst7) |
 | [Baritone](https://github.com/cabaletta/baritone) | Goal-based navigation and pathfinding concepts for autonomous movement. | [LGPL-3.0](https://github.com/cabaletta/baritone) |
 | [Anomoly](https://github.com/DistilledSlop/anomoly) | Minecraft 26.3 Fabric project structure, ClickGUI ideas, and local server-profile diagnostics. | [CC0-1.0](https://github.com/DistilledSlop/anomoly) |
-| [AUTISM Client](https://github.com/AutismDevelopment/Autism-Client) | AutoTotem and KillAura feature behavior and module architecture; reviewed as a research reference only, without copying its source code. | [GPL-3.0](https://github.com/AutismDevelopment/Autism-Client) |\n| [BleachHack](https://github.com/BleachDev/BleachHack) | Historical Fabric utility-client patterns for GUI organization, AutoTotem, combat modules, and automation. This project is discontinued and targets older Minecraft versions. | See the repository's license and redistribution terms. |
+| [AUTISM Client](https://github.com/AutismDevelopment/Autism-Client) | AutoTotem and KillAura feature behavior and module architecture; reviewed as a research reference only, without copying its source code. | [GPL-3.0](https://github.com/AutismDevelopment/Autism-Client) |
+| [BleachHack](https://github.com/BleachDev/BleachHack) | Historical Fabric utility-client patterns for GUI organization, AutoTotem, combat modules, and automation. This project is discontinued and targets older Minecraft versions. | See the repository's license and redistribution terms. |
 
 ### Attribution and code-use note
 
