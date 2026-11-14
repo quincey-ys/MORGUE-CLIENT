@@ -32,7 +32,7 @@ public final class AutoTotemModule {
     private long nextAttemptAt;
     private long pendingUntil;
     private boolean pauseWhileUsingItem = true;
-    private float activationHealth = 6.0F;
+    private float activationHealth = 20.0F;
 
     public void tick(Minecraft client) {
         if (!enabled || client == null || client.player == null || client.level == null
