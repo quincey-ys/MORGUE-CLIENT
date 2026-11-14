@@ -16,10 +16,12 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
 - **Shared Combat Action Coordinator:** Mace Hitter and KillAura may both be enabled. Mace Hitter gets first opportunity to claim one attack action per client tick; KillAura acts only when Mace Hitter does not attack.
 - Target Intelligence centralizes ranking only; each combat module retains its own target filters and action logic.
-- Settings persist in `config/morgue-client.properties`.
+- Settings persist in `config/morgue-client.properties`; three named profile slots can be exported/imported under `config/morgue-client/profiles/`.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
-- Movement, Player, Render, World, and some Misc/Privacy/Config entries still contain prototype or informational screens; they are not all functional gameplay modules yet.
+- **Sprint:** optional auto-sprint while horizontal movement is detected.
+- **World Info / Client Metadata:** local player coordinates, health, world time, target version, and privacy-scope information.
+- **Profiles:** three local configuration slots with import/export. Safe Walk, Movement Settings, several Player/Render/World tools, and some Misc/Privacy entries remain prototypes or informational screens.
 
 ## Development environment
 
