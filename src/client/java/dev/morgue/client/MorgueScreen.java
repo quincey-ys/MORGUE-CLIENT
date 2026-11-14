@@ -435,7 +435,7 @@ public final class MorgueScreen extends Screen {
                 () -> module.setCriticalOnly(!module.isCriticalOnly()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Pause on Throwables", module.isPauseOnThrowables()),
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
-        addSettingButton(leftX, y + leftRow++ * 34, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
+        addSettingButton(leftX, y + (leftRow + 1) * 34, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
                 () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
 
         addBackButton();
