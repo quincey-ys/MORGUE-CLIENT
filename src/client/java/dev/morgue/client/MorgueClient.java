@@ -6,6 +6,7 @@ import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
+import dev.morgue.client.modules.player.InventoryHelperModule;
 import dev.morgue.client.modules.movement.SprintModule;
 import dev.morgue.client.modules.movement.SafeWalkModule;
 import net.fabricmc.api.ClientModInitializer;
@@ -22,6 +23,7 @@ public final class MorgueClient implements ClientModInitializer {
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
+    private static final InventoryHelperModule INVENTORY_HELPER = new InventoryHelperModule();
     private static final SprintModule SPRINT = new SprintModule();
     private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
 
@@ -81,6 +83,7 @@ public final class MorgueClient implements ClientModInitializer {
             MACE_HITTER.tick(client);
             KILL_AURA.tick(client);
             AUTO_TOTEM.tick(client);
+            INVENTORY_HELPER.tick(client);
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
         });
@@ -119,6 +122,16 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static SprintModule sprint() { return SPRINT; }
+
+    public static void setInventoryHelperEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        INVENTORY_HELPER.setEnabled(enabled);
+    }
+
+    public static InventoryHelperModule inventoryHelper() { return INVENTORY_HELPER; }
 
     public static void setSafeWalkEnabled(boolean enabled) {
         if (enabled && !MorgueIntegrity.isActivationAllowed()) {
