@@ -107,6 +107,9 @@ public final class MorgueScreen extends Screen {
     private String searchQuery = "";
     private boolean draggingPanel;
     private boolean resizingPanel;
+    private int moduleScrollOffset;
+    private int moduleTotalCount;
+    private int moduleVisibleCount;
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -180,13 +183,25 @@ public final class MorgueScreen extends Screen {
 
     private void buildModuleList() {
         int moduleX = panelX + 150;
-        int moduleY = panelY + 140;
+        int listTop = panelY + 140;
+        int listBottom = panelY + panelHeight - 48;
+        int rowHeight = 36;
+        int buttonHeight = 28;
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
-        int visibleCount = 0;
-        for (String module : MODULES.getOrDefault(selectedCategory, List.of())) {
-            if (!query.isEmpty() && !module.toLowerCase(java.util.Locale.ROOT).contains(query)) {
-                continue;
-            }
+        List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
+                .filter(module -> query.isEmpty()
+                        || module.toLowerCase(java.util.Locale.ROOT).contains(query))
+                .toList();
+
+        moduleTotalCount = filtered.size();
+        moduleVisibleCount = Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1);
+        int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
+        moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
+
+        int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
+        for (int i = moduleScrollOffset; i < end; i++) {
+            String module = filtered.get(i);
+            int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module);
             addRenderableWidget(Button.builder(
                     Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
@@ -199,21 +214,18 @@ public final class MorgueScreen extends Screen {
                         }
                         rebuildWidgets();
                     }
-            ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), 28).build());
+            ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), buttonHeight).build());
 
             addRenderableWidget(Button.builder(Component.literal("SETTINGS"), button -> {
                 selectedModule = module;
                 entityPage = false;
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 112, moduleY, 88, 28).build());
-
-            moduleY += 36;
-            visibleCount++;
+            }).bounds(panelX + panelWidth - 112, moduleY, 88, buttonHeight).build());
         }
 
-        if (visibleCount == 0) {
+        if (moduleTotalCount == 0) {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
-                    button -> {}).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), 28).build());
+                    button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
         }
     }
 
@@ -586,7 +598,8 @@ public final class MorgueScreen extends Screen {
         return Component.literal(value).withStyle(style -> style.withFont(DISPLAY_FONT).withBold(true));
     }
 
-    private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, int mouseX, int mouseY) {
+    private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
+                                      int mouseX, int mouseY) {
         int x = widget.getX();
         int y = widget.getY();
         int w = widget.getWidth();
@@ -597,7 +610,6 @@ public final class MorgueScreen extends Screen {
 
         long now = System.nanoTime();
         double pulse = (Math.sin(now / 310_000_000.0) + 1.0) * 0.5;
-        String rawLabel = widget.getMessage().getString();
         boolean selected = rawLabel.equals(selectedCategory);
         boolean activeState = rawLabel.startsWith("LIVE") || rawLabel.startsWith("ON")
                 || rawLabel.contains(": ON");
@@ -745,9 +757,26 @@ public final class MorgueScreen extends Screen {
         graphics.text(font, displayText("RIGHT SHIFT  •  CLOSE"),
                 panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
 
+        // Suppress vanilla button captions before Minecraft renders widgets. We restore
+        // them immediately afterward so input, accessibility, and click behavior stay intact.
+        Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
+        for (var child : children()) {
+            if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
+                buttonLabels.put(widget, widget.getMessage().getString());
+                widget.setMessage(Component.empty());
+            }
+        }
+
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
-        // Repaint vanilla Button widgets with MORGUE's own control language.
+        // Paint MORGUE controls once, above the now-captionless vanilla widget layer.
+        for (var entry : buttonLabels.entrySet()) {
+            AbstractWidget widget = entry.getKey();
+            String rawLabel = entry.getValue();
+            widget.setMessage(Component.literal(rawLabel));
+            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+        }
+
         for (var child : children()) {
             if (child instanceof AbstractWidget widget) {
                 if (widget instanceof EditBox) {
@@ -764,13 +793,41 @@ public final class MorgueScreen extends Screen {
                             searchHovered ? 0xFFFF607A : 0xA047647E);
                     continue;
                 }
-                extractCustomButton(graphics, widget, mouseX, mouseY);
             }
+        }
+
+        // A compact scroll track communicates that more modules are available.
+        if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
+            int trackX = panelX + panelWidth - 17;
+            int trackTop = panelY + 140;
+            int trackBottom = panelY + panelHeight - 48;
+            int trackHeight = Math.max(1, trackBottom - trackTop);
+            int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
+            int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
+            int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
+            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0x8055687C);
+            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
         }
     }
 
     private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
         return widget.isMouseOver(mouseX, mouseY) ? RED : 0xFF59697D;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (selectedModule == null && moduleTotalCount > moduleVisibleCount
+                && mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 10
+                && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
+                && verticalAmount != 0.0) {
+            int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
+            int step = Math.max(1, Math.abs((int) Math.signum(verticalAmount)));
+            moduleScrollOffset = Math.max(0, Math.min(maxOffset,
+                    moduleScrollOffset - (verticalAmount > 0 ? step : -step)));
+            rebuildWidgets();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
