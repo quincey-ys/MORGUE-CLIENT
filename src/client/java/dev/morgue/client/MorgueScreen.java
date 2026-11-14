@@ -110,6 +110,7 @@ public final class MorgueScreen extends Screen {
     private int moduleScrollOffset;
     private int moduleTotalCount;
     private int moduleVisibleCount;
+    private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -610,12 +611,40 @@ public final class MorgueScreen extends Screen {
 
     private void buildProfileSettings() {
         int x = panelX + 150;
-        addRenderableWidget(Button.builder(Component.literal("ACTIVE PROFILE: DEFAULT"),
-                button -> {}).bounds(x, panelY + 116, panelWidth - 176, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("Settings save automatically to config/morgue-client.properties."),
-                button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("Named profile import/export is not implemented yet."),
-                button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
+        int y = panelY + 112;
+        int width = panelWidth - 176;
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 1"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-1")
+                    ? "Saved profile slot 1." : "Could not save profile slot 1.";
+            rebuildWidgets();
+        }).bounds(x, y, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 1"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-1")
+                    ? "Loaded profile slot 1." : "Profile slot 1 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 31, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 2"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-2")
+                    ? "Saved profile slot 2." : "Could not save profile slot 2.";
+            rebuildWidgets();
+        }).bounds(x, y + 62, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 2"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-2")
+                    ? "Loaded profile slot 2." : "Profile slot 2 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 93, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 3"), button -> {
+            profileStatus = MorgueConfig.exportProfile("profile-3")
+                    ? "Saved profile slot 3." : "Could not save profile slot 3.";
+            rebuildWidgets();
+        }).bounds(x, y + 124, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("LOAD PROFILE SLOT 3"), button -> {
+            profileStatus = MorgueConfig.importProfile("profile-3")
+                    ? "Loaded profile slot 3." : "Profile slot 3 does not exist or could not be loaded.";
+            rebuildWidgets();
+        }).bounds(x, y + 155, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal(profileStatus), button -> {})
+                .bounds(x, y + 190, width, 28).build());
         addBackButton();
     }
 
