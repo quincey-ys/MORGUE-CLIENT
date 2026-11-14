@@ -19,8 +19,9 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Settings persist in `config/morgue-client.properties`; three named profile slots can be exported/imported under `config/morgue-client/profiles/`.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
-- **Sprint:** optional auto-sprint while horizontal movement is detected.
+- **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
 - **World Info / Client Metadata:** local player coordinates, health, world time, target version, and privacy-scope information.
+- **Inventory Helper:** refills low-count hotbar stacks from matching main-inventory stacks through vanilla container input; AutoTotem has priority if both request an inventory action in the same tick.
 - **Profiles:** three local configuration slots with import/export. Safe Walk, Movement Settings, several Player/Render/World tools, and some Misc/Privacy entries remain prototypes or informational screens.
 
 ## Development environment
