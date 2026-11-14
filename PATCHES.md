@@ -185,3 +185,6 @@ The entries above link representative commits. These additional commits are part
 - [32b — Trigger marker on observed target damage-cooldown reset](https://github.com/quincey-ys/MORGUE-CLIENT/commit/99a4dd55c7aa7c3de20a62e37c6b604fdbf14439).
 - [32c–32d — Persist and expose the marker option](https://github.com/quincey-ys/MORGUE-CLIENT/commit/94bb7f643372e9a2b7c4197af4e32333530d296c).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/fe51f39d2ab69ca577c7c7713c1ced2c0b3b2b9e).
+
+## Patch 33 — Smooth AutoTotem damage projection
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4d8b7a4705588d7727a35e48b4fe1a1422152410) — normalizes observed per-tick health loss before the short-horizon estimate, avoiding multiplying a single damage spike by ten.
