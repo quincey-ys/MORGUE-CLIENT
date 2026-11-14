@@ -95,7 +95,12 @@ public final class MaceHitterModule {
         if (now < nextAttackAt) {
             return;
         }
-        if (!ignoreCooldown && player.getAttackStrengthScale(0.5F) < 1.0F) {
+        // Holding the mace directly must not be blocked by the vanilla attack-strength
+        // meter. Mace Hitter's falling-smash checks and its own Attack Delay setting
+        // remain authoritative; the server still decides whether an attack deals damage.
+        boolean alreadyHoldingMace = isMace(player.getMainHandItem());
+        if (!alreadyHoldingMace && !ignoreCooldown
+                && player.getAttackStrengthScale(0.5F) < 1.0F) {
             return;
         }
 
