@@ -25,7 +25,7 @@ jobs:
         with:
           gradle-version: '9.8.0'
       - name: Build protected mod and SBOM
-        run: gradle build
+        run: gradle build --stacktrace
       - name: Verify protected release package
         shell: bash
         run: |
