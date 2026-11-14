@@ -47,3 +47,8 @@ All six commits are on `main` already. Use the latest main build for testing; do
 - Commit: [9d1bd67e](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9d1bd67e911895c98aaa28a3a57ed52565914c77)
 - File: `src/client/java/dev/morgue/client/MorgueScreen.java`
 - Caps the visible module rows at four so the Combat page can scroll even when the window is tall. Mouse-wheel scrolling moves through the remaining modules while the surrounding UI stays fixed.
+
+## Patch 09 — Mathematical double-struck UI typography
+- Commit: [5d9ab099](https://github.com/quincey-ys/MORGUE-CLIENT/commit/5d9ab099f04068fe0b53bac4abf8724a9fb2e7a3)
+- File: `src/client/java/dev/morgue/client/MorgueScreen.java`
+- Converts Latin letters and digits in rendered ClickGUI labels to the mathematical double-struck Unicode alphabet shown in the user's example. Uses Minecraft's default Unicode-capable font provider for those glyphs so the Oxanium TTF does not replace them with missing-glyph boxes.
