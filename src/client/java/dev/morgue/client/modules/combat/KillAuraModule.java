@@ -156,7 +156,7 @@ public final class KillAuraModule {
     private static boolean isThrowable(Item item) {
         return item == Items.SNOWBALL || item == Items.EGG || item == Items.ENDER_PEARL
                 || item == Items.FIREWORK_ROCKET || item == Items.SPLASH_POTION
-                || item == Items.LINGERING_POTION || item == Items.TRIDENT;
+                || item == Items.LINGERING_POTION;
     }
 
     /** Uses vanilla player state only; it does not spoof critical hits. */
