@@ -531,7 +531,9 @@ public final class MorgueScreen extends Screen {
         int y = panelY + 108;
         var assessment = dev.morgue.client.ai.TargetIntelligence.getLatestAssessment();
 
-        String activeCombat = MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
+        String activeCombat = MorgueClient.maceHitter().isEnabled() && MorgueClient.killAura().isEnabled()
+                ? "Mace Hitter priority / KillAura fallback"
+                : MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
                 : MorgueClient.killAura().isEnabled() ? "KillAura" : "No combat module active";
         addRenderableWidget(Button.builder(Component.literal("ENGINE: LOCAL TARGET INTELLIGENCE  /  READY"),
                 button -> {}).bounds(x, y, panelWidth - 176, 27).build());
