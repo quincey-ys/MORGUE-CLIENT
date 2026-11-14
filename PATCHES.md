@@ -188,3 +188,6 @@ The entries above link representative commits. These additional commits are part
 
 ## Patch 33 — Smooth AutoTotem damage projection
 - [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/4d8b7a4705588d7727a35e48b4fe1a1422152410) — normalizes observed per-tick health loss before the short-horizon estimate, avoiding multiplying a single damage spike by ten.
+
+## Patch 34 — Complete module-list HUD
+- [Commit](https://github.com/quincey-ys/MORGUE-CLIENT/commit/9e87de93419b2ae4ea472bbbb232e76a90215276) — adds Inventory Helper and Auto Eat states to the optional HUD list.
