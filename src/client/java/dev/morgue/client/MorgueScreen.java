@@ -758,13 +758,20 @@ public final class MorgueScreen extends Screen {
     private void buildHudEditorInfo() {
         int x = panelX + 150;
         int y = panelY + 112;
-        int width = panelWidth - 176;
-        addRenderableWidget(Button.builder(Component.literal("HUD EDITOR: CUSTOM OVERLAY LAYOUT IS NOT IMPLEMENTED."),
-                button -> {}).bounds(x, y, width, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("USE MODULE LIST TO VIEW THE CURRENT MODULE STATES."),
-                button -> {}).bounds(x, y + 36, width, 28).build());
-        addRenderableWidget(Button.builder(Component.literal("MORGUE DOES NOT DRAW A CUSTOM TARGET HUD YET."),
-                button -> {}).bounds(x, y + 72, width, 28).build());
+        addSettingButton(x, y, toggleLabel("Module List Overlay",
+                dev.morgue.client.MorgueHud.isModuleListEnabled()),
+                () -> dev.morgue.client.MorgueHud.setModuleListEnabled(
+                        !dev.morgue.client.MorgueHud.isModuleListEnabled()));
+        addSettingButton(x, y + 36, toggleLabel("KillAura Target Info",
+                dev.morgue.client.MorgueHud.isTargetInfoEnabled()),
+                () -> dev.morgue.client.MorgueHud.setTargetInfoEnabled(
+                        !dev.morgue.client.MorgueHud.isTargetInfoEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Overlays use the standard Fabric HUD layer and remain local to your client."),
+                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Positions are currently fixed to the upper corners; drag-and-drop editing is not implemented."),
+                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
         addBackButton();
     }
 
