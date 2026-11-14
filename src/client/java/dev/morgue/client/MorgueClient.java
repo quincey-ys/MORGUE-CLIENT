@@ -7,6 +7,7 @@ import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import dev.morgue.client.modules.movement.SprintModule;
+import dev.morgue.client.modules.movement.SafeWalkModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -22,6 +23,7 @@ public final class MorgueClient implements ClientModInitializer {
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AutoTotemModule AUTO_TOTEM = new AutoTotemModule();
     private static final SprintModule SPRINT = new SprintModule();
+    private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
 
     @Override
     public void onInitializeClient() {
@@ -80,6 +82,7 @@ public final class MorgueClient implements ClientModInitializer {
             KILL_AURA.tick(client);
             AUTO_TOTEM.tick(client);
             SPRINT.tick(client);
+            SAFE_WALK.tick(client);
         });
     }
 
@@ -116,6 +119,16 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static SprintModule sprint() { return SPRINT; }
+
+    public static void setSafeWalkEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        SAFE_WALK.setEnabled(enabled);
+    }
+
+    public static SafeWalkModule safeWalk() { return SAFE_WALK; }
 
     public static KillAuraModule killAura() {
         return KILL_AURA;
