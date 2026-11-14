@@ -20,7 +20,8 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
 - **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
-- **World Info / Client Metadata:** local player coordinates, health, world time, target version, and privacy-scope information.
+- **World Info / Environment / Client Metadata:** local player coordinates, health, absorption, rain/thunder state, world time, target version, and privacy-scope information.
+- **Module List / Movement Settings / Visual Settings:** live module status and the current movement/theme configuration.
 - **Inventory Helper:** refills low-count hotbar stacks from matching main-inventory stacks through vanilla container input; AutoTotem has priority if both request an inventory action in the same tick.
 - **Profiles:** three local configuration slots with import/export. Safe Walk, Movement Settings, several Player/Render/World tools, and some Misc/Privacy entries remain prototypes or informational screens.
 
