@@ -179,3 +179,9 @@ The entries above link representative commits. These additional commits are part
 - [31b — Register the Fabric HUD layer](https://github.com/quincey-ys/MORGUE-CLIENT/commit/2fa548d6b0c959e9e26f29517184600fe8d41182).
 - [31c–31d — Persist and expose overlay controls](https://github.com/quincey-ys/MORGUE-CLIENT/commit/85af45755e96f050cbe7fbb4df44649b383c7de3).
 - [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/48d4ae202943ee3e73ad03b996d4567c6fb489f2).
+
+## Patch 32 — Damage marker
+- [32a — Add timed gothic hit-marker overlay](https://github.com/quincey-ys/MORGUE-CLIENT/commit/94d0fbe4693e636dda000d27f3ba05ab1ff60507).
+- [32b — Trigger marker on observed target damage-cooldown reset](https://github.com/quincey-ys/MORGUE-CLIENT/commit/99a4dd55c7aa7c3de20a62e37c6b604fdbf14439).
+- [32c–32d — Persist and expose the marker option](https://github.com/quincey-ys/MORGUE-CLIENT/commit/94bb7f643372e9a2b7c4197af4e32333530d296c).
+- [Documentation](https://github.com/quincey-ys/MORGUE-CLIENT/commit/fe51f39d2ab69ca577c7c7713c1ced2c0b3b2b9e).
