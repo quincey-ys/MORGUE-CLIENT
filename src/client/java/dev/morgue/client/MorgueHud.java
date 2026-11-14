@@ -36,10 +36,12 @@ public final class MorgueHud {
                     "AURA: " + state(MorgueClient.killAura().isEnabled()),
                     "TOTEM: " + state(MorgueClient.autoTotem().isEnabled()),
                     "SPRINT: " + state(MorgueClient.sprint().isEnabled()),
-                    "SAFE WALK: " + state(MorgueClient.safeWalk().isEnabled())
+                    "SAFE WALK: " + state(MorgueClient.safeWalk().isEnabled()),
+                    "REFILL: " + state(MorgueClient.inventoryHelper().isEnabled()),
+                    "AUTO EAT: " + state(MorgueClient.autoEat().isEnabled())
             };
             int height = lines.length * 12 + 8;
-            graphics.fill(left, top, left + 112, top + height, 0xB8050914);
+            graphics.fill(left, top, left + 124, top + height, 0xB8050914);
             graphics.fill(left, top, left + 2, top + height, 0xFF80AFFF);
             for (int i = 0; i < lines.length; i++) {
                 graphics.text(client.font, Component.literal(lines[i]),
