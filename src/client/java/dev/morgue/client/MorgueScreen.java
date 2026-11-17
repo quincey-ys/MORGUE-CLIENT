@@ -15,7 +15,7 @@ import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.item.Items;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -1445,21 +1445,15 @@ public final class MorgueScreen extends Screen {
 
         List<EntityOption> options = new ArrayList<>();
         options.add(new EntityOption("Players", "minecraft:player"));
-        List<EntityOption> registeredLivingTypes = new ArrayList<>();
+        List<EntityOption> registeredEntityTypes = new ArrayList<>();
 
-        // Every non-MISC category is a mob category. Include the special
-        // living entity types that Minecraft places in MISC as well.
+        // Build from the complete registry. The runtime target filter removes
+        // entities that are not both attackable and pickable in the current world.
         BuiltInRegistries.ENTITY_TYPE.forEach(type -> {
             String id = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
             if ("minecraft:player".equals(id)) {
                 return;
             }
-            boolean specialLivingType = "minecraft:armor_stand".equals(id)
-                    || "minecraft:mannequin".equals(id);
-            if (type.getCategory() == MobCategory.MISC && !specialLivingType) {
-                return;
-            }
-
             String name = type.getDescription().getString();
             if (name == null || name.isBlank()) {
                 name = id.substring(id.indexOf(':') + 1).replace('_', ' ');
@@ -1467,13 +1461,13 @@ public final class MorgueScreen extends Screen {
             if (!id.startsWith("minecraft:")) {
                 name += " [" + id + "]";
             }
-            registeredLivingTypes.add(new EntityOption(name, id));
+            registeredEntityTypes.add(new EntityOption(name, id));
         });
 
-        registeredLivingTypes.sort(Comparator
+        registeredEntityTypes.sort(Comparator
                 .comparing(EntityOption::name, String.CASE_INSENSITIVE_ORDER)
                 .thenComparing(EntityOption::id));
-        options.addAll(registeredLivingTypes);
+        options.addAll(registeredEntityTypes);
         options.add(new EntityOption("Modded / Other", "morgue:other"));
         cachedEntityOptions = List.copyOf(options);
         return cachedEntityOptions;
@@ -1506,6 +1500,24 @@ public final class MorgueScreen extends Screen {
             itemId = option.id() + "_spawn_egg";
         }
         var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemId));
+        if (item == null || item == Items.AIR) {
+            // Non-mob targets do not have spawn eggs. Use a representative
+            // item icon where one exists, otherwise the barrier marker.
+            String fallbackId = switch (option.id()) {
+                case "minecraft:end_crystal" -> "minecraft:end_crystal";
+                case "minecraft:oak_boat", "minecraft:spruce_boat", "minecraft:birch_boat",
+                     "minecraft:jungle_boat", "minecraft:acacia_boat", "minecraft:cherry_boat",
+                     "minecraft:dark_oak_boat", "minecraft:mangrove_boat", "minecraft:pale_oak_boat",
+                     "minecraft:bamboo_raft" -> option.id();
+                case "minecraft:minecart", "minecraft:chest_minecart", "minecraft:furnace_minecart",
+                     "minecraft:tnt_minecart", "minecraft:hopper_minecart" -> option.id();
+                default -> "minecraft:barrier";
+            };
+            item = BuiltInRegistries.ITEM.getValue(Identifier.parse(fallbackId));
+        }
+        if (item == null || item == Items.AIR) {
+            item = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:barrier"));
+        }
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
