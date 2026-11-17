@@ -193,7 +193,7 @@ public final class KillAuraModule {
                     || (selectedEntityTypes.contains("morgue:other") && !id.startsWith("minecraft:"));
         }
         if (entity instanceof Player) {
-            return targetMode == TargetMode.PLAYERS;
+            return targetMode == TargetMode.PLAYERS || targetMode == TargetMode.ALL_LIVING;
         }
         return switch (targetMode) {
             case PLAYERS -> false;
