@@ -15,13 +15,13 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **Click Assist:** repeats the user's held attack input at a fixed configurable CPS against the entity under the crosshair, using vanilla cooldowns and shared combat arbitration.
 - **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, hurt-time and minimum-age filters, vanilla-critical-only option, throwable pause, rotation, auto-sword, shield breaking, switch-back, and optional local attack sound.
 - **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
-- **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
+- **AI Brain / Combat Coach:** displays the active controller and latest target assessment, then gives context-aware defensive, spacing, target-filter, cooldown, and Mace timing suggestions from local player state. It is deterministic, explainable, and runs locally; it is not a trained or remote model.
 - **Shared Combat Action Coordinator:** Mace Hitter and KillAura may both be enabled. Mace Hitter gets first opportunity to claim one attack action per client tick; KillAura acts only when Mace Hitter does not attack.
 - Target Intelligence centralizes ranking only; each combat module retains its own target filters and action logic.
 - Settings persist in `config/morgue-client.properties`; three named profile slots can be exported/imported under `config/morgue-client/profiles/`.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
-- **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
+- **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key. Movement Settings is now a status-only summary; Sprint and Safe Walk each have a single source-of-truth toggle in their own module settings.
 - **World Info / Environment / Client Metadata:** local player coordinates, health, absorption, rain/thunder state, world time, target version, and privacy-scope information.
 - **Module List / Movement Settings / Visual Settings:** live module status and the current movement/theme configuration.
 - **HUD overlays:** optional gothic module-list and KillAura target-info panels plus a short damage-cooldown-reset marker using Fabric's HUD layer API; positions are fixed for now. The marker is inferred from client-observed target state, not a server-confirmed hit receipt.
