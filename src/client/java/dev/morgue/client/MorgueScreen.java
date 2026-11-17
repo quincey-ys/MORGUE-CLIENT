@@ -12,6 +12,9 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
@@ -115,6 +118,15 @@ public final class MorgueScreen extends Screen {
     private int moduleListBottom;
     private static final int MODULE_ROW_HEIGHT = 36;
 
+    private static float panelOpacity = 1.0F;
+    private static float controlOpacity = 1.0F;
+
+    private int settingsScrollOffset;
+    private int settingsScrollMaxOffset;
+    private boolean settingsScrollDragging;
+    private int settingsScrollDragOffset;
+    private int activeOpacitySlider = -1;
+
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
     }
@@ -145,6 +157,8 @@ public final class MorgueScreen extends Screen {
                 selectedModule = null;
                 searchQuery = "";
                 entityPage = false;
+                moduleScrollOffset = 0;
+                settingsScrollOffset = 0;
                 rebuildWidgets();
             }).bounds(sidebarX, sidebarY, 116, 24).build());
             sidebarY += 29;
@@ -174,7 +188,7 @@ public final class MorgueScreen extends Screen {
             buildEnabledModuleList();
         } else if ("Environment".equals(selectedModule)) {
             buildEnvironmentInfo();
-        } else if ("Visual Settings".equals(selectedModule)) {
+        } else if ("Visual Settings".equals(selectedModule) || "Theme".equals(selectedModule)) {
             buildVisualSettings();
         } else if ("Notifications".equals(selectedModule)) {
             buildNotificationsSettings();
@@ -219,6 +233,8 @@ public final class MorgueScreen extends Screen {
         } else {
             buildPlaceholderSettings();
         }
+
+        layoutSettingsViewport();
     }
 
     private List<String> filteredModules() {
@@ -274,6 +290,7 @@ public final class MorgueScreen extends Screen {
                 if (viewOnly) {
                     selectedModule = module;
                     entityPage = false;
+                    settingsScrollOffset = 0;
                 } else {
                     toggleModule(module);
                 }
@@ -464,6 +481,7 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("ENTITY TARGET FILTER  >"), button -> {
             entityPage = true;
             entityPageIndex = 0;
+            settingsScrollOffset = 0;
             rebuildWidgets();
         }).bounds(leftX + 170, panelY + panelHeight - 42, panelWidth - 360, 24).build());
 
@@ -901,19 +919,12 @@ public final class MorgueScreen extends Screen {
         int x = panelX + 150;
         int y = panelY + 112;
         int width = panelWidth - 176;
-        String[] lines = {
-                "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
-                "PANEL: DEEP NAVY / BLACK",
-                "ACCENT: ICY STEEL BLUE",
-                "TYPOGRAPHY: BOLD DEFAULT MINECRAFT FONT",
-                "ANIMATION: ENABLED",
-                "THEME EDITOR: CUSTOM COLOR PICKER NOT IMPLEMENTED"
-        };
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-            addRenderableWidget(Button.builder(Component.literal(line), button -> {})
-                    .bounds(x, y + i * 32, width, 27).build());
-        }
+        addRenderableWidget(Button.builder(Component.literal(
+                "DRAG THE SLIDERS TO ADJUST THE TRANSPARENCY OF THE CLIENT UI."),
+                button -> {}).bounds(x, y, width, 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "SETTINGS ARE SAVED TO CONFIG AND RESTORED ON YOUR NEXT LAUNCH."),
+                button -> {}).bounds(x, y + 36, width, 28).build());
         addBackButton();
     }
 
@@ -1117,8 +1128,9 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("< BACK TO MODULES"), button -> {
             selectedModule = null;
             entityPage = false;
+            settingsScrollOffset = 0;
             rebuildWidgets();
-        }).bounds(panelX + 150, panelY + panelHeight - 42, 160, 24).build());
+        }).bounds(panelX + 150, panelY + panelHeight - 56, 160, 22).build());
     }
 
     private static boolean isModuleEnabled(String module) {
@@ -1151,6 +1163,171 @@ public final class MorgueScreen extends Screen {
 
     private static String format(double value) {
         return String.format(java.util.Locale.ROOT, "%.1f", value);
+    }
+
+    public static float getPanelOpacity() {
+        return panelOpacity;
+    }
+
+    public static void setPanelOpacity(float value) {
+        panelOpacity = clampOpacity(value);
+    }
+
+    public static float getControlOpacity() {
+        return controlOpacity;
+    }
+
+    public static void setControlOpacity(float value) {
+        controlOpacity = clampOpacity(value);
+    }
+
+    private static float clampOpacity(float value) {
+        return Math.max(0.20F, Math.min(1.0F, value));
+    }
+
+    private static int withOpacity(int argb, float opacity) {
+        int alpha = (argb >>> 24) & 0xFF;
+        int adjusted = Math.max(0, Math.min(255, Math.round(alpha * opacity)));
+        return (argb & 0x00FFFFFF) | (adjusted << 24);
+    }
+
+    private boolean isOpacitySettingsPage() {
+        return "Visual Settings".equals(selectedModule) || "Theme".equals(selectedModule);
+    }
+
+    private boolean isScrollableSettingsPage() {
+        return selectedModule != null && !entityPage && !isOpacitySettingsPage();
+    }
+
+    private int settingsViewportTop() {
+        return panelY + 106;
+    }
+
+    private int settingsViewportBottom() {
+        return panelY + panelHeight - 64;
+    }
+
+    private int settingsViewportLeft() {
+        return panelX + 144;
+    }
+
+    private int settingsViewportRight() {
+        return panelX + panelWidth - 22;
+    }
+
+    private boolean isBackButton(AbstractWidget widget) {
+        return widget.getMessage().getString().startsWith("< BACK TO MODULES");
+    }
+
+    private boolean isSettingsContentWidget(AbstractWidget widget) {
+        return widget.getX() >= panelX + 140 && !isBackButton(widget);
+    }
+
+    private void layoutSettingsViewport() {
+        settingsScrollMaxOffset = 0;
+        if (!isScrollableSettingsPage()) {
+            settingsScrollOffset = 0;
+            return;
+        }
+
+        int contentBottom = settingsViewportTop();
+        for (var child : children()) {
+            if (child instanceof AbstractWidget widget && widget.visible
+                    && isSettingsContentWidget(widget)) {
+                contentBottom = Math.max(contentBottom, widget.getY() + widget.getHeight());
+            }
+        }
+
+        settingsScrollMaxOffset = Math.max(0, contentBottom - settingsViewportBottom());
+        settingsScrollOffset = Math.max(0, Math.min(settingsScrollOffset, settingsScrollMaxOffset));
+        if (settingsScrollOffset > 0) {
+            for (var child : children()) {
+                if (child instanceof AbstractWidget widget && widget.visible
+                        && isSettingsContentWidget(widget)) {
+                    widget.setY(widget.getY() - settingsScrollOffset);
+                }
+            }
+        }
+    }
+
+    private int settingsScrollTrackX() {
+        return panelX + panelWidth - 16;
+    }
+
+    private int settingsScrollThumbHeight() {
+        int track = Math.max(1, settingsViewportBottom() - settingsViewportTop());
+        return Math.max(22, track * track / Math.max(1, track + settingsScrollMaxOffset));
+    }
+
+    private int settingsScrollThumbY() {
+        int track = Math.max(1, settingsViewportBottom() - settingsViewportTop());
+        int thumb = settingsScrollThumbHeight();
+        int travel = Math.max(1, track - thumb);
+        return settingsViewportTop() + travel * settingsScrollOffset
+                / Math.max(1, settingsScrollMaxOffset);
+    }
+
+    private void setSettingsScrollFromMouseY(double mouseY) {
+        int track = Math.max(1, settingsViewportBottom() - settingsViewportTop());
+        int thumb = settingsScrollThumbHeight();
+        int travel = Math.max(1, track - thumb);
+        double fraction = (mouseY - settingsScrollDragOffset - settingsViewportTop()) / travel;
+        fraction = Math.max(0.0, Math.min(1.0, fraction));
+        settingsScrollOffset = (int) Math.round(fraction * settingsScrollMaxOffset);
+        rebuildWidgets();
+    }
+
+    private int opacitySliderLeft() {
+        return panelX + 184;
+    }
+
+    private int opacitySliderRight() {
+        return panelX + panelWidth - 62;
+    }
+
+    private int opacitySliderY(int slider) {
+        return panelY + 176 + slider * 76;
+    }
+
+    private boolean isOpacitySliderAt(double mouseX, double mouseY, int slider) {
+        int y = opacitySliderY(slider);
+        return mouseX >= opacitySliderLeft() - 6 && mouseX <= opacitySliderRight() + 6
+                && mouseY >= y - 7 && mouseY <= y + 15;
+    }
+
+    private void updateOpacitySlider(double mouseX, int slider) {
+        double fraction = (mouseX - opacitySliderLeft())
+                / Math.max(1.0, opacitySliderRight() - opacitySliderLeft());
+        float value = (float) (0.20 + Math.max(0.0, Math.min(1.0, fraction)) * 0.80);
+        if (slider == 0) {
+            panelOpacity = value;
+        } else {
+            controlOpacity = value;
+        }
+    }
+
+    private void drawOpacitySliders(GuiGraphicsExtractor graphics) {
+        if (!isOpacitySettingsPage()) {
+            return;
+        }
+        graphics.text(font, displayText("PANEL OPACITY  " + Math.round(panelOpacity * 100) + "%"),
+                opacitySliderLeft(), opacitySliderY(0) - 23, WHITE);
+        graphics.text(font, displayText("BUTTON OPACITY  " + Math.round(controlOpacity * 100) + "%"),
+                opacitySliderLeft(), opacitySliderY(1) - 23, WHITE);
+
+        for (int i = 0; i < 2; i++) {
+            int y = opacitySliderY(i);
+            float value = i == 0 ? panelOpacity : controlOpacity;
+            int left = opacitySliderLeft();
+            int right = opacitySliderRight();
+            int thumb = left + Math.round((right - left) * ((value - 0.20F) / 0.80F));
+            graphics.fill(left, y, right, y + 8, 0xFF17263A);
+            graphics.fill(left, y + 1, thumb, y + 7, RED_SOFT);
+            graphics.fill(left, y + 3, thumb, y + 5, RED);
+            graphics.outline(left, y - 1, right - left, 10, 0xB35C7CA3);
+            graphics.fill(thumb - 4, y - 4, thumb + 5, y + 13, 0xFF9DCBFF);
+            graphics.fill(thumb - 2, y - 2, thumb + 3, y + 11, 0xFF203A59);
+        }
     }
 
     @Override
@@ -1196,8 +1373,9 @@ public final class MorgueScreen extends Screen {
                 : WHITE;
 
         // Layered glass plate, cut corners, and a restrained animated edge.
-        graphics.fill(x, y, x + w, y + h, background);
-        graphics.fill(x + 2, y + 1, x + w - 2, y + h - 1, hovered ? 0x263D5E87 : 0x182A4263);
+        graphics.fill(x, y, x + w, y + h, withOpacity(background, controlOpacity));
+        graphics.fill(x + 2, y + 1, x + w - 2, y + h - 1,
+                withOpacity(hovered ? 0x263D5E87 : 0x182A4263, controlOpacity));
         graphics.fill(x, y + 2, x + 3, y + h - 2, accent);
         graphics.fill(x + 3, y, x + w - 5, y + 1, 0x806C86A8);
         graphics.fill(x + 4, y + h - 1, x + w - 2, y + h, 0xA0030812);
@@ -1226,15 +1404,51 @@ public final class MorgueScreen extends Screen {
                     hovered ? 0xFFB9D8FF : 0xFF54708F);
         }
 
+        int textLeft = x + 10;
+        EntityOption targetOption = entityPage ? entityOptionForLabel(rawLabel) : null;
+        if (targetOption != null) {
+            ItemStack icon = entityItemStack(targetOption);
+            if (!icon.isEmpty()) {
+                graphics.item(icon, x + 5, y + Math.max(2, (h - 16) / 2));
+                textLeft = x + 27;
+            }
+        }
+
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int maxTextWidth = Math.max(8, w - 30);
+        int maxTextWidth = Math.max(8, x + w - textLeft - 18);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
-        graphics.text(font, label, x + 10, textY, textColor);
+        graphics.text(font, label, textLeft, textY, textColor);
+    }
+
+    private EntityOption entityOptionForLabel(String rawLabel) {
+        String name = rawLabel.replaceFirst("^\\[[ xX]\\]\\s*", "");
+        for (EntityOption option : ENTITY_OPTIONS) {
+            if (option.name().equals(name)) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    private ItemStack entityItemStack(EntityOption option) {
+        String itemId;
+        if ("minecraft:player".equals(option.id())) {
+            itemId = "minecraft:player_head";
+        } else if ("minecraft:wither".equals(option.id())) {
+            itemId = "minecraft:wither_skeleton_skull";
+        } else if ("minecraft:ender_dragon".equals(option.id())) {
+            itemId = "minecraft:dragon_head";
+        } else if ("morgue:other".equals(option.id())) {
+            itemId = "minecraft:barrier";
+        } else {
+            itemId = option.id() + "_spawn_egg";
+        }
+        return new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(itemId)));
     }
 
     private void drawAnimatedPanelEffects(GuiGraphicsExtractor graphics) {
@@ -1283,20 +1497,24 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX + 1, panelY + 3, panelX + panelWidth - 1, panelY + panelHeight - 1, PANEL);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight,
+                withOpacity(BLACK, panelOpacity));
+        graphics.fill(panelX + 1, panelY + 3, panelX + panelWidth - 1, panelY + panelHeight - 1,
+                withOpacity(PANEL, panelOpacity));
         graphics.outline(panelX, panelY, panelWidth, panelHeight, BORDER);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
         graphics.fill(panelX + panelWidth - 92, panelY + 3, panelX + panelWidth - 16,
                 panelY + 4, RED_SOFT);
         drawAnimatedPanelEffects(graphics);
 
-        graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
+        graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72,
+                withOpacity(PANEL_LIGHT, panelOpacity));
         graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
         graphics.text(font, displayText("MORGUE"), panelX + 49, panelY + 17, WHITE);
         graphics.text(font, displayText("CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
 
-        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL_LIGHT);
+        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69,
+                withOpacity(PANEL_LIGHT, panelOpacity));
         graphics.fill(panelX + 145, panelY + 18, panelX + 148, panelY + 69, RED_SOFT);
         String heading = selectedModule == null ? selectedCategory.toUpperCase() : selectedModule.toUpperCase();
         graphics.text(font, displayText(heading), panelX + 161, panelY + 27, WHITE);
@@ -1324,25 +1542,68 @@ public final class MorgueScreen extends Screen {
         graphics.text(font, displayText("LMB TOGGLE  •  RMB SETTINGS  •  MMB BIND"),
                 panelX + panelWidth - 244, panelY + panelHeight - 24, MUTED);
 
-        // Suppress vanilla button captions before Minecraft renders widgets. We restore
-        // them immediately afterward so input, accessibility, and click behavior stay intact.
+        // Suppress vanilla captions; custom MORGUE controls are painted above the
+        // widget layer. Scrollable pages are rendered in two passes so the content
+        // viewport can be clipped without clipping the sidebar or fixed Back button.
         Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
+        Map<AbstractWidget, Boolean> originalVisibility = new java.util.IdentityHashMap<>();
         for (var child : children()) {
             if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
                 buttonLabels.put(widget, widget.getMessage().getString());
+                originalVisibility.put(widget, widget.visible);
                 widget.setMessage(Component.empty());
             }
         }
 
-        super.extractRenderState(graphics, mouseX, mouseY, delta);
+        if (isScrollableSettingsPage()) {
+            for (var child : children()) {
+                if (child instanceof AbstractWidget widget) {
+                    widget.visible = originalVisibility.getOrDefault(widget, widget.visible)
+                            && isSettingsContentWidget(widget);
+                }
+            }
+            graphics.enableScissor(settingsViewportLeft(), settingsViewportTop(),
+                    settingsViewportRight(), settingsViewportBottom());
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
+            graphics.disableScissor();
 
-        // Paint MORGUE controls once, above the now-captionless vanilla widget layer.
+            for (var child : children()) {
+                if (child instanceof AbstractWidget widget) {
+                    widget.visible = originalVisibility.getOrDefault(widget, widget.visible)
+                            && !isSettingsContentWidget(widget);
+                }
+            }
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
+
+            for (var child : children()) {
+                if (child instanceof AbstractWidget widget) {
+                    widget.visible = originalVisibility.getOrDefault(widget, widget.visible);
+                }
+            }
+        } else {
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
+        }
+
+        // Paint buttons with the same clipping boundaries used by the vanilla widget pass.
+        if (isScrollableSettingsPage()) {
+            graphics.enableScissor(settingsViewportLeft(), settingsViewportTop(),
+                    settingsViewportRight(), settingsViewportBottom());
+        }
         for (var entry : buttonLabels.entrySet()) {
             AbstractWidget widget = entry.getKey();
             String rawLabel = entry.getValue();
             widget.setMessage(Component.literal(rawLabel));
-            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+            if (!isScrollableSettingsPage() || isSettingsContentWidget(widget)) {
+                extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+            } else if (isBackButton(widget) || widget.getX() < panelX + 140) {
+                extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+            }
         }
+        if (isScrollableSettingsPage()) {
+            graphics.disableScissor();
+        }
+
+        drawOpacitySliders(graphics);
 
         for (var child : children()) {
             if (child instanceof AbstractWidget widget) {
@@ -1363,6 +1624,16 @@ public final class MorgueScreen extends Screen {
             }
         }
 
+        if (isScrollableSettingsPage() && settingsScrollMaxOffset > 0) {
+            int trackX = settingsScrollTrackX();
+            int thumbY = settingsScrollThumbY();
+            int thumbHeight = settingsScrollThumbHeight();
+            graphics.fill(trackX, settingsViewportTop(), trackX + 2, settingsViewportBottom(), 0x805778A2);
+            graphics.fill(trackX - 2, thumbY, trackX + 4, thumbY + thumbHeight,
+                    settingsScrollDragging ? 0xFFB8D5FF : RED);
+            graphics.fill(trackX - 1, thumbY + 2, trackX + 3, thumbY + thumbHeight - 2, 0xFF27496F);
+        }
+
         // Drag handle and track for the module-list viewport.
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
             int trackX = moduleScrollTrackX();
@@ -1381,6 +1652,15 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (isScrollableSettingsPage() && settingsScrollMaxOffset > 0
+                && mouseX >= settingsViewportLeft() && mouseX <= settingsViewportRight()
+                && mouseY >= settingsViewportTop() && mouseY <= settingsViewportBottom()
+                && verticalAmount != 0.0) {
+            settingsScrollOffset = Math.max(0, Math.min(settingsScrollMaxOffset,
+                    settingsScrollOffset - (int) Math.round(verticalAmount * 28.0)));
+            rebuildWidgets();
+            return true;
+        }
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount
                 && mouseX >= panelX + 150 && mouseX <= panelX + panelWidth - 20
                 && mouseY >= moduleListTop && mouseY <= moduleListBottom
@@ -1411,6 +1691,38 @@ public final class MorgueScreen extends Screen {
             return true;
         }
 
+        if (event.button() == 0 && isOpacitySettingsPage()) {
+            for (int slider = 0; slider < 2; slider++) {
+                if (isOpacitySliderAt(mouseX, mouseY, slider)) {
+                    activeOpacitySlider = slider;
+                    updateOpacitySlider(mouseX, slider);
+                    return true;
+                }
+            }
+        }
+
+        if (event.button() == 0 && isScrollableSettingsPage() && settingsScrollMaxOffset > 0
+                && mouseX >= settingsScrollTrackX() - 5 && mouseX <= settingsScrollTrackX() + 6
+                && mouseY >= settingsViewportTop() && mouseY <= settingsViewportBottom()) {
+            int thumbY = settingsScrollThumbY();
+            int thumbHeight = settingsScrollThumbHeight();
+            settingsScrollDragging = true;
+            settingsScrollDragOffset = mouseY >= thumbY && mouseY <= thumbY + thumbHeight
+                    ? (int) mouseY - thumbY : thumbHeight / 2;
+            if (mouseY < thumbY || mouseY > thumbY + thumbHeight) {
+                setSettingsScrollFromMouseY(mouseY);
+            }
+            return true;
+        }
+
+        if (isScrollableSettingsPage() && mouseX >= settingsViewportLeft()
+                && mouseX <= settingsViewportRight()
+                && (mouseY < settingsViewportTop() || mouseY > settingsViewportBottom())
+                && !(mouseX >= panelX + 145 && mouseX <= panelX + 320
+                && mouseY >= panelY + panelHeight - 56 && mouseY <= panelY + panelHeight - 34)) {
+            return true;
+        }
+
         if (event.button() == 0 && selectedModule == null
                 && moduleTotalCount > moduleVisibleCount
                 && mouseX >= moduleScrollTrackX() - 5 && mouseX <= moduleScrollTrackX() + 6
@@ -1430,6 +1742,7 @@ public final class MorgueScreen extends Screen {
         if (event.button() == 1 && module != null) {
             selectedModule = module;
             entityPage = false;
+            settingsScrollOffset = 0;
             pendingKeybindModule = null;
             rebuildWidgets();
             return true;
@@ -1477,6 +1790,14 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 0 && activeOpacitySlider >= 0) {
+            updateOpacitySlider(event.x(), activeOpacitySlider);
+            return true;
+        }
+        if (event.button() == 0 && settingsScrollDragging) {
+            setSettingsScrollFromMouseY(event.y());
+            return true;
+        }
         if (event.button() == 0 && moduleScrollDragging) {
             setModuleScrollFromMouseY(event.y());
             return true;
@@ -1507,6 +1828,12 @@ public final class MorgueScreen extends Screen {
         draggingPanel = false;
         resizingPanel = false;
         moduleScrollDragging = false;
+        settingsScrollDragging = false;
+        if (activeOpacitySlider >= 0) {
+            activeOpacitySlider = -1;
+            MorgueConfig.save();
+            return true;
+        }
         return super.mouseReleased(event);
     }
 
