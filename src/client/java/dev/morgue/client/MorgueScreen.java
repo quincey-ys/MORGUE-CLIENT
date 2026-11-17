@@ -21,6 +21,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleSupplier;
 
 public final class MorgueScreen extends Screen {
     private static final int BLACK = 0xC8050914;
@@ -126,6 +128,8 @@ public final class MorgueScreen extends Screen {
     private boolean settingsScrollDragging;
     private int settingsScrollDragOffset;
     private int activeOpacitySlider = -1;
+    private final Map<AbstractWidget, SettingSlider> settingSliders = new java.util.IdentityHashMap<>();
+    private SettingSlider activeSettingSlider;
 
     public MorgueScreen() {
         super(Component.literal("MORGUE-CLIENT"));
@@ -134,6 +138,8 @@ public final class MorgueScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
+        settingSliders.clear();
+        activeSettingSlider = null;
 
         int maxWidth = Math.max(320, width - 24);
         int maxHeight = Math.max(300, height - 24);
@@ -352,8 +358,8 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.inventoryHelper();
         addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
                 () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Refill At: " + module.getRefillAt() + " items",
-                () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
+        addValueSlider(x, y + 36, panelWidth / 2 - 170, "Refill At", 1, 16, " items", true,
+                () -> module.getRefillAt(), value -> module.setRefillAt((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Swaps matching low-count hotbar stacks with main-inventory stacks."),
                 button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
@@ -399,12 +405,12 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.aimAssist();
         addSettingButton(x, y, toggleLabel("Visible Aim Assist", module.isEnabled()),
                 () -> MorgueClient.setAimAssistEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Range: " + format(module.getRange()),
-                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.5));
-        addSettingButton(x, y + 72, "FOV: " + format(module.getFov()),
-                () -> module.setFov(module.getFov() >= 180.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(x, y + 108, "Smoothing: " + format(module.getSmoothing()),
-                () -> module.setSmoothing(module.getSmoothing() >= 1.0F ? 0.05F : module.getSmoothing() + 0.05F));
+        addValueSlider(x, y + 36, panelWidth / 2 - 170, "Range", 1.0, 6.0, " blocks", false,
+                module::getRange, module::setRange);
+        addValueSlider(x, y + 72, panelWidth / 2 - 170, "FOV", 15.0, 180.0, " deg", false,
+                module::getFov, module::setFov);
+        addValueSlider(x, y + 108, panelWidth / 2 - 170, "Smoothing", 0.05, 1.0, "", false,
+                module::getSmoothing, value -> module.setSmoothing((float) value));
         addRenderableWidget(Button.builder(Component.literal(
                 "Only assists while you hold attack, targets visible players, and rotates visibly."),
                 button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
@@ -420,9 +426,8 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.clickAssist();
         addSettingButton(x, y, toggleLabel("Click Assist", module.isEnabled()),
                 () -> MorgueClient.setClickAssistEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Rate: " + module.getClicksPerSecond() + " CPS",
-                () -> module.setClicksPerSecond(module.getClicksPerSecond() >= 20
-                        ? 1 : module.getClicksPerSecond() + 1));
+        addValueSlider(x, y + 36, panelWidth / 2 - 170, "Click Rate", 1, 20, " CPS", true,
+                () -> module.getClicksPerSecond(), value -> module.setClicksPerSecond((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Repeats your held attack input against the entity under your crosshair."),
                 button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
@@ -439,14 +444,14 @@ public final class MorgueScreen extends Screen {
         int y = panelY + 108;
         int row = 0;
 
-        addSettingButton(leftX, y + row++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
-                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
-        addSettingButton(leftX, y + row++ * 27, "FOV: " + format(module.getFov()) + "  (+15)",
-                () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(leftX, y + row++ * 27, "Minimum Fall: " + format(module.getMinimumFallDistance()) + "  (+0.1)",
-                () -> module.setMinimumFallDistance(module.getMinimumFallDistance() >= 5.0 ? 0.0 : module.getMinimumFallDistance() + 0.1));
-        addSettingButton(leftX, y + row++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms  (+10)",
-                () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
+        addValueSlider(leftX, y + row++ * 27, panelWidth / 2 - 170, "Range", 1.0, 6.0, " blocks", false,
+                module::getRange, module::setRange);
+        addValueSlider(leftX, y + row++ * 27, panelWidth / 2 - 170, "FOV", 15.0, 360.0, " deg", false,
+                module::getFov, module::setFov);
+        addValueSlider(leftX, y + row++ * 27, panelWidth / 2 - 170, "Minimum Fall", 0.0, 5.0, " blocks", false,
+                module::getMinimumFallDistance, module::setMinimumFallDistance);
+        addValueSlider(leftX, y + row++ * 27, panelWidth / 2 - 170, "Attack Delay", 0, 200, " ms", true,
+                () -> module.getAttackDelayMillis(), value -> module.setAttackDelayMillis((int) Math.round(value)));
         addSettingButton(leftX, y + row++ * 27, "Priority: " + module.getPriority(),
                 () -> module.setPriority(switch (module.getPriority()) {
                     case CLOSEST -> MaceHitterModule.Priority.LOWEST_HEALTH;
@@ -590,12 +595,12 @@ public final class MorgueScreen extends Screen {
         int leftRow = 0;
         int rightRow = 0;
 
-        addSettingButton(leftX, y + leftRow++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
-                () -> module.setRange(module.getRange() >= 6.0 ? 1.0 : module.getRange() + 0.2));
-        addSettingButton(leftX, y + leftRow++ * 27, "FOV: " + format(module.getFov()) + "  (+15)",
-                () -> module.setFov(module.getFov() >= 360.0 ? 15.0 : module.getFov() + 15.0));
-        addSettingButton(leftX, y + leftRow++ * 27, "Attack Delay: " + module.getAttackDelayMillis() + " ms",
-                () -> module.setAttackDelayMillis(module.getAttackDelayMillis() >= 200 ? 0 : module.getAttackDelayMillis() + 10));
+        addValueSlider(leftX, y + leftRow++ * 27, panelWidth / 2 - 170, "Range", 1.0, 6.0, " blocks", false,
+                module::getRange, module::setRange);
+        addValueSlider(leftX, y + leftRow++ * 27, panelWidth / 2 - 170, "FOV", 15.0, 360.0, " deg", false,
+                module::getFov, module::setFov);
+        addValueSlider(leftX, y + leftRow++ * 27, panelWidth / 2 - 170, "Attack Delay", 0, 200, " ms", true,
+                () -> module.getAttackDelayMillis(), value -> module.setAttackDelayMillis((int) Math.round(value)));
         addSettingButton(leftX, y + leftRow++ * 27, "Priority: " + module.getPriority(),
                 () -> module.setPriority(switch (module.getPriority()) {
                     case CLOSEST -> dev.morgue.client.modules.combat.KillAuraModule.Priority.LOWEST_HEALTH;
@@ -638,8 +643,8 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Attack Sound", module.isAttackSound()),
                 () -> module.setAttackSound(!module.isAttackSound()));
-        addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
-                () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
+        addValueSlider(leftX, y + leftRow++ * 27, panelWidth / 2 - 170, "Minimum Target Age", 0, 200, " ticks", true,
+                () -> module.getMinimumAgeTicks(), value -> module.setMinimumAgeTicks((int) Math.round(value)));
 
         addBackButton();
     }
@@ -706,12 +711,10 @@ public final class MorgueScreen extends Screen {
                     ? dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.INVENTORY_FIRST
                     : dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.HOTBAR_FIRST);
         });
-        addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
-            module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
-        });
-        addSettingButton(leftX, y + 108, "Activation Health: " + format(module.getActivationHealth()),
-                () -> module.setActivationHealth(module.getActivationHealth() <= 0.0F ? 20.0F
-                        : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
+        addValueSlider(leftX, y + 72, panelWidth / 2 - 170, "Switch Delay", 0, 250, " ms", true,
+                () -> module.getSwitchDelayMillis(), value -> module.setSwitchDelayMillis((int) Math.round(value)));
+        addValueSlider(leftX, y + 108, panelWidth / 2 - 170, "Activation Health", 0, 20, " HP", false,
+                () -> module.getActivationHealth(), value -> module.setActivationHealth((float) value));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
         addSettingButton(rightX, y + 72, toggleLabel("Predict Recent Damage", module.isPredictRecentDamage()),
@@ -850,9 +853,8 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.autoEat();
         addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
                 () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Hunger Threshold: " + module.getHungerThreshold(),
-                () -> module.setHungerThreshold(module.getHungerThreshold() >= 19
-                        ? 1 : module.getHungerThreshold() + 1));
+        addValueSlider(x, y + 36, panelWidth / 2 - 170, "Hunger Threshold", 1, 19, " points", true,
+                () -> module.getHungerThreshold(), value -> module.setHungerThreshold((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Selects the most nutritious food already in your hotbar."),
                 button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
@@ -1111,6 +1113,54 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Gameplay behavior is not connected yet."),
                 button -> {}).bounds(x, panelY + 148, panelWidth - 176, 28).build());
         addBackButton();
+    }
+
+    private void addValueSlider(int x, int y, int width, String label, double min, double max,
+                                String suffix, boolean integer, DoubleSupplier getter, DoubleConsumer setter) {
+        AbstractWidget placeholder = Button.builder(Component.empty(), button -> {})
+                .bounds(x, y, width, 27).build();
+        addRenderableWidget(placeholder);
+        settingSliders.put(placeholder,
+                new SettingSlider(placeholder, label, min, max, suffix, integer, getter, setter));
+    }
+
+    private void updateSettingSlider(SettingSlider slider, double mouseX) {
+        int left = slider.widget().getX() + 8;
+        int right = slider.widget().getX() + slider.widget().getWidth() - 8;
+        double fraction = (mouseX - left) / Math.max(1.0, right - left);
+        fraction = Math.max(0.0, Math.min(1.0, fraction));
+        double value = slider.minimum() + fraction * (slider.maximum() - slider.minimum());
+        if (slider.integer()) {
+            value = Math.round(value);
+        }
+        slider.setter().accept(value);
+    }
+
+    private void drawSettingSliders(GuiGraphicsExtractor graphics) {
+        for (SettingSlider slider : settingSliders.values()) {
+            AbstractWidget widget = slider.widget();
+            int x = widget.getX();
+            int y = widget.getY();
+            int width = widget.getWidth();
+            double value = slider.getter().getAsDouble();
+            double fraction = (value - slider.minimum())
+                    / Math.max(0.0001, slider.maximum() - slider.minimum());
+            fraction = Math.max(0.0, Math.min(1.0, fraction));
+            int left = x + 8;
+            int right = x + width - 8;
+            int trackY = y + 19;
+            int thumb = left + (int) Math.round((right - left) * fraction);
+            String shownValue = slider.integer()
+                    ? Long.toString(Math.round(value)) : format(value);
+            graphics.text(font, displayText(slider.label() + "  " + shownValue + slider.suffix()),
+                    x + 8, y + 2, WHITE);
+            graphics.fill(left, trackY, right, trackY + 4, withOpacity(0xFF17263A, controlOpacity));
+            graphics.fill(left, trackY + 1, thumb, trackY + 3, withOpacity(RED_SOFT, controlOpacity));
+            graphics.fill(left, trackY + 2, thumb, trackY + 3, withOpacity(RED, controlOpacity));
+            graphics.outline(left, trackY - 1, right - left, 6, 0xA05C7CA3);
+            graphics.fill(thumb - 3, trackY - 4, thumb + 4, trackY + 8, 0xFF9DCBFF);
+            graphics.fill(thumb - 1, trackY - 2, thumb + 2, trackY + 6, 0xFF203A59);
+        }
     }
 
     private void addSettingButton(int x, int y, String label, Runnable action) {
@@ -1599,10 +1649,11 @@ public final class MorgueScreen extends Screen {
                 AbstractWidget widget = entry.getKey();
                 String rawLabel = entry.getValue();
                 widget.setMessage(Component.literal(rawLabel));
-                if (isSettingsContentWidget(widget)) {
+                if (isSettingsContentWidget(widget) && !settingSliders.containsKey(widget)) {
                     extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
                 }
             }
+            drawSettingSliders(graphics);
             graphics.disableScissor();
 
             // The sidebar and Back button are fixed UI and must never be clipped.
@@ -1620,8 +1671,11 @@ public final class MorgueScreen extends Screen {
                 AbstractWidget widget = entry.getKey();
                 String rawLabel = entry.getValue();
                 widget.setMessage(Component.literal(rawLabel));
-                extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+                if (!settingSliders.containsKey(widget)) {
+                    extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+                }
             }
+            drawSettingSliders(graphics);
         }
 
         drawOpacitySliders(graphics);
@@ -1710,6 +1764,18 @@ public final class MorgueScreen extends Screen {
             pendingKeybindModule = null;
             rebuildWidgets();
             return true;
+        }
+
+        if (event.button() == 0) {
+            for (SettingSlider slider : settingSliders.values()) {
+                AbstractWidget widget = slider.widget();
+                if (mouseX >= widget.getX() && mouseX <= widget.getX() + widget.getWidth()
+                        && mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight()) {
+                    activeSettingSlider = slider;
+                    updateSettingSlider(slider, mouseX);
+                    return true;
+                }
+            }
         }
 
         if (event.button() == 0 && isOpacitySettingsPage()) {
@@ -1811,6 +1877,10 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 0 && activeSettingSlider != null) {
+            updateSettingSlider(activeSettingSlider, event.x());
+            return true;
+        }
         if (event.button() == 0 && activeOpacitySlider >= 0) {
             updateOpacitySlider(event.x(), activeOpacitySlider);
             return true;
@@ -1850,6 +1920,11 @@ public final class MorgueScreen extends Screen {
         resizingPanel = false;
         moduleScrollDragging = false;
         settingsScrollDragging = false;
+        if (activeSettingSlider != null) {
+            activeSettingSlider = null;
+            MorgueConfig.save();
+            return true;
+        }
         if (activeOpacitySlider >= 0) {
             activeOpacitySlider = -1;
             MorgueConfig.save();
@@ -1866,6 +1941,10 @@ public final class MorgueScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private record SettingSlider(AbstractWidget widget, String label, double minimum, double maximum,
+                                  String suffix, boolean integer, DoubleSupplier getter, DoubleConsumer setter) {
     }
 
     private record EntityOption(String name, String id) {
