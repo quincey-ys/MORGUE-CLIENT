@@ -3,6 +3,7 @@ package dev.morgue.client.config;
 import dev.morgue.client.MorgueClient;
 import dev.morgue.client.ClientNotifications;
 import dev.morgue.client.MorgueHud;
+import dev.morgue.client.MorgueScreen;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
@@ -110,6 +111,9 @@ public final class MorgueConfig {
             mace.setEntityTypeSelected(id.trim(), true);
         }
 
+        MorgueScreen.setPanelOpacity((float) decimal(values, "ui.panelOpacity", 1.0));
+        MorgueScreen.setControlOpacity((float) decimal(values, "ui.controlOpacity", 1.0));
+
         ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
         MorgueClient.setAimAssistEnabled(bool(values, "combat.aimAssist.enabled", false));
         MorgueClient.setClickAssistEnabled(bool(values, "combat.clickAssist.enabled", false));
@@ -192,6 +196,9 @@ public final class MorgueConfig {
         put(values, "mace.priority", mace.getPriority());
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
+
+        put(values, "ui.panelOpacity", MorgueScreen.getPanelOpacity());
+        put(values, "ui.controlOpacity", MorgueScreen.getControlOpacity());
 
         put(values, "notifications.enabled", ClientNotifications.isEnabled());
         put(values, "combat.aimAssist.enabled", MorgueClient.aimAssist().isEnabled());
