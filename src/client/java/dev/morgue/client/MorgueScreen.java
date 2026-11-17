@@ -1447,7 +1447,8 @@ public final class MorgueScreen extends Screen {
         } else {
             itemId = option.id() + "_spawn_egg";
         }
-        return new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(itemId)));
+        var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemId));
+        return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
     private void drawAnimatedPanelEffects(GuiGraphicsExtractor graphics) {
