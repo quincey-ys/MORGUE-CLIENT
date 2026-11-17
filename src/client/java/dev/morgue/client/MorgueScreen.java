@@ -527,13 +527,13 @@ public final class MorgueScreen extends Screen {
                 addRenderableWidget(Button.builder(Component.literal("< PREVIOUS"), button -> {
                     entityPageIndex--;
                     rebuildWidgets();
-                }).bounds(leftX, panelY + panelHeight - 78, 104, 26).build());
+                }).bounds(leftX, panelY + panelHeight - 88, 104, 26).build());
             }
             if (end < ENTITY_OPTIONS.size()) {
                 addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                     entityPageIndex++;
                     rebuildWidgets();
-                }).bounds(rightX + 80, panelY + panelHeight - 78, 90, 26).build());
+                }).bounds(rightX + 80, panelY + panelHeight - 88, 90, 26).build());
             }
             addBackButton();
             return;
@@ -571,13 +571,13 @@ public final class MorgueScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("< PREVIOUS"), button -> {
                 entityPageIndex--;
                 rebuildWidgets();
-            }).bounds(leftX, panelY + panelHeight - 78, 104, 26).build());
+            }).bounds(leftX, panelY + panelHeight - 88, 104, 26).build());
         }
         if (end < ENTITY_OPTIONS.size()) {
             addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                 entityPageIndex++;
                 rebuildWidgets();
-            }).bounds(rightX + 80, panelY + panelHeight - 78, 90, 26).build());
+            }).bounds(rightX + 80, panelY + panelHeight - 88, 90, 26).build());
         }
         addBackButton();
     }
@@ -922,9 +922,6 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(
                 "DRAG THE SLIDERS TO ADJUST THE TRANSPARENCY OF THE CLIENT UI."),
                 button -> {}).bounds(x, y, width, 28).build());
-        addRenderableWidget(Button.builder(Component.literal(
-                "SETTINGS ARE SAVED TO CONFIG AND RESTORED ON YOUR NEXT LAUNCH."),
-                button -> {}).bounds(x, y + 36, width, 28).build());
         addBackButton();
     }
 
@@ -1288,7 +1285,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private int opacitySliderY(int slider) {
-        return panelY + 176 + slider * 76;
+        return panelY + 162 + slider * 60;
     }
 
     private boolean isOpacitySliderAt(double mouseX, double mouseY, int slider) {
