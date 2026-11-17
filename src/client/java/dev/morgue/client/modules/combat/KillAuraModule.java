@@ -4,6 +4,7 @@ import dev.morgue.client.ai.TargetIntelligence;
 import dev.morgue.client.MorgueHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -55,21 +56,9 @@ public final class KillAuraModule {
     private TargetMode targetMode = TargetMode.PLAYERS;
     private Priority priority = Priority.CLOSEST;
     private LivingEntity lastTarget;
-    private LivingEntity observedTarget;
+    private Entity observedTarget;
     private int observedDamageCooldown;
     private final Set<String> selectedEntityTypes = new LinkedHashSet<>(Set.of("minecraft:player"));
-    private static final Set<String> KNOWN_ENTITY_TYPES = Set.of(
-            "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper", "minecraft:spider",
-            "minecraft:cave_spider", "minecraft:enderman", "minecraft:witch", "minecraft:pillager",
-            "minecraft:drowned", "minecraft:husk", "minecraft:phantom", "minecraft:blaze",
-            "minecraft:wither_skeleton", "minecraft:slime", "minecraft:magma_cube", "minecraft:ghast",
-            "minecraft:piglin", "minecraft:piglin_brute", "minecraft:hoglin", "minecraft:zoglin",
-            "minecraft:ravager", "minecraft:guardian", "minecraft:elder_guardian", "minecraft:shulker",
-            "minecraft:vindicator", "minecraft:evoker", "minecraft:vex", "minecraft:warden",
-            "minecraft:wither", "minecraft:ender_dragon", "minecraft:villager", "minecraft:iron_golem",
-            "minecraft:wolf", "minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken",
-            "minecraft:horse"
-    );
 
     public void tick(Minecraft client) {
         if (!enabled || client == null || client.player == null || client.level == null
@@ -87,19 +76,23 @@ public final class KillAuraModule {
             return;
         }
 
-        LivingEntity target = selectTarget(client);
-        lastTarget = target;
+        Entity target = selectTarget(client);
+        lastTarget = target instanceof LivingEntity living ? living : null;
         if (target == null) {
             observedTarget = null;
             observedDamageCooldown = 0;
             return;
         }
-        int currentDamageCooldown = target.damageCooldownTime;
-        if (observedTarget == target && currentDamageCooldown > observedDamageCooldown + 1) {
-            MorgueHud.triggerHitMarker();
+        if (target instanceof LivingEntity living) {
+            int currentDamageCooldown = living.damageCooldownTime;
+            if (observedTarget == target && currentDamageCooldown > observedDamageCooldown + 1) {
+                MorgueHud.triggerHitMarker();
+            }
+            observedDamageCooldown = currentDamageCooldown;
+        } else {
+            observedDamageCooldown = 0;
         }
         observedTarget = target;
-        observedDamageCooldown = currentDamageCooldown;
 
         long now = System.currentTimeMillis();
         if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F
@@ -145,19 +138,21 @@ public final class KillAuraModule {
         nextAttackAt = now + attackDelayMillis;
     }
 
-    private LivingEntity selectTarget(Minecraft client) {
+    private Entity selectTarget(Minecraft client) {
         Player player = client.player;
-        List<LivingEntity> candidates = client.level.getEntitiesOfClass(
-                LivingEntity.class,
+        List<Entity> candidates = client.level.getEntities(
+                player,
                 player.getBoundingBox().inflate(range),
-                entity -> entity != player && entity.isAlive() && !entity.isRemoved()
+                entity -> entity.isAlive() && !entity.isRemoved()
+                        && entity.isAttackable() && entity.isPickable()
         );
 
-        return TargetIntelligence.selectBest(
+        return TargetIntelligence.selectBestEntity(
                 player,
                 candidates,
                 candidate -> isAllowed(candidate)
-                        && (!ignoreHurtTime || candidate.damageCooldownTime <= 10)
+                        && (!(candidate instanceof LivingEntity living)
+                            || !ignoreHurtTime || living.damageCooldownTime <= 10)
                         && candidate.tickCount >= minimumAgeTicks
                         && (!teamsCheck || !player.isAlliedTo(candidate))
                         && (ignoreWalls || player.hasLineOfSight(candidate))
@@ -191,28 +186,25 @@ public final class KillAuraModule {
         };
     }
 
-    private boolean isAllowed(LivingEntity entity) {
-        if (entity instanceof Player) {
-            return targetMode == TargetMode.CUSTOM
-                    ? selectedEntityTypes.contains("minecraft:player")
-                    : targetMode != TargetMode.HOSTILE_MOBS;
-        }
+    private boolean isAllowed(Entity entity) {
         if (targetMode == TargetMode.CUSTOM) {
             String id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
-            if (selectedEntityTypes.contains(id)) {
-                return true;
-            }
-            return selectedEntityTypes.contains("morgue:other") && !KNOWN_ENTITY_TYPES.contains(id);
+            return selectedEntityTypes.contains(id)
+                    || (selectedEntityTypes.contains("morgue:other") && !id.startsWith("minecraft:"));
+        }
+        if (entity instanceof Player) {
+            return targetMode == TargetMode.PLAYERS || targetMode == TargetMode.ALL_LIVING;
         }
         return switch (targetMode) {
             case PLAYERS -> false;
-            case HOSTILE_MOBS -> !entity.getType().getCategory().isFriendly();
-            case ALL_LIVING -> true;
+            case HOSTILE_MOBS -> entity instanceof LivingEntity
+                    && !entity.getType().getCategory().isFriendly();
+            case ALL_LIVING -> entity instanceof LivingEntity;
             case CUSTOM -> false;
         };
     }
 
-    private boolean isWithinFov(Player player, LivingEntity target) {
+    private boolean isWithinFov(Player player, Entity target) {
         Vec3 delta = target.getEyePosition().subtract(player.getEyePosition());
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         float targetYaw = (float) (Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0);
@@ -222,7 +214,7 @@ public final class KillAuraModule {
         return Math.sqrt(yawDifference * yawDifference + pitchDifference * pitchDifference) <= fov * 0.5;
     }
 
-    private void faceTarget(Player player, LivingEntity target) {
+    private void faceTarget(Player player, Entity target) {
         Vec3 delta = target.getEyePosition().subtract(player.getEyePosition());
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         float yaw = (float) (Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0);

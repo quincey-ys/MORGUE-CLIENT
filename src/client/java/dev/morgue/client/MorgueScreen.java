@@ -15,8 +15,11 @@ import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,48 +45,6 @@ public final class MorgueScreen extends Screen {
     private static final Map<String, List<String>> MODULES = new LinkedHashMap<>();
     private static final Map<String, Boolean> ENABLED = new LinkedHashMap<>();
 
-    private static final List<EntityOption> ENTITY_OPTIONS = List.of(
-            new EntityOption("Players", "minecraft:player"),
-            new EntityOption("Zombie", "minecraft:zombie"),
-            new EntityOption("Skeleton", "minecraft:skeleton"),
-            new EntityOption("Creeper", "minecraft:creeper"),
-            new EntityOption("Spider", "minecraft:spider"),
-            new EntityOption("Cave Spider", "minecraft:cave_spider"),
-            new EntityOption("Enderman", "minecraft:enderman"),
-            new EntityOption("Witch", "minecraft:witch"),
-            new EntityOption("Pillager", "minecraft:pillager"),
-            new EntityOption("Drowned", "minecraft:drowned"),
-            new EntityOption("Husk", "minecraft:husk"),
-            new EntityOption("Phantom", "minecraft:phantom"),
-            new EntityOption("Blaze", "minecraft:blaze"),
-            new EntityOption("Wither Skeleton", "minecraft:wither_skeleton"),
-            new EntityOption("Slime", "minecraft:slime"),
-            new EntityOption("Magma Cube", "minecraft:magma_cube"),
-            new EntityOption("Ghast", "minecraft:ghast"),
-            new EntityOption("Piglin", "minecraft:piglin"),
-            new EntityOption("Piglin Brute", "minecraft:piglin_brute"),
-            new EntityOption("Hoglin", "minecraft:hoglin"),
-            new EntityOption("Zoglin", "minecraft:zoglin"),
-            new EntityOption("Ravager", "minecraft:ravager"),
-            new EntityOption("Guardian", "minecraft:guardian"),
-            new EntityOption("Elder Guardian", "minecraft:elder_guardian"),
-            new EntityOption("Shulker", "minecraft:shulker"),
-            new EntityOption("Vindicator", "minecraft:vindicator"),
-            new EntityOption("Evoker", "minecraft:evoker"),
-            new EntityOption("Vex", "minecraft:vex"),
-            new EntityOption("Warden", "minecraft:warden"),
-            new EntityOption("Wither", "minecraft:wither"),
-            new EntityOption("Ender Dragon", "minecraft:ender_dragon"),
-            new EntityOption("Villager", "minecraft:villager"),
-            new EntityOption("Iron Golem", "minecraft:iron_golem"),
-            new EntityOption("Wolf", "minecraft:wolf"),
-            new EntityOption("Cow", "minecraft:cow"),
-            new EntityOption("Pig", "minecraft:pig"),
-            new EntityOption("Sheep", "minecraft:sheep"),
-            new EntityOption("Chicken", "minecraft:chicken"),
-            new EntityOption("Horse", "minecraft:horse"),
-            new EntityOption("Other", "morgue:other")
-    );
 
     static {
         MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
@@ -101,6 +62,7 @@ public final class MorgueScreen extends Screen {
     private String selectedModule;
     private boolean entityPage;
     private int entityPageIndex;
+    private List<EntityOption> cachedEntityOptions;
     private int panelX;
     private int panelY;
     private int panelWidth;
@@ -494,6 +456,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildEntitySelector() {
+        List<EntityOption> options = entityOptions();
         if ("KillAura".equals(selectedModule)) {
             var module = MorgueClient.killAura();
             Set<String> selected = module.getSelectedEntityTypes();
@@ -510,11 +473,11 @@ public final class MorgueScreen extends Screen {
 
             int pageSize = 16;
             int start = entityPageIndex * pageSize;
-            int end = Math.min(ENTITY_OPTIONS.size(), start + pageSize);
+            int end = Math.min(options.size(), start + pageSize);
             int leftX = panelX + 150;
             int rightX = panelX + panelWidth / 2 + 12;
             for (int i = start; i < end; i++) {
-                EntityOption option = ENTITY_OPTIONS.get(i);
+                EntityOption option = options.get(i);
                 int visibleIndex = i - start;
                 int columnX = visibleIndex < 8 ? leftX : rightX;
                 int rowY = panelY + 138 + (visibleIndex % 8) * 27;
@@ -534,7 +497,7 @@ public final class MorgueScreen extends Screen {
                     rebuildWidgets();
                 }).bounds(leftX, panelY + panelHeight - 88, 104, 26).build());
             }
-            if (end < ENTITY_OPTIONS.size()) {
+            if (end < options.size()) {
                 addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                     entityPageIndex++;
                     rebuildWidgets();
@@ -554,11 +517,11 @@ public final class MorgueScreen extends Screen {
 
         int pageSize = 16;
         int start = entityPageIndex * pageSize;
-        int end = Math.min(ENTITY_OPTIONS.size(), start + pageSize);
+        int end = Math.min(options.size(), start + pageSize);
         int leftX = panelX + 150;
         int rightX = panelX + panelWidth / 2 + 12;
         for (int i = start; i < end; i++) {
-            EntityOption option = ENTITY_OPTIONS.get(i);
+            EntityOption option = options.get(i);
             int visibleIndex = i - start;
             int columnX = visibleIndex < 8 ? leftX : rightX;
             int rowY = panelY + 138 + (visibleIndex % 8) * 27;
@@ -578,7 +541,7 @@ public final class MorgueScreen extends Screen {
                 rebuildWidgets();
             }).bounds(leftX, panelY + panelHeight - 88, 104, 26).build());
         }
-        if (end < ENTITY_OPTIONS.size()) {
+        if (end < options.size()) {
             addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                 entityPageIndex++;
                 rebuildWidgets();
@@ -1474,9 +1437,45 @@ public final class MorgueScreen extends Screen {
         graphics.text(font, label, textLeft, textY, textColor);
     }
 
+
+    private List<EntityOption> entityOptions() {
+        if (cachedEntityOptions != null) {
+            return cachedEntityOptions;
+        }
+
+        List<EntityOption> options = new ArrayList<>();
+        options.add(new EntityOption("Players", "minecraft:player"));
+        List<EntityOption> registeredEntityTypes = new ArrayList<>();
+
+        // Build from the complete registry. The runtime target filter removes
+        // entities that are not both attackable and pickable in the current world.
+        BuiltInRegistries.ENTITY_TYPE.forEach(type -> {
+            String id = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
+            if ("minecraft:player".equals(id)) {
+                return;
+            }
+            String name = type.getDescription().getString();
+            if (name == null || name.isBlank()) {
+                name = id.substring(id.indexOf(':') + 1).replace('_', ' ');
+            }
+            if (!id.startsWith("minecraft:")) {
+                name += " [" + id + "]";
+            }
+            registeredEntityTypes.add(new EntityOption(name, id));
+        });
+
+        registeredEntityTypes.sort(Comparator
+                .comparing(EntityOption::name, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(EntityOption::id));
+        options.addAll(registeredEntityTypes);
+        options.add(new EntityOption("Modded / Other", "morgue:other"));
+        cachedEntityOptions = List.copyOf(options);
+        return cachedEntityOptions;
+    }
+
     private EntityOption entityOptionForLabel(String rawLabel) {
         String name = rawLabel.replaceFirst("^\\[[ xX]\\]\\s*", "");
-        for (EntityOption option : ENTITY_OPTIONS) {
+        for (EntityOption option : entityOptions()) {
             if (option.name().equals(name)) {
                 return option;
             }
@@ -1492,12 +1491,33 @@ public final class MorgueScreen extends Screen {
             itemId = "minecraft:wither_skeleton_skull";
         } else if ("minecraft:ender_dragon".equals(option.id())) {
             itemId = "minecraft:dragon_head";
+        } else if ("minecraft:armor_stand".equals(option.id())
+                || "minecraft:mannequin".equals(option.id())) {
+            itemId = "minecraft:armor_stand";
         } else if ("morgue:other".equals(option.id())) {
             itemId = "minecraft:barrier";
         } else {
             itemId = option.id() + "_spawn_egg";
         }
         var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemId));
+        if (item == null || item == Items.AIR) {
+            // Non-mob targets do not have spawn eggs. Use a representative
+            // item icon where one exists, otherwise the barrier marker.
+            String fallbackId = switch (option.id()) {
+                case "minecraft:end_crystal" -> "minecraft:end_crystal";
+                case "minecraft:oak_boat", "minecraft:spruce_boat", "minecraft:birch_boat",
+                     "minecraft:jungle_boat", "minecraft:acacia_boat", "minecraft:cherry_boat",
+                     "minecraft:dark_oak_boat", "minecraft:mangrove_boat", "minecraft:pale_oak_boat",
+                     "minecraft:bamboo_raft" -> option.id();
+                case "minecraft:minecart", "minecraft:chest_minecart", "minecraft:furnace_minecart",
+                     "minecraft:tnt_minecart", "minecraft:hopper_minecart" -> option.id();
+                default -> "minecraft:barrier";
+            };
+            item = BuiltInRegistries.ITEM.getValue(Identifier.parse(fallbackId));
+        }
+        if (item == null || item == Items.AIR) {
+            item = BuiltInRegistries.ITEM.getValue(Identifier.parse("minecraft:barrier"));
+        }
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
