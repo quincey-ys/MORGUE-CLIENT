@@ -488,7 +488,7 @@ public final class MorgueScreen extends Screen {
             entityPageIndex = 0;
             settingsScrollOffset = 0;
             rebuildWidgets();
-        }).bounds(leftX + 170, panelY + panelHeight - 42, panelWidth - 360, 24).build());
+        }).bounds(leftX + 170, panelY + panelHeight - 88, panelWidth - 360, 24).build());
 
         addBackButton();
     }
@@ -1770,7 +1770,9 @@ public final class MorgueScreen extends Screen {
             for (SettingSlider slider : settingSliders.values()) {
                 AbstractWidget widget = slider.widget();
                 if (mouseX >= widget.getX() && mouseX <= widget.getX() + widget.getWidth()
-                        && mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight()) {
+                        && mouseY >= widget.getY() && mouseY <= widget.getY() + widget.getHeight()
+                        && (!isScrollableSettingsPage()
+                        || (mouseY >= settingsViewportTop() && mouseY <= settingsViewportBottom()))) {
                     activeSettingSlider = slider;
                     updateSettingSlider(slider, mouseX);
                     return true;
