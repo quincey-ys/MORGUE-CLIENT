@@ -1591,23 +1591,37 @@ public final class MorgueScreen extends Screen {
             entry.getKey().setAlpha(entry.getValue());
         }
 
-        // Paint buttons with the same clipping boundaries used by the vanilla widget pass.
+        // Draw scrolling settings controls inside the clipped viewport first.
         if (isScrollableSettingsPage()) {
             graphics.enableScissor(settingsViewportLeft(), settingsViewportTop(),
                     settingsViewportRight(), settingsViewportBottom());
-        }
-        for (var entry : buttonLabels.entrySet()) {
-            AbstractWidget widget = entry.getKey();
-            String rawLabel = entry.getValue();
-            widget.setMessage(Component.literal(rawLabel));
-            if (!isScrollableSettingsPage() || isSettingsContentWidget(widget)) {
-                extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
-            } else if (isBackButton(widget) || widget.getX() < panelX + 140) {
+            for (var entry : buttonLabels.entrySet()) {
+                AbstractWidget widget = entry.getKey();
+                String rawLabel = entry.getValue();
+                widget.setMessage(Component.literal(rawLabel));
+                if (isSettingsContentWidget(widget)) {
+                    extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+                }
+            }
+            graphics.disableScissor();
+
+            // The sidebar and Back button are fixed UI and must never be clipped.
+            for (var entry : buttonLabels.entrySet()) {
+                AbstractWidget widget = entry.getKey();
+                String rawLabel = entry.getValue();
+                widget.setMessage(Component.literal(rawLabel));
+                if (!isSettingsContentWidget(widget)
+                        || isBackButton(widget) || widget.getX() < panelX + 140) {
+                    extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+                }
+            }
+        } else {
+            for (var entry : buttonLabels.entrySet()) {
+                AbstractWidget widget = entry.getKey();
+                String rawLabel = entry.getValue();
+                widget.setMessage(Component.literal(rawLabel));
                 extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
             }
-        }
-        if (isScrollableSettingsPage()) {
-            graphics.disableScissor();
         }
 
         drawOpacitySliders(graphics);
