@@ -1,5 +1,6 @@
 package dev.morgue.client.ai;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -98,6 +99,85 @@ public final class TargetIntelligence {
                 explain(player, best, ranking),
                 System.currentTimeMillis()
         );
+        return best;
+    }
+
+    public static Entity selectBestEntity(
+            Player player,
+            List<Entity> candidates,
+            Predicate<Entity> allowed,
+            Priority priority,
+            double range
+    ) {
+        if (player == null || candidates == null || allowed == null || range <= 0.0) {
+            latestAssessment = null;
+            return null;
+        }
+
+        Priority ranking = priority == null ? Priority.CLOSEST : priority;
+        Entity best = null;
+        double bestMetric = Double.NEGATIVE_INFINITY;
+        double bestDistance = Double.MAX_VALUE;
+        double bestThreat = 0.0;
+
+        for (Entity candidate : candidates) {
+            if (candidate == null || candidate == player || candidate.isRemoved()
+                    || !candidate.isAlive() || !candidate.isAttackable() || !candidate.isPickable()
+                    || !allowed.test(candidate)) {
+                continue;
+            }
+
+            double distanceSquared = player.distanceToSqr(candidate);
+            if (distanceSquared > range * range) {
+                continue;
+            }
+
+            double distance = Math.sqrt(distanceSquared);
+            double threat = candidate instanceof LivingEntity living
+                    ? threatScore(player, living, distance, range)
+                    : 1.0 + Math.max(0.0, 5.0 * (1.0 - distance / Math.max(0.1, range)));
+            double metric = switch (ranking) {
+                case CLOSEST -> -distanceSquared;
+                case LOWEST_HEALTH -> candidate instanceof LivingEntity living
+                        ? -living.getHealth() : -Double.MAX_VALUE;
+                case THREAT -> threat;
+            };
+
+            if (metric > bestMetric || (metric == bestMetric && distanceSquared < bestDistance)) {
+                bestMetric = metric;
+                best = candidate;
+                bestDistance = distanceSquared;
+                bestThreat = threat;
+            }
+        }
+
+        if (best == null) {
+            latestAssessment = null;
+            return null;
+        }
+
+        double distance = Math.sqrt(bestDistance);
+        if (best instanceof LivingEntity living) {
+            latestAssessment = new Assessment(
+                    best.getName().getString(),
+                    distance,
+                    living.getHealth(),
+                    bestThreat,
+                    ranking,
+                    explain(player, living, ranking),
+                    System.currentTimeMillis()
+            );
+        } else {
+            latestAssessment = new Assessment(
+                    best.getName().getString(),
+                    distance,
+                    0.0F,
+                    bestThreat,
+                    ranking,
+                    "Hittable entity (no living health bar)",
+                    System.currentTimeMillis()
+            );
+        }
         return best;
     }
 
