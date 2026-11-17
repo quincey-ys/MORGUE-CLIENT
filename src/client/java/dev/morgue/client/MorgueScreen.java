@@ -1216,7 +1216,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private boolean isBackButton(AbstractWidget widget) {
-        return widget.getMessage().getString().startsWith("< BACK TO MODULES");
+        return widget.getMessage().getString().startsWith("< BACK TO MODULES")
+                || (widget.getX() == panelX + 150 && widget.getY() == panelY + panelHeight - 56
+                && widget.getWidth() == 160 && widget.getHeight() == 22);
     }
 
     private boolean isSettingsContentWidget(AbstractWidget widget) {
@@ -1547,11 +1549,14 @@ public final class MorgueScreen extends Screen {
         // viewport can be clipped without clipping the sidebar or fixed Back button.
         Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
         Map<AbstractWidget, Boolean> originalVisibility = new java.util.IdentityHashMap<>();
+        Map<AbstractWidget, Float> originalAlpha = new java.util.IdentityHashMap<>();
         for (var child : children()) {
             if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
                 buttonLabels.put(widget, widget.getMessage().getString());
                 originalVisibility.put(widget, widget.visible);
+                originalAlpha.put(widget, widget.getAlpha());
                 widget.setMessage(Component.empty());
+                widget.setAlpha(0.0F);
             }
         }
 
@@ -1582,6 +1587,10 @@ public final class MorgueScreen extends Screen {
             }
         } else {
             super.extractRenderState(graphics, mouseX, mouseY, delta);
+        }
+
+        for (var entry : originalAlpha.entrySet()) {
+            entry.getKey().setAlpha(entry.getValue());
         }
 
         // Paint buttons with the same clipping boundaries used by the vanilla widget pass.
