@@ -3,6 +3,7 @@ package dev.morgue.client.config;
 import dev.morgue.client.MorgueClient;
 import dev.morgue.client.ClientNotifications;
 import dev.morgue.client.MorgueHud;
+import dev.morgue.client.MorgueScreen;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
@@ -110,8 +111,14 @@ public final class MorgueConfig {
             mace.setEntityTypeSelected(id.trim(), true);
         }
 
+        MorgueScreen.setPanelOpacity((float) decimal(values, "ui.panelOpacity", 1.0));
+        MorgueScreen.setControlOpacity((float) decimal(values, "ui.controlOpacity", 1.0));
+
         ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
         MorgueClient.setAimAssistEnabled(bool(values, "combat.aimAssist.enabled", false));
+        MorgueClient.aimAssist().setRange(decimal(values, "combat.aimAssist.range", 4.5));
+        MorgueClient.aimAssist().setFov(decimal(values, "combat.aimAssist.fov", 90.0));
+        MorgueClient.aimAssist().setSmoothing((float) decimal(values, "combat.aimAssist.smoothing", 0.25));
         MorgueClient.setClickAssistEnabled(bool(values, "combat.clickAssist.enabled", false));
         MorgueClient.clickAssist().setClicksPerSecond((int) integer(values, "combat.clickAssist.cps", 8));
         MorgueHud.setModuleListEnabled(bool(values, "hud.moduleList", false));
@@ -193,8 +200,14 @@ public final class MorgueConfig {
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
+        put(values, "ui.panelOpacity", MorgueScreen.getPanelOpacity());
+        put(values, "ui.controlOpacity", MorgueScreen.getControlOpacity());
+
         put(values, "notifications.enabled", ClientNotifications.isEnabled());
         put(values, "combat.aimAssist.enabled", MorgueClient.aimAssist().isEnabled());
+        put(values, "combat.aimAssist.range", MorgueClient.aimAssist().getRange());
+        put(values, "combat.aimAssist.fov", MorgueClient.aimAssist().getFov());
+        put(values, "combat.aimAssist.smoothing", MorgueClient.aimAssist().getSmoothing());
         put(values, "combat.clickAssist.enabled", MorgueClient.clickAssist().isEnabled());
         put(values, "combat.clickAssist.cps", MorgueClient.clickAssist().getClicksPerSecond());
         put(values, "hud.moduleList", MorgueHud.isModuleListEnabled());
