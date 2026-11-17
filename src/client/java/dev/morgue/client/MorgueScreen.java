@@ -2,6 +2,7 @@ package dev.morgue.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
+import dev.morgue.client.ai.CombatCoach;
 import dev.morgue.client.config.MorgueConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -615,43 +616,48 @@ public final class MorgueScreen extends Screen {
     private void buildAiBrainSettings() {
         int x = panelX + 150;
         int y = panelY + 108;
+        int width = panelWidth - 176;
         var assessment = dev.morgue.client.ai.TargetIntelligence.getLatestAssessment();
 
         String activeCombat = MorgueClient.maceHitter().isEnabled() && MorgueClient.killAura().isEnabled()
                 ? "Mace Hitter priority / KillAura fallback"
                 : MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
-                : MorgueClient.killAura().isEnabled() ? "KillAura" : "No combat module active";
-        addRenderableWidget(Button.builder(Component.literal("ENGINE: LOCAL TARGET INTELLIGENCE  /  READY"),
-                button -> {}).bounds(x, y, panelWidth - 176, 27).build());
-        addRenderableWidget(Button.builder(Component.literal("ACTIVE CONTROLLER: " + activeCombat),
-                button -> {}).bounds(x, y + 34, panelWidth - 176, 27).build());
+                : MorgueClient.killAura().isEnabled() ? "KillAura" : "Manual combat";
+        addRenderableWidget(Button.builder(Component.literal("LOCAL COMBAT COACH  /  RULE-BASED"), button -> {})
+                .bounds(x, y, width, 27).build());
+        addRenderableWidget(Button.builder(Component.literal("ACTIVE CONTROLLER: " + activeCombat), button -> {})
+                .bounds(x, y + 32, width, 27).build());
 
         if (assessment == null) {
-            addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: Waiting for a valid target"),
-                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
-            addRenderableWidget(Button.builder(Component.literal("ASSESSMENT: No candidate passed the active filters"),
-                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("TARGET: No valid target assessment yet"), button -> {})
+                    .bounds(x, y + 64, width, 27).build());
         } else {
-            addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: " + assessment.targetName()),
-                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
-            addRenderableWidget(Button.builder(Component.literal("PRIORITY: " + assessment.priority()
-                    + "  /  DISTANCE: " + format(assessment.distance())),
-                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
-            addRenderableWidget(Button.builder(Component.literal("THREAT SCORE: "
-                    + String.format(java.util.Locale.ROOT, "%.2f", assessment.threatScore())
-                    + "  /  HEALTH: " + format(assessment.health())),
-                    button -> {}).bounds(x, y + 136, panelWidth - 176, 27).build());
-            addRenderableWidget(Button.builder(Component.literal("REASON: " + assessment.reason()),
-                    button -> {}).bounds(x, y + 170, panelWidth - 176, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("TARGET: " + assessment.targetName()
+                    + "  /  " + format(assessment.distance()) + " blocks"), button -> {})
+                    .bounds(x, y + 64, width, 27).build());
+            addRenderableWidget(Button.builder(Component.literal("THREAT: "
+                    + String.format(java.util.Locale.ROOT, "%.1f", assessment.threatScore())
+                    + "  /  HEALTH: " + format(assessment.health())
+                    + "  /  " + assessment.priority()), button -> {})
+                    .bounds(x, y + 96, width, 27).build());
         }
 
-        addRenderableWidget(Button.builder(Component.literal("DECISION MODEL: deterministic local heuristics; no cloud AI"),
-                button -> {}).bounds(x, y + 208, panelWidth - 176, 27).build());
+        var advice = CombatCoach.instructions(minecraft == null ? null : minecraft.player, assessment,
+                MorgueClient.maceHitter().isEnabled(), MorgueClient.killAura().isEnabled());
+        int adviceY = assessment == null ? y + 100 : y + 132;
+        for (int i = 0; i < advice.size(); i++) {
+            String instruction = (i + 1) + ". " + advice.get(i);
+            addRenderableWidget(Button.builder(Component.literal(instruction), button -> {})
+                    .bounds(x, adviceY + i * 31, width, 27).build());
+        }
+
+        addRenderableWidget(Button.builder(Component.literal(
+                "ADVICE IS LOCAL AND HEURISTIC — NOT A TRAINED MODEL OR SERVER PREDICTION"), button -> {})
+                .bounds(x, adviceY + advice.size() * 31 + 4, width, 27).build());
         addRenderableWidget(Button.builder(Component.literal("CLEAR LAST ASSESSMENT"), button -> {
             dev.morgue.client.ai.TargetIntelligence.clearAssessment();
             rebuildWidgets();
-        }).bounds(x, y + 242, panelWidth - 176, 27).build());
-
+        }).bounds(x, adviceY + advice.size() * 31 + 36, width, 27).build());
         addBackButton();
     }
 
@@ -703,12 +709,16 @@ public final class MorgueScreen extends Screen {
     private void buildMovementSettings() {
         int x = panelX + 150;
         int y = panelY + 112;
-        addSettingButton(x, y, toggleLabel("Auto Sprint", MorgueClient.sprint().isEnabled()),
-                () -> MorgueClient.setSprintEnabled(!MorgueClient.sprint().isEnabled()));
-        addSettingButton(x, y + 36, toggleLabel("Safe Walk", MorgueClient.safeWalk().isEnabled()),
-                () -> MorgueClient.setSafeWalkEnabled(!MorgueClient.safeWalk().isEnabled()));
+        addRenderableWidget(Button.builder(Component.literal("AUTO SPRINT: "
+                + (MorgueClient.sprint().isEnabled() ? "ON" : "OFF")
+                + "  — configure it in the Sprint module."), button -> {})
+                .bounds(x, y, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("SAFE WALK: "
+                + (MorgueClient.safeWalk().isEnabled() ? "ON" : "OFF")
+                + "  — configure it in the Safe Walk module."), button -> {})
+                .bounds(x, y + 36, panelWidth - 176, 28).build());
         addRenderableWidget(Button.builder(Component.literal(
-                "Both options use normal client movement state and respect the server's movement rules."),
+                "This page is a status summary. Each movement module has one settings page and one toggle."),
                 button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
         addBackButton();
     }
