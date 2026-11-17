@@ -169,7 +169,8 @@ tasks.register('packageProtectedRelease') {
 
         def releaseDir = layout.buildDirectory.dir('release').get().asFile
         releaseDir.mkdirs()
-        def releaseName = "${project.archives_base_name}-${project.version}.jar"
+        def patchLabel = project.findProperty('release_patch_label') ?: 'UNRELEASED'
+        def releaseName = "${project.archives_base_name}-${project.version}-${patchLabel}.jar"
         def releaseJar = new File(releaseDir, releaseName)
         def tempJar = new File(releaseDir, releaseName + ".tmp")
         def integrityEntryName = 'META-INF/morgue-integrity.sha256'
@@ -238,6 +239,7 @@ tasks.register('packageProtectedRelease') {
 
         new File(releaseDir, 'BUILD-INFO.txt').text = [
                 "mod_version=${project.version}",
+                "patch_label=${project.findProperty('release_patch_label') ?: 'UNRELEASED'}",
                 "minecraft=${project.minecraft_version}",
                 "java=${System.getProperty('java.version')}",
                 "commit=${System.getenv('GITHUB_SHA') ?: 'local'}",
