@@ -58,18 +58,6 @@ public final class KillAuraModule {
     private LivingEntity observedTarget;
     private int observedDamageCooldown;
     private final Set<String> selectedEntityTypes = new LinkedHashSet<>(Set.of("minecraft:player"));
-    private static final Set<String> KNOWN_ENTITY_TYPES = Set.of(
-            "minecraft:zombie", "minecraft:skeleton", "minecraft:creeper", "minecraft:spider",
-            "minecraft:cave_spider", "minecraft:enderman", "minecraft:witch", "minecraft:pillager",
-            "minecraft:drowned", "minecraft:husk", "minecraft:phantom", "minecraft:blaze",
-            "minecraft:wither_skeleton", "minecraft:slime", "minecraft:magma_cube", "minecraft:ghast",
-            "minecraft:piglin", "minecraft:piglin_brute", "minecraft:hoglin", "minecraft:zoglin",
-            "minecraft:ravager", "minecraft:guardian", "minecraft:elder_guardian", "minecraft:shulker",
-            "minecraft:vindicator", "minecraft:evoker", "minecraft:vex", "minecraft:warden",
-            "minecraft:wither", "minecraft:ender_dragon", "minecraft:villager", "minecraft:iron_golem",
-            "minecraft:wolf", "minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken",
-            "minecraft:horse"
-    );
 
     public void tick(Minecraft client) {
         if (!enabled || client == null || client.player == null || client.level == null
@@ -202,7 +190,7 @@ public final class KillAuraModule {
             if (selectedEntityTypes.contains(id)) {
                 return true;
             }
-            return selectedEntityTypes.contains("morgue:other") && !KNOWN_ENTITY_TYPES.contains(id);
+            return selectedEntityTypes.contains("morgue:other") && !id.startsWith("minecraft:");
         }
         return switch (targetMode) {
             case PLAYERS -> false;
