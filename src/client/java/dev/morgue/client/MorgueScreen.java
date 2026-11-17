@@ -1285,7 +1285,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private int opacitySliderY(int slider) {
-        return panelY + 162 + slider * 60;
+        return panelY + 168 + slider * 60;
     }
 
     private boolean isOpacitySliderAt(double mouseX, double mouseY, int slider) {
