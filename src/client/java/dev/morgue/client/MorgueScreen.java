@@ -488,7 +488,7 @@ public final class MorgueScreen extends Screen {
             entityPageIndex = 0;
             settingsScrollOffset = 0;
             rebuildWidgets();
-        }).bounds(leftX + 170, panelY + panelHeight - 88, panelWidth - 360, 24).build());
+        }).bounds(leftX, y + row * 27, panelWidth / 2 - 170, 24).build());
 
         addBackButton();
     }
@@ -643,7 +643,7 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Attack Sound", module.isAttackSound()),
                 () -> module.setAttackSound(!module.isAttackSound()));
-        addValueSlider(leftX, y + leftRow++ * 27, panelWidth / 2 - 170, "Minimum Target Age", 0, 200, " ticks", true,
+        addValueSlider(leftX, y + (leftRow + 1) * 27, panelWidth / 2 - 170, "Minimum Target Age", 0, 200, " ticks", true,
                 () -> module.getMinimumAgeTicks(), value -> module.setMinimumAgeTicks((int) Math.round(value)));
 
         addBackButton();
@@ -1251,7 +1251,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private int settingsViewportBottom() {
-        return panelY + panelHeight - 64;
+        return panelY + panelHeight - 58;
     }
 
     private int settingsViewportLeft() {
