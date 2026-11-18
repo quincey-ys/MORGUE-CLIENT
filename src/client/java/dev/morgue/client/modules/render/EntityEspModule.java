@@ -1,7 +1,7 @@
 package dev.morgue.client.modules.render;
 
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.MobCategory;
 
 /** Lightweight configuration for render-state based entity outlines. */
@@ -17,7 +17,7 @@ public final class EntityEspModule {
         if (state == null || state.entityType == null || state.isInvisible) {
             return false;
         }
-        if (state.entityType == EntityType.PLAYER) {
+        if (state instanceof AvatarRenderState) {
             return showPlayers;
         }
         MobCategory category = state.entityType.getCategory();
