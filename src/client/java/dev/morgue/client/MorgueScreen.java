@@ -51,7 +51,7 @@ public final class MorgueScreen extends Screen {
         MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
         MODULES.put("Movement", List.of("Sprint", "Safe Walk", "Movement Settings"));
         MODULES.put("Player", List.of("Auto Totem", "Inventory Helper", "Item Use"));
-        MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
+        MODULES.put("Render", List.of("Entity ESP", "HUD Editor", "Module List", "Visual Settings"));
         MODULES.put("World", List.of("World Info", "Environment", "World Settings"));
         MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities", "Credits"));
         MODULES.put("Privacy", List.of("Privacy Dashboard", "Build Integrity", "Screenshot Privacy", "Client Metadata"));
@@ -153,6 +153,8 @@ public final class MorgueScreen extends Screen {
             buildInventoryHelperSettings();
         } else if ("Movement Settings".equals(selectedModule)) {
             buildMovementSettings();
+        } else if ("Entity ESP".equals(selectedModule)) {
+            buildEntityEspSettings();
         } else if ("Module List".equals(selectedModule)) {
             buildEnabledModuleList();
         } else if ("Environment".equals(selectedModule)) {
@@ -720,6 +722,32 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(
                 "This page is a status summary. Each movement module has one settings page and one toggle."),
                 button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildEntityEspSettings() {
+        var module = MorgueClient.entityEsp();
+        int x = panelX + 150;
+        int rightX = panelX + panelWidth / 2 + 12;
+        int y = panelY + 108;
+        int width = panelWidth - 176;
+
+        addRenderableWidget(Button.builder(Component.literal("ENTITY ESP: "
+                + (module.isEnabled() ? "ON" : "OFF") + "  /  TOGGLE FROM THE MODULE LIST"),
+                button -> {}).bounds(x, y, width, 27).build());
+        addSettingButton(x, y + 36, toggleLabel("Players", module.isShowPlayers()),
+                () -> module.setShowPlayers(!module.isShowPlayers()));
+        addSettingButton(rightX, y + 36, toggleLabel("Hostile Mobs", module.isShowHostileMobs()),
+                () -> module.setShowHostileMobs(!module.isShowHostileMobs()));
+        addSettingButton(x, y + 72, toggleLabel("Friendly Mobs", module.isShowFriendlyMobs()),
+                () -> module.setShowFriendlyMobs(!module.isShowFriendlyMobs()));
+        addSettingButton(rightX, y + 72, toggleLabel("Other Entities", module.isShowOtherEntities()),
+                () -> module.setShowOtherEntities(!module.isShowOtherEntities()));
+        addValueSlider(x, y + 112, width, "Maximum Render Range", 8, 64, " blocks", true,
+                () -> module.getRange(), value -> module.setRange((int) Math.round(value)));
+        addRenderableWidget(Button.builder(Component.literal(
+                "DEPTH-TESTED OUTLINES  /  SOLID BLOCKS HIDE ENTITIES  /  NO XRAY"),
+                button -> {}).bounds(x, y + 148, width, 27).build());
         addBackButton();
     }
 
