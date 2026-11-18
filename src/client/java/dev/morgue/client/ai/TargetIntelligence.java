@@ -68,8 +68,8 @@ public final class TargetIntelligence {
                 continue;
             }
 
-            double distance = Math.sqrt(distanceSquared);
-            double threat = threatScore(player, candidate, distance, range);
+            double threat = ranking == Priority.THREAT
+                    ? threatScore(player, candidate, Math.sqrt(distanceSquared), range) : 0.0;
             double metric = switch (ranking) {
                 case CLOSEST -> -distanceSquared;
                 case LOWEST_HEALTH -> -candidate.getHealth();
@@ -90,11 +90,12 @@ public final class TargetIntelligence {
         }
 
         double distance = Math.sqrt(bestDistance);
+        double assessmentThreat = threatScore(player, best, distance, range);
         latestAssessment = new Assessment(
                 best.getName().getString(),
                 distance,
                 best.getHealth(),
-                bestThreat,
+                assessmentThreat,
                 ranking,
                 explain(player, best, ranking),
                 System.currentTimeMillis()
@@ -132,10 +133,13 @@ public final class TargetIntelligence {
                 continue;
             }
 
-            double distance = Math.sqrt(distanceSquared);
-            double threat = candidate instanceof LivingEntity living
-                    ? threatScore(player, living, distance, range)
-                    : 1.0 + Math.max(0.0, 5.0 * (1.0 - distance / Math.max(0.1, range)));
+            double threat = 0.0;
+            if (ranking == Priority.THREAT) {
+                double distance = Math.sqrt(distanceSquared);
+                threat = candidate instanceof LivingEntity living
+                        ? threatScore(player, living, distance, range)
+                        : 1.0 + Math.max(0.0, 5.0 * (1.0 - distance / Math.max(0.1, range)));
+            }
             double metric = switch (ranking) {
                 case CLOSEST -> -distanceSquared;
                 case LOWEST_HEALTH -> candidate instanceof LivingEntity living
@@ -157,12 +161,15 @@ public final class TargetIntelligence {
         }
 
         double distance = Math.sqrt(bestDistance);
+        double assessmentThreat = best instanceof LivingEntity living
+                ? threatScore(player, living, distance, range)
+                : 1.0 + Math.max(0.0, 5.0 * (1.0 - distance / Math.max(0.1, range)));
         if (best instanceof LivingEntity living) {
             latestAssessment = new Assessment(
                     best.getName().getString(),
                     distance,
                     living.getHealth(),
-                    bestThreat,
+                    assessmentThreat,
                     ranking,
                     explain(player, living, ranking),
                     System.currentTimeMillis()
@@ -172,7 +179,7 @@ public final class TargetIntelligence {
                     best.getName().getString(),
                     distance,
                     0.0F,
-                    bestThreat,
+                    assessmentThreat,
                     ranking,
                     "Hittable entity (no living health bar)",
                     System.currentTimeMillis()
