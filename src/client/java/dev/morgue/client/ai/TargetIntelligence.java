@@ -55,7 +55,6 @@ public final class TargetIntelligence {
         LivingEntity best = null;
         double bestMetric = Double.NEGATIVE_INFINITY;
         double bestDistance = Double.MAX_VALUE;
-        double bestThreat = 0.0;
 
         for (LivingEntity candidate : candidates) {
             if (candidate == null || candidate == player || !candidate.isAlive()
@@ -80,7 +79,6 @@ public final class TargetIntelligence {
                 bestMetric = metric;
                 best = candidate;
                 bestDistance = distanceSquared;
-                bestThreat = threat;
             }
         }
 
