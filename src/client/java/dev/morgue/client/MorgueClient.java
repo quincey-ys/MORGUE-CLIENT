@@ -12,6 +12,8 @@ import dev.morgue.client.modules.player.InventoryHelperModule;
 import dev.morgue.client.modules.player.AutoEatModule;
 import dev.morgue.client.modules.movement.SprintModule;
 import dev.morgue.client.modules.movement.SafeWalkModule;
+import dev.morgue.client.modules.render.EntityEspModule;
+import dev.morgue.client.modules.render.EntityEspRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -33,10 +35,12 @@ public final class MorgueClient implements ClientModInitializer {
     private static final AutoEatModule AUTO_EAT = new AutoEatModule();
     private static final SprintModule SPRINT = new SprintModule();
     private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
+    private static final EntityEspModule ENTITY_ESP = new EntityEspModule();
 
     @Override
     public void onInitializeClient() {
         MorgueHud.register();
+        EntityEspRenderer.register();
         MorgueIntegrity.verify();
         if (MorgueIntegrity.isActivationAllowed()) {
             MorgueConfig.load();
@@ -62,6 +66,7 @@ public final class MorgueClient implements ClientModInitializer {
         registerModuleKeybind("Safe Walk", "safe_walk", -1, category);
         registerModuleKeybind("Inventory Helper", "inventory_helper", -1, category);
         registerModuleKeybind("Item Use", "item_use", -1, category);
+        registerModuleKeybind("Entity ESP", "entity_esp", -1, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
@@ -130,6 +135,7 @@ public final class MorgueClient implements ClientModInitializer {
             case "Safe Walk" -> SAFE_WALK.isEnabled();
             case "Inventory Helper" -> INVENTORY_HELPER.isEnabled();
             case "Item Use" -> AUTO_EAT.isEnabled();
+            case "Entity ESP" -> ENTITY_ESP.isEnabled();
             default -> false;
         };
     }
@@ -145,6 +151,7 @@ public final class MorgueClient implements ClientModInitializer {
             case "Safe Walk" -> setSafeWalkEnabled(enabled);
             case "Inventory Helper" -> setInventoryHelperEnabled(enabled);
             case "Item Use" -> setAutoEatEnabled(enabled);
+            case "Entity ESP" -> setEntityEspEnabled(enabled);
             default -> {
                 return;
             }
@@ -209,6 +216,16 @@ public final class MorgueClient implements ClientModInitializer {
     }
 
     public static AutoEatModule autoEat() { return AUTO_EAT; }
+
+    public static void setEntityEspEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        ENTITY_ESP.setEnabled(enabled);
+    }
+
+    public static EntityEspModule entityEsp() { return ENTITY_ESP; }
 
     public static void setSafeWalkEnabled(boolean enabled) {
         if (enabled && !MorgueIntegrity.isActivationAllowed()) {
