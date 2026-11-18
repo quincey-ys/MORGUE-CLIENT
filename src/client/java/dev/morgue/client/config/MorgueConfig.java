@@ -128,6 +128,12 @@ public final class MorgueConfig {
         MorgueClient.setSafeWalkEnabled(bool(values, "movement.safeWalk.enabled", false));
         MorgueClient.setInventoryHelperEnabled(bool(values, "player.inventoryHelper.enabled", false));
         MorgueClient.setAutoEatEnabled(bool(values, "player.autoEat.enabled", false));
+        MorgueClient.setEntityEspEnabled(bool(values, "render.entityEsp.enabled", false));
+        MorgueClient.entityEsp().setShowPlayers(bool(values, "render.entityEsp.players", true));
+        MorgueClient.entityEsp().setShowHostileMobs(bool(values, "render.entityEsp.hostileMobs", true));
+        MorgueClient.entityEsp().setShowFriendlyMobs(bool(values, "render.entityEsp.friendlyMobs", false));
+        MorgueClient.entityEsp().setShowOtherEntities(bool(values, "render.entityEsp.otherEntities", false));
+        MorgueClient.entityEsp().setRange((int) integer(values, "render.entityEsp.range", 32));
         MorgueClient.autoEat().setHungerThreshold((int) integer(values, "player.autoEat.hungerThreshold", 16));
         MorgueClient.inventoryHelper().setRefillAt((int) integer(values, "player.inventoryHelper.refillAt", 1));
 
@@ -219,6 +225,12 @@ public final class MorgueConfig {
         put(values, "player.inventoryHelper.refillAt", MorgueClient.inventoryHelper().getRefillAt());
         put(values, "player.autoEat.enabled", MorgueClient.autoEat().isEnabled());
         put(values, "player.autoEat.hungerThreshold", MorgueClient.autoEat().getHungerThreshold());
+        put(values, "render.entityEsp.enabled", MorgueClient.entityEsp().isEnabled());
+        put(values, "render.entityEsp.players", MorgueClient.entityEsp().isShowPlayers());
+        put(values, "render.entityEsp.hostileMobs", MorgueClient.entityEsp().isShowHostileMobs());
+        put(values, "render.entityEsp.friendlyMobs", MorgueClient.entityEsp().isShowFriendlyMobs());
+        put(values, "render.entityEsp.otherEntities", MorgueClient.entityEsp().isShowOtherEntities());
+        put(values, "render.entityEsp.range", MorgueClient.entityEsp().getRange());
 
         AutoTotemModule totem = MorgueClient.autoTotem();
         put(values, "totem.enabled", totem.isEnabled());
