@@ -14,11 +14,14 @@ public final class EntityEspModule {
     private int range = 32;
 
     public boolean shouldRender(EntityRenderState state) {
-        if (state == null || state.entityType == null || state.isInvisible) {
+        if (state == null || state.isInvisible) {
             return false;
         }
         if (state instanceof AvatarRenderState) {
             return showPlayers;
+        }
+        if (state.entityType == null) {
+            return false;
         }
         MobCategory category = state.entityType.getCategory();
         if (category == MobCategory.MISC) {
