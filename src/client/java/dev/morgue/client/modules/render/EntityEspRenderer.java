@@ -22,7 +22,7 @@ public final class EntityEspRenderer {
             return;
         }
         registered = true;
-        LevelRenderEvents.BEFORE_GIZMOS.register(EntityEspRenderer::render);
+        LevelRenderEvents.COLLECT_SUBMITS.register(EntityEspRenderer::render);
     }
 
     private static void render(LevelRenderContext context) {
@@ -43,12 +43,11 @@ public final class EntityEspRenderer {
         }
 
         double rangeSquared = (double) module.getRange() * module.getRange();
-        var cameraEntity = levelState.cameraRenderState.entityRenderState;
         var poseStack = context.poseStack();
         var collector = context.submitNodeCollector();
 
         for (EntityRenderState state : levelState.entityRenderStates) {
-            if (state == null || state == cameraEntity || !module.shouldRender(state)
+            if (state == null || !module.shouldRender(state)
                     || !Double.isFinite(state.distanceToCameraSq)
                     || state.distanceToCameraSq > rangeSquared) {
                 continue;
