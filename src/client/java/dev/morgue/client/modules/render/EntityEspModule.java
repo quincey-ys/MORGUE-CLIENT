@@ -31,8 +31,11 @@ public final class EntityEspModule {
     }
 
     public int colorFor(EntityRenderState state) {
-        if (state.entityType == EntityType.PLAYER) {
+        if (state instanceof AvatarRenderState) {
             return 0xFF79BFFF;
+        }
+        if (state.entityType == null) {
+            return 0xFFFFC878;
         }
         MobCategory category = state.entityType.getCategory();
         if (category == MobCategory.MISC) {
