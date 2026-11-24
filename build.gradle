@@ -53,8 +53,8 @@ tasks.register("convertUiAudio") {
     doLast {
         def ffmpeg = System.getenv("FFMPEG") ?: "ffmpeg"
         def audioFiles = [
-            "opensfx.mp3": "open",
-            "closesfx.mp3": "close",
+            "open.mp3": "open",
+            "close.mp3": "close",
             "hover.mp3": "hover",
             "click.mp3": "click",
             "toggle_on.mp3": "toggle_on",
