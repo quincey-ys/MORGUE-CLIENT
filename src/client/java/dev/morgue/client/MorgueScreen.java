@@ -113,7 +113,7 @@ public final class MorgueScreen extends Screen {
     private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
-        super(Component.literal("MORGUE-CLIENT"));
+        super(Component.literal("Morgue Refined"));
     }
 
     @Override
@@ -565,6 +565,8 @@ public final class MorgueScreen extends Screen {
                 () -> module.setAttackSound(!module.isAttackSound()));
         addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
                 () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
+        addSettingButton(leftX, y + (leftRow + 2) * 27, "Rotation Speed: " + format(module.getRotationSpeed()),
+                () -> module.setRotationSpeed(module.getRotationSpeed() >= 0.95 ? 0.1 : module.getRotationSpeed() + 0.1));
 
         addBackButton();
     }
@@ -893,7 +895,7 @@ public final class MorgueScreen extends Screen {
         int y = panelY + 112;
         int width = panelWidth - 176;
         String[] details = {
-                "CLIENT: MORGUE-CLIENT",
+                "CLIENT: MORGUE REFINED",
                 "TARGET: MINECRAFT JAVA 26.3",
                 "RUNTIME: JAVA 25  /  FABRIC LOADER 0.20.1+",
                 "INTERFACE: GOTHIC MIDNIGHT BLUE",
@@ -991,8 +993,10 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
             minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
         }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
-        addRenderableWidget(Button.builder(Component.literal("MORGUE defaults: Right Shift / M / K / V"),
+        addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
                 button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+        addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
+                button -> {}).bounds(x, panelY + 194, panelWidth - 176, 28).build());
         addBackButton();
     }
 
@@ -1292,7 +1296,7 @@ public final class MorgueScreen extends Screen {
         graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
         graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
         graphics.text(font, displayText("MORGUE"), panelX + 49, panelY + 17, WHITE);
-        graphics.text(font, displayText("CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
+        graphics.text(font, displayText("REFINED CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
 
         graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL_LIGHT);
         graphics.fill(panelX + 145, panelY + 18, panelX + 148, panelY + 69, RED_SOFT);
@@ -1397,7 +1401,7 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 1) {
+        if (event.button() == 0) {
             double mouseX = event.x();
             double mouseY = event.y();
 
