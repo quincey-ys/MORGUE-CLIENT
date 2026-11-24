@@ -2,6 +2,8 @@ import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
@@ -18,8 +20,8 @@ public final class BytecodeSmokeTest {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            throw new IllegalArgumentException("Expected the protected release JAR path.");
+        if (args.length != 2) {
+            throw new IllegalArgumentException("Expected: <protected release JAR> <report path>.");
         }
 
         boolean verifyAll = ManagementFactory.getRuntimeMXBean().getInputArguments().stream()
@@ -30,6 +32,7 @@ public final class BytecodeSmokeTest {
         }
 
         Path jarPath = Path.of(args[0]).toAbsolutePath().normalize();
+        Path reportPath = Path.of(args[1]).toAbsolutePath().normalize();
         Set<String> classNames = new LinkedHashSet<>();
         try (JarFile archive = new JarFile(jarPath.toFile())) {
             Enumeration<JarEntry> entries = archive.entries();
@@ -72,9 +75,12 @@ public final class BytecodeSmokeTest {
             }
         }
 
-        System.out.println("JVM verification: -Xverify:all");
-        System.out.println("Protected JAR class definitions verified: " + loaded);
-        System.out.println("Release JAR: " + jarPath.getFileName());
+        String report = "JVM verification: -Xverify:all\\n"
+                + "Protected JAR class definitions verified: " + loaded + "\\n"
+                + "Release JAR: " + jarPath.getFileName() + "\\n";
+        Files.createDirectories(reportPath.getParent());
+        Files.writeString(reportPath, report, StandardCharsets.UTF_8);
+        System.out.print(report);
     }
 
     /** Ensures protected classes are defined from the release JAR, not build output. */
