@@ -17,6 +17,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.ArrayDeque;
 import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,6 +114,7 @@ public final class MorgueScreen extends Screen {
     private int moduleVisibleCount;
     private int moduleColumns = 2;
     private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
+    private final Map<String, Float> toggleProgress = new HashMap<>();
     private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
     private long openedAtNanos = System.nanoTime();
     private long transitionAtNanos = openedAtNanos;
@@ -1220,9 +1222,14 @@ public final class MorgueScreen extends Screen {
             int trackColor = activeState ? RED_SOFT : 0xFF293747;
             graphics.fill(trackX, trackY, trackX + 34, trackY + 16, trackColor);
             graphics.outline(trackX, trackY, 34, 16, activeState ? RED : BORDER);
-            float knob = activeState ? 1.0F : 0.0F;
-            float animatedKnob = UiSettings.isAnimationsEnabled() ? knob : (activeState ? 1 : 0);
-            int knobX = trackX + 2 + Math.round(animatedKnob * 16);
+            String toggleKey = rawLabel.startsWith("ON  ") || rawLabel.startsWith("OFF ")
+                    ? rawLabel.substring(4) : rawLabel.replaceFirst(": (ON|OFF)$", "");
+            float targetToggle = activeState ? 1.0F : 0.0F;
+            float previousToggle = toggleProgress.getOrDefault(toggleKey, targetToggle);
+            float animatedToggle = previousToggle + (targetToggle - previousToggle)
+                    * (UiSettings.isAnimationsEnabled() ? (float) frameFactor : 1.0F);
+            toggleProgress.put(toggleKey, animatedToggle);
+            int knobX = trackX + 2 + Math.round(animatedToggle * 16);
             graphics.fill(knobX, trackY + 2, knobX + 12, trackY + 14, WHITE);
         }
     }
