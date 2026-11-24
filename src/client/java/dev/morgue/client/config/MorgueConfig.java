@@ -79,6 +79,7 @@ public final class MorgueConfig {
         UiSettings.setAnimationsEnabled(bool(values, "ui.animations.enabled", true));
         UiSettings.setSoundsEnabled(bool(values, "ui.sounds.enabled", true));
         UiSettings.setKillSoundEnabled(bool(values, "ui.killSound.enabled", true));
+        UiSettings.setAccentIndex((int) integer(values, "ui.theme.accent", 0));
 
         MaceHitterModule mace = MorgueClient.maceHitter();
         mace.setEnabled(bool(values, "mace.enabled", false));
@@ -178,6 +179,7 @@ public final class MorgueConfig {
         put(values, "ui.animations.enabled", UiSettings.isAnimationsEnabled());
         put(values, "ui.sounds.enabled", UiSettings.isSoundsEnabled());
         put(values, "ui.killSound.enabled", UiSettings.isKillSoundEnabled());
+        put(values, "ui.theme.accent", UiSettings.accentIndex());
 
         MaceHitterModule mace = MorgueClient.maceHitter();
         put(values, "mace.enabled", mace.isEnabled());

@@ -31,8 +31,14 @@ public final class MorgueScreen extends Screen {
     private static final int BORDER = 0xFF2B394B;
     private static final int WHITE = 0xFFF1F5FA;
     private static final int MUTED = 0xFF94A3B8;
-    private static final int RED = 0xFF67D6C5;
-    private static final int RED_SOFT = 0xFF285E5A;
+    private static int accentColor() { return UiSettings.accentColor(); }
+    private static int accentSoftColor() {
+        int color = UiSettings.accentColor();
+        int r = ((color >>> 16) & 0xFF) / 3;
+        int g = ((color >>> 8) & 0xFF) / 3;
+        int b = (color & 0xFF) / 3;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
     private static final int BUTTON_IDLE = 0xF0141C28;
     private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
@@ -150,8 +156,9 @@ public final class MorgueScreen extends Screen {
         }
 
         if (selectedModule == null) {
-            searchBox = new EditBox(font, panelX + panelWidth - 330, panelY + 23,
-                    250, 26, Component.literal("Search modules"));
+            int searchWidth = Math.max(100, Math.min(250, panelWidth - 110));
+            searchBox = new EditBox(font, panelX + panelWidth - searchWidth - 80, panelY + 23,
+                    searchWidth, 26, Component.literal("Search modules"));
             searchBox.setValue(searchQuery);
             addRenderableWidget(searchBox);
             addRenderableWidget(Button.builder(Component.literal("FILTER"), button -> {
@@ -215,6 +222,8 @@ public final class MorgueScreen extends Screen {
             buildKeybindSettings();
         } else if ("Profiles".equals(selectedModule)) {
             buildProfileSettings();
+        } else if ("Theme".equals(selectedModule)) {
+            buildThemeSettings();
         } else if ("UI Effects".equals(selectedModule)) {
             buildUiEffectsSettings();
         } else {
@@ -1125,6 +1134,17 @@ public final class MorgueScreen extends Screen {
                 button -> {}).bounds(x, panelY + 112, panelWidth - 176, 28).build());
         addRenderableWidget(Button.builder(Component.literal("Gameplay behavior is not connected yet."),
                 button -> {}).bounds(x, panelY + 148, panelWidth - 176, 28).build());
+        addBackButton();
+    }
+
+    private void buildThemeSettings() {
+        int x = panelX + 158;
+        int y = panelY + 148;
+        addSettingButton(x, y, "Accent Color: " + UiSettings.accentName() + "  ›",
+                () -> UiSettings.cycleAccent());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Choose a palette inspired by Ghost Client's clean, high-contrast panel styling."),
+                button -> {}).bounds(x, y + 42, Math.max(260, panelWidth - 190), 32).build());
         addBackButton();
     }
 
