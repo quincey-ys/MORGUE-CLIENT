@@ -146,6 +146,12 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
         libraryjars("${jmod.absolutePath}(!**.jar;!module-info.class)")
     }
     libraryjars(sourceSets.client.compileClasspath)
+    // Include runtime-only transitive libraries too, but never feed this project's own
+    // compiled output back to ProGuard as a library JAR.
+    def clientRuntimeLibraries = sourceSets.client.runtimeClasspath.filter { dependencyFile ->
+        !dependencyFile.toPath().startsWith(layout.buildDirectory.get().asFile.toPath())
+    }
+    libraryjars(clientRuntimeLibraries)
 
     dontshrink()
     dontoptimize()
