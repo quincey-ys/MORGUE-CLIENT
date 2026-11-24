@@ -1339,9 +1339,11 @@ public final class MorgueScreen extends Screen {
                 int ew = widget.getWidth();
                 int eh = widget.getHeight();
                 boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
-                graphics.fill(ex, ey, ex + ew, ey + eh, 0xFF101722);
+                // Keep the vanilla text/edit handling visible; decorate only its frame.
                 graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
                         searchHovered ? RED : BORDER);
+                graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
+                        searchHovered ? RED : 0xFF405065);
             }
         }
 
