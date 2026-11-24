@@ -3,6 +3,7 @@ package dev.morgue.client.config;
 import dev.morgue.client.MorgueClient;
 import dev.morgue.client.ClientNotifications;
 import dev.morgue.client.MorgueHud;
+import dev.morgue.client.ui.UiSettings;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.player.AutoTotemModule;
@@ -74,6 +75,12 @@ public final class MorgueConfig {
             System.err.println("[MORGUE] Could not read config: " + exception.getMessage());
             return;
         }
+
+        UiSettings.setAnimationsEnabled(bool(values, "ui.animations.enabled", true));
+        UiSettings.setSoundsEnabled(bool(values, "ui.sounds.enabled", false));
+
+        put(values, "ui.animations.enabled", UiSettings.isAnimationsEnabled());
+        put(values, "ui.sounds.enabled", UiSettings.isSoundsEnabled());
 
         MaceHitterModule mace = MorgueClient.maceHitter();
         mace.setEnabled(bool(values, "mace.enabled", false));
