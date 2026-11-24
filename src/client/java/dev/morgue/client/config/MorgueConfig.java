@@ -130,7 +130,9 @@ public final class MorgueConfig {
         totem.setPredictRecentDamage(bool(values, "totem.predictRecentDamage", true));
         totem.setPredictFallDamage(bool(values, "totem.predictFallDamage", true));
         totem.setPredictNearbyThreats(bool(values, "totem.predictNearbyThreats", true));
-        totem.setRestoreDisplacedOffhand(bool(values, "totem.restoreDisplacedOffhand", true));
+        totem.setKeepTotemEquipped(bool(values, "totem.keepTotemEquipped", true));
+        totem.loadRefillState(bool(values, "totem.refillArmed", false),
+                values.getProperty("totem.refillPlayerUuid", ""));
 
         KillAuraModule aura = MorgueClient.killAura();
         aura.setEnabled(bool(values, "aura.enabled", false));
@@ -212,7 +214,9 @@ public final class MorgueConfig {
         put(values, "totem.predictRecentDamage", totem.isPredictRecentDamage());
         put(values, "totem.predictFallDamage", totem.isPredictFallDamage());
         put(values, "totem.predictNearbyThreats", totem.isPredictNearbyThreats());
-        put(values, "totem.restoreDisplacedOffhand", totem.isRestoreDisplacedOffhand());
+        put(values, "totem.keepTotemEquipped", totem.isKeepTotemEquipped());
+        put(values, "totem.refillArmed", totem.isRefillArmed());
+        put(values, "totem.refillPlayerUuid", totem.getRefillPlayerUuid());
 
         KillAuraModule aura = MorgueClient.killAura();
         put(values, "aura.enabled", aura.isEnabled());

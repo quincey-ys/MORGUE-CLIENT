@@ -1,6 +1,7 @@
 package dev.morgue.client.modules.player;
 
 import dev.morgue.client.ClientNotifications;
+import dev.morgue.client.config.MorgueConfig;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,8 +13,9 @@ import net.minecraft.world.item.Items;
 /**
  * Standalone MORGUE Auto Totem.
  *
- * Inventory changes use Minecraft's normal container-input path. Damage and
- * fall predictions are conservative local estimates, not server damage forecasts.
+ * Inventory changes use Minecraft's normal container-input path. The initial
+ * equip is health-gated; once a totem has been equipped, empty-offhand refills
+ * are independent of health. Displaced offhand items are never restored.
  */
 public final class AutoTotemModule {
     public enum Mode { SMART, SWITCH, PICK_UP }
@@ -25,67 +27,91 @@ public final class AutoTotemModule {
     private long switchDelayMillis;
     private long nextAttemptAt;
     private long pendingUntil;
+    private boolean pendingEquip;
+    private int pendingSourceMenuSlot = -1;
+    private String pendingPlayerUuid = "";
     private boolean pauseWhileUsingItem = true;
     private float activationHealth = 20.0F;
     private boolean predictRecentDamage = true;
     private boolean predictFallDamage = true;
     private boolean predictNearbyThreats = true;
-    private boolean restoreDisplacedOffhand = true;
+    private boolean keepTotemEquipped = true;
+    private boolean refillArmed;
+    private String refillPlayerUuid = "";
+    private String lastPlayerUuid = "";
     private float lastEffectiveHealth = -1.0F;
     private float recentDamagePerTick;
-    private int restoreMenuSlot = -1;
-    private ItemStack displacedOffhand = ItemStack.EMPTY;
 
     public void tick(Minecraft client) {
-        if ((!enabled && restoreMenuSlot < 0) || client == null || client.player == null
-                || client.level == null || client.gameMode == null || client.gui.screen() != null) {
+        if (client == null) return;
+        if (client.player == null || client.level == null || client.gameMode == null) {
+            lastEffectiveHealth = -1.0F;
+            recentDamagePerTick = 0.0F;
+            lastPlayerUuid = "";
             return;
         }
 
         Player player = client.player;
-        if (player.isSpectator() || player.isDeadOrDying()
-                || (pauseWhileUsingItem && player.isUsingItem())) {
-            return;
-        }
-
         long now = System.currentTimeMillis();
-        if (now < nextAttemptAt || now < pendingUntil) return;
+        String playerUuid = player.getUUID().toString();
+
+        if (!playerUuid.equals(lastPlayerUuid)) {
+            lastPlayerUuid = playerUuid;
+            lastEffectiveHealth = -1.0F;
+            recentDamagePerTick = 0.0F;
+        }
+        if (pendingEquip && !playerUuid.equals(pendingPlayerUuid)) {
+            clearPendingEquip();
+        }
+        if (refillArmed && !playerUuid.equals(refillPlayerUuid)) {
+            disarmRefill(true);
+        }
 
         ItemStack offhand = player.getOffhandItem();
         if (offhand.is(Items.TOTEM_OF_UNDYING)) {
-            pendingUntil = 0L;
+            if (pendingEquip && keepTotemEquipped) {
+                armRefill(playerUuid);
+            } else if (enabled && keepTotemEquipped && !refillArmed) {
+                // Also support players who already had a totem equipped when enabling the module.
+                armRefill(playerUuid);
+            }
+            clearPendingEquip();
             return;
         }
 
-        // Restore the item displaced by the totem once the totem has been consumed.
-        // Only restore if the original inventory slot still contains the exact stack.
-        if (offhand.isEmpty() && restoreDisplacedOffhand && restoreMenuSlot >= 0
-                && !displacedOffhand.isEmpty()) {
-            ItemStack candidate = player.inventoryMenu.getSlot(restoreMenuSlot).getItem();
-            if (ItemStack.isSameItemSameComponents(candidate, displacedOffhand)) {
-                if (!InventoryActionCoordinator.tryClaim(client)) return;
-                client.gameMode.handleContainerInput(
-                        player.inventoryMenu.containerId,
-                        restoreMenuSlot,
-                        Inventory.SLOT_OFFHAND,
-                        ContainerInput.SWAP,
-                        player
-                );
-                restoreMenuSlot = -1;
-                displacedOffhand = ItemStack.EMPTY;
-                pendingUntil = now + 300L;
-                ClientNotifications.post(client, "Restored the displaced offhand item.");
+        // If the first swap was processed and the totem popped before this tick,
+        // the selected inventory slot will no longer contain that totem. Arm from
+        // this observed inventory change so a very fast pop is not missed.
+        if (pendingEquip) {
+            ItemStack requestedSlot = pendingSourceMenuSlot >= 0 && pendingSourceMenuSlot <= 44
+                    ? player.inventoryMenu.getSlot(pendingSourceMenuSlot).getItem() : ItemStack.EMPTY;
+            if (!requestedSlot.is(Items.TOTEM_OF_UNDYING)) {
+                clearPendingEquip();
+                if (keepTotemEquipped) armRefill(playerUuid);
+            } else if (now < pendingUntil) {
                 return;
+            } else {
+                clearPendingEquip();
             }
-            restoreMenuSlot = -1;
-            displacedOffhand = ItemStack.EMPTY;
-        } else if (!offhand.isEmpty()) {
-            restoreMenuSlot = -1;
-            displacedOffhand = ItemStack.EMPTY;
         }
 
-        if (!enabled) return;
+        // A non-empty offhand item always wins over persistent refill. Keep the
+        // refill armed so it resumes naturally if the user later empties the slot.
+        if (keepTotemEquipped && refillArmed && !offhand.isEmpty()) return;
 
+        if (!enabled || player.isSpectator() || player.isDeadOrDying()
+                || (pauseWhileUsingItem && player.isUsingItem()) || client.gui.screen() != null) {
+            return;
+        }
+        if (now < nextAttemptAt || now < pendingUntil) return;
+
+        // Once armed, refill an empty offhand regardless of health or predictions.
+        if (keepTotemEquipped && refillArmed) {
+            requestTotemSwap(client, player, findTotem(player), now, true);
+            return;
+        }
+
+        // First equip remains governed by the configured health/prediction threshold.
         float effectiveHealth = player.getHealth() + player.getAbsorptionAmount();
         if (lastEffectiveHealth >= 0.0F) {
             float damageThisTick = lastEffectiveHealth - effectiveHealth;
@@ -114,17 +140,25 @@ public final class AutoTotemModule {
         }
         if (activationHealth <= 0.0F || predictedHealth > activationHealth) return;
 
-        int inventoryIndex = findTotem(player);
+        requestTotemSwap(client, player, findTotem(player), now, false);
+    }
+
+    private void requestTotemSwap(Minecraft client, Player player, int inventoryIndex,
+                                  long now, boolean refill) {
         if (inventoryIndex < 0) return;
+        if (refill && !player.getOffhandItem().isEmpty()) return;
 
         // InventoryMenu maps hotbar slots to 36..44 and main inventory to 9..35.
         int menuSlot = inventoryIndex < 9 ? inventoryIndex + 36 : inventoryIndex;
-        if (restoreDisplacedOffhand && !offhand.isEmpty()) {
-            restoreMenuSlot = menuSlot;
-            displacedOffhand = offhand.copy();
-        }
+        if (menuSlot < 9 || menuSlot > 44) return;
 
+        // Revalidate the chosen source immediately before submitting the container action.
+        ItemStack source = player.getInventory().getItem(inventoryIndex);
+        ItemStack menuStack = player.inventoryMenu.getSlot(menuSlot).getItem();
+        if (!source.is(Items.TOTEM_OF_UNDYING) || !menuStack.is(Items.TOTEM_OF_UNDYING)) return;
+        if (refill && !player.getOffhandItem().isEmpty()) return;
         if (!InventoryActionCoordinator.tryClaim(client)) return;
+
         client.gameMode.handleContainerInput(
                 player.inventoryMenu.containerId,
                 menuSlot,
@@ -133,9 +167,45 @@ public final class AutoTotemModule {
                 player
         );
 
-        ClientNotifications.post(client, "Totem swap requested.");
+        pendingEquip = true;
+        pendingSourceMenuSlot = menuSlot;
+        pendingPlayerUuid = player.getUUID().toString();
         nextAttemptAt = now + switchDelayMillis;
         pendingUntil = now + 300L;
+
+        // Keep background refills quiet; the first threshold-triggered equip
+        // retains the existing local notification behavior.
+        if (!refill) ClientNotifications.post(client, "Totem swap requested.");
+    }
+
+    private void armRefill(String playerUuid) {
+        if (!keepTotemEquipped || playerUuid == null || playerUuid.isBlank()) return;
+        boolean changed = !refillArmed || !playerUuid.equals(refillPlayerUuid);
+        refillArmed = true;
+        refillPlayerUuid = playerUuid;
+        if (changed) MorgueConfig.save();
+    }
+
+    private void disarmRefill(boolean persist) {
+        boolean changed = refillArmed || !refillPlayerUuid.isEmpty();
+        refillArmed = false;
+        refillPlayerUuid = "";
+        clearPendingEquip();
+        if (persist && changed) MorgueConfig.save();
+    }
+
+    private void clearPendingEquip() {
+        pendingEquip = false;
+        pendingSourceMenuSlot = -1;
+        pendingPlayerUuid = "";
+        pendingUntil = 0L;
+    }
+
+    /** Restores only a valid persisted refill state for the same player. */
+    public void loadRefillState(boolean armed, String playerUuid) {
+        String normalizedUuid = playerUuid == null ? "" : playerUuid.trim();
+        refillArmed = armed && keepTotemEquipped && !normalizedUuid.isEmpty();
+        refillPlayerUuid = refillArmed ? normalizedUuid : "";
     }
 
     private int findTotem(Player player) {
@@ -170,10 +240,7 @@ public final class AutoTotemModule {
     }
 
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean value) {
-        enabled = value;
-        if (!value) { pendingUntil = 0L; nextAttemptAt = 0L; }
-    }
+    public void setEnabled(boolean value) { enabled = value; }
     public void toggle() { setEnabled(!enabled); }
     public Mode getMode() { return mode; }
     public void setMode(Mode value) { mode = value == null ? Mode.SMART : value; }
@@ -195,11 +262,13 @@ public final class AutoTotemModule {
     public void setPredictFallDamage(boolean value) { predictFallDamage = value; }
     public boolean isPredictNearbyThreats() { return predictNearbyThreats; }
     public void setPredictNearbyThreats(boolean value) { predictNearbyThreats = value; }
-    public boolean isRestoreDisplacedOffhand() { return restoreDisplacedOffhand; }
-    public void setRestoreDisplacedOffhand(boolean value) {
-        restoreDisplacedOffhand = value;
-        if (!value) { restoreMenuSlot = -1; displacedOffhand = ItemStack.EMPTY; }
+    public boolean isKeepTotemEquipped() { return keepTotemEquipped; }
+    public void setKeepTotemEquipped(boolean value) {
+        keepTotemEquipped = value;
+        if (!value) disarmRefill(false);
     }
+    public boolean isRefillArmed() { return refillArmed; }
+    public String getRefillPlayerUuid() { return refillPlayerUuid; }
     public boolean isPauseWhileUsingItem() { return pauseWhileUsingItem; }
     public void setPauseWhileUsingItem(boolean value) { pauseWhileUsingItem = value; }
 }

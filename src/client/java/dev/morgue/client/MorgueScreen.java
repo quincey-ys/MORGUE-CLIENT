@@ -645,8 +645,8 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPredictRecentDamage(!module.isPredictRecentDamage()));
         addSettingButton(rightX, y + 108, toggleLabel("Predict Fall Damage", module.isPredictFallDamage()),
                 () -> module.setPredictFallDamage(!module.isPredictFallDamage()));
-        addSettingButton(rightX, y + 144, toggleLabel("Restore Displaced Offhand", module.isRestoreDisplacedOffhand()),
-                () -> module.setRestoreDisplacedOffhand(!module.isRestoreDisplacedOffhand()));
+        addSettingButton(rightX, y + 144, toggleLabel("Keep Totem Equipped", module.isKeepTotemEquipped()),
+                () -> module.setKeepTotemEquipped(!module.isKeepTotemEquipped()));
         addSettingButton(rightX, y + 180, toggleLabel("Predict Nearby Threats", module.isPredictNearbyThreats()),
                 () -> module.setPredictNearbyThreats(!module.isPredictNearbyThreats()));
 

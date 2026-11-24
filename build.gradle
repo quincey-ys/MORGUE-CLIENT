@@ -121,10 +121,37 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     printmapping(obfuscationMap.get().asFile)
 }
 
+// Verify every transformed class in a fresh JVM before creating the distributable.
+def bytecodeVerificationReport = layout.buildDirectory.file('reports/morgue/bytecode-verification.txt')
+def bytecodeVerifierClasses = layout.buildDirectory.dir('tmp/morgue-bytecode-verifier')
+
+tasks.register('compileBytecodeSmokeTest', JavaCompile) {
+    source = files('tools/BytecodeSmokeTest.java')
+    classpath = files()
+    destinationDirectory = bytecodeVerifierClasses
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+
+tasks.register('verifyProtectedBytecode', JavaExec) {
+    dependsOn tasks.named('obfuscateClientJar'), tasks.named('compileBytecodeSmokeTest')
+    classpath = files(bytecodeVerifierClasses, obfuscatedJar, sourceSets.client.compileClasspath)
+    mainClass = 'BytecodeSmokeTest'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = org.gradle.jvm.toolchain.JavaLanguageVersion.of(25)
+    }
+    jvmArgs '-Xverify:all'
+    args obfuscatedJar.get().asFile.absolutePath, bytecodeVerificationReport.get().asFile.absolutePath
+    outputs.file(bytecodeVerificationReport)
+    doFirst {
+        bytecodeVerificationReport.get().asFile.parentFile.mkdirs()
+    }
+}
+
 // Add embedded hashes after obfuscation. All regular JAR entries except this
 // manifest are hashed so the runtime can detect changed, missing, or extra files.
 tasks.register('packageProtectedRelease') {
-    dependsOn tasks.named('obfuscateClientJar'), tasks.named('cyclonedxBom')
+    dependsOn tasks.named('obfuscateClientJar'), tasks.named('cyclonedxBom'), tasks.named('verifyProtectedBytecode')
 
     doLast {
         def inputJar = obfuscatedJar.get().asFile
@@ -227,6 +254,13 @@ tasks.register('packageProtectedRelease') {
         if (!new File(releaseDir, 'sbom.cyclonedx.json').isFile()) {
             throw new GradleException('CycloneDX JSON SBOM was not generated.')
         }
+        def bytecodeReport = bytecodeVerificationReport.get().asFile
+        if (!bytecodeReport.isFile()) {
+            throw new GradleException('Protected-JAR JVM verification report is missing.')
+        }
+        java.nio.file.Files.copy(bytecodeReport.toPath(),
+                new File(releaseDir, 'BYTECODE-VERIFICATION.txt').toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING)
         logger.lifecycle("Protected MORGUE release packaged at ${releaseJar}")
     }
 }
