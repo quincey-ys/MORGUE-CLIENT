@@ -1,4 +1,4 @@
-# MORGUE-CLIENT
+# Morgue Refined
 
 A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 
@@ -73,7 +73,7 @@ MORGUE protects its distributed build and makes package changes visible; these c
 - **Runtime integrity check:** at startup, MORGUE compares every packaged JAR entry (except its own manifest) against embedded SHA-256 values. Missing, unexpected, duplicated, or modified entries mark the package as failed and block MORGUE gameplay-module activation. Only a confirmed Fabric development environment can skip the packaged-JAR check; an unrecognized or unverifiable production package fails closed and blocks MORGUE gameplay-module activation.
 - **Integrity test:** CI loads the obfuscated verifier from the packaged JAR, checks that a clean build reports `VERIFIED`, then adds a test entry to a copy and checks that it reports `FAILED` and denies module activation.
 - **Integrity limitation:** an embedded checksum manifest is not a digital signature. A determined person who modifies the code can also replace the manifest or patch the verifier. Use the separately distributed release checksum to compare a downloaded JAR against the build output.
-- **External SHA-256:** the release bundle contains a `.sha256` sidecar. Verify it with `sha256sum -c MORGUE-CLIENT-0.1.0.jar.sha256` (use the matching versioned filename).
+- **External SHA-256:** the release bundle contains a `.sha256` sidecar. Verify it with `sha256sum -c MORGUE-REFINED-0.1.0.jar.sha256` (use the matching versioned filename).
 - **Software Bill of Materials:** the build produces CycloneDX JSON and XML SBOM files listing the resolved project dependencies.
 - **Source separation:** the distributable release bundle contains the obfuscated runtime JAR and build metadata, not the unobfuscated sources JAR. The source JAR remains a local build output under `build/libs`.
 - MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to Minecraft, Fabric Loader, the server, and installed dependencies.
