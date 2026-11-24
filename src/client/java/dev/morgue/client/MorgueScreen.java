@@ -1284,7 +1284,7 @@ public final class MorgueScreen extends Screen {
         int background = mixColor(0xFF070B12, mixColor(idle, BUTTON_HOVER, hover),
                 (float) Math.max(0.0, Math.min(1.0, revealFactor)));
         int accent = mixColor(BORDER,
-                selected || activeState ? RED : mixColor(BORDER, 0xFF9FB3C8, hover),
+                selected || activeState ? accentColor() : mixColor(BORDER, 0xFF9FB3C8, hover),
                 (float) Math.max(0.0, Math.min(1.0, revealFactor)));
         int textColor = mixColor(0xFF667487, !enabled ? 0xFF667487 : WHITE,
                 (float) Math.max(0.0, Math.min(1.0, revealFactor)));
@@ -1309,9 +1309,9 @@ public final class MorgueScreen extends Screen {
         if (toggle && w >= 70) {
             int trackX = x + w - 48;
             int trackY = y + (h - 16) / 2;
-            int trackColor = activeState ? RED_SOFT : 0xFF293747;
+            int trackColor = activeState ? accentSoftColor() : 0xFF293747;
             graphics.fill(trackX, trackY, trackX + 34, trackY + 16, trackColor);
-            graphics.outline(trackX, trackY, 34, 16, activeState ? RED : BORDER);
+            graphics.outline(trackX, trackY, 34, 16, activeState ? accentColor() : BORDER);
             String toggleKey = rawLabel.startsWith("ON  ") || rawLabel.startsWith("OFF ")
                     ? rawLabel.substring(4) : rawLabel.replaceFirst(": (ON|OFF)$", "");
             float targetToggle = activeState ? 1.0F : 0.0F;
@@ -1350,7 +1350,7 @@ public final class MorgueScreen extends Screen {
                     (now - ripple.startedAtNanos()) / 520_000_000.0F);
             int radius = 5 + Math.round(progress * 28.0F);
             int alpha = Math.max(0, Math.round(170.0F * (1.0F - progress)));
-            int color = (alpha << 24) | (RED & 0x00FFFFFF);
+            int color = (alpha << 24) | (accentColor() & 0x00FFFFFF);
             int left = (int) Math.round(ripple.x()) - radius;
             int right = (int) Math.round(ripple.x()) + radius;
             int top = (int) Math.round(ripple.y()) - radius;
@@ -1377,7 +1377,7 @@ public final class MorgueScreen extends Screen {
         graphics.fill(0, 0, width, height, 0xFF070B12);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 68, PANEL_LIGHT);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, accentColor());
 
         graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 17, WHITE);
         graphics.text(font, displayText("CLIENT  /  GHOST-INSPIRED WORKSPACE"), panelX + 20, panelY + 36, MUTED);
@@ -1394,9 +1394,9 @@ public final class MorgueScreen extends Screen {
 
         int contentRight = Math.max(panelX + 180, panelX + panelWidth - 18);
         int navWidth = (int) Math.round((contentRight - (panelX + 20)) * navProgress);
-        graphics.fill(panelX + 20, panelY + 108, panelX + 20 + navWidth, panelY + 110, RED);
+        graphics.fill(panelX + 20, panelY + 108, panelX + 20 + navWidth, panelY + 110, accentColor());
         int openWidth = (int) Math.round((panelWidth - 40) * openProgress);
-        graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, RED_SOFT);
+        graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, accentSoftColor());
 
         if (selectedModule == null) {
             int columns = Math.max(1, Math.min(4, panelWidth / 360));
@@ -1414,7 +1414,7 @@ public final class MorgueScreen extends Screen {
                 int y = gridTop + row * (rowHeight + gap);
                 graphics.fill(x, y, x + cardWidth, y + rowHeight, PANEL);
                 graphics.outline(x, y, cardWidth, rowHeight, BORDER);
-                graphics.fill(x + 1, y + 1, x + cardWidth - 1, y + 3, RED);
+                graphics.fill(x + 1, y + 1, x + cardWidth - 1, y + 3, accentColor());
                 graphics.text(font, displayText(CATEGORIES.get(i).toUpperCase(java.util.Locale.ROOT)),
                         x + 10, y + 11, WHITE);
                 graphics.fill(x + 10, y + 27, x + cardWidth - 10, y + 28, BORDER);
@@ -1455,9 +1455,9 @@ public final class MorgueScreen extends Screen {
                 boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
                 // Keep the vanilla text/edit handling visible; decorate only its frame.
                 graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
-                        searchHovered ? RED : BORDER);
+                        searchHovered ? accentColor() : BORDER);
                 graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
-                        searchHovered ? RED : 0xFF405065);
+                        searchHovered ? accentColor() : 0xFF405065);
             }
         }
 
@@ -1470,14 +1470,14 @@ public final class MorgueScreen extends Screen {
             int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
             int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
             graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0xFF293747);
-            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
+            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, accentColor());
         }
 
         drawClickRipples(graphics, now);
     }
 
     private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
-        return widget.isMouseOver(mouseX, mouseY) ? RED : 0xFF6586AC;
+        return widget.isMouseOver(mouseX, mouseY) ? accentColor() : 0xFF6586AC;
     }
 
     @Override
