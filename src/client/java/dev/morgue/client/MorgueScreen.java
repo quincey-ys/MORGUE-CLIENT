@@ -20,16 +20,16 @@ import java.util.Map;
 import java.util.Set;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xC8050914;
-    private static final int PANEL = 0xD00B1220;
-    private static final int PANEL_LIGHT = 0xE1121D30;
-    private static final int BORDER = 0xB34A6388;
-    private static final int WHITE = 0xFFE8F0FF;
-    private static final int MUTED = 0xFF91A5C1;
-    private static final int RED = 0xFF80AFFF;
-    private static final int RED_SOFT = 0xFF315A91;
-    private static final int BUTTON_IDLE = 0xF00A1220;
-    private static final int BUTTON_HOVER = 0xFF17263D;
+    private static final int BLACK = 0xA5000000;
+    private static final int PANEL = 0xF00D121B;
+    private static final int PANEL_LIGHT = 0xFF141E2B;
+    private static final int BORDER = 0xFF2B394B;
+    private static final int WHITE = 0xFFF1F5FA;
+    private static final int MUTED = 0xFF94A3B8;
+    private static final int RED = 0xFF67D6C5;
+    private static final int RED_SOFT = 0xFF285E5A;
+    private static final int BUTTON_IDLE = 0xF0141C28;
+    private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("morgue", "display"));
 
@@ -123,8 +123,8 @@ public final class MorgueScreen extends Screen {
         int maxWidth = Math.max(320, width - 24);
         int maxHeight = Math.max(300, height - 24);
         if (panelWidth == 0 || panelHeight == 0) {
-            panelWidth = Math.min(720, maxWidth);
-            panelHeight = Math.min(440, maxHeight);
+            panelWidth = Math.min(960, maxWidth);
+            panelHeight = Math.min(580, maxHeight);
             panelX = (width - panelWidth) / 2;
             panelY = (height - panelHeight) / 2;
         } else {
@@ -135,7 +135,7 @@ public final class MorgueScreen extends Screen {
         }
 
         int sidebarX = panelX + 16;
-        int sidebarY = panelY + 88;
+        int sidebarY = panelY + 112;
         for (String category : CATEGORIES) {
             addRenderableWidget(Button.builder(Component.literal(category), button -> {
                 selectedCategory = category;
@@ -220,10 +220,13 @@ public final class MorgueScreen extends Screen {
 
     private void buildModuleList() {
         int moduleX = panelX + 150;
-        int listTop = panelY + 140;
-        int listBottom = panelY + panelHeight - 48;
-        int rowHeight = 36;
-        int buttonHeight = 28;
+        int listTop = panelY + 148;
+        int listBottom = panelY + panelHeight - 52;
+        int rowHeight = 62;
+        int buttonHeight = 48;
+        int columnGap = 12;
+        int contentWidth = Math.max(420, panelWidth - 182);
+        int cardWidth = Math.max(200, (contentWidth - columnGap) / 2);
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
         List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
                 .filter(module -> query.isEmpty()
@@ -231,14 +234,20 @@ public final class MorgueScreen extends Screen {
                 .toList();
 
         moduleTotalCount = filtered.size();
-        moduleVisibleCount = Math.min(4, Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1));
+        int visibleRows = Math.max(1, (listBottom - listTop) / rowHeight);
+        moduleVisibleCount = visibleRows * 2;
         int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
         moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
+        moduleScrollOffset -= moduleScrollOffset % 2;
 
         int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
         for (int i = moduleScrollOffset; i < end; i++) {
             String module = filtered.get(i);
-            int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
+            int relativeIndex = i - moduleScrollOffset;
+            int column = relativeIndex % 2;
+            int row = relativeIndex / 2;
+            int cardX = moduleX + column * (cardWidth + columnGap);
+            int moduleY = listTop + row * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
                     || "Credits".equals(module) || "World Info".equals(module)
                     || "Client Metadata".equals(module) || "Module List".equals(module)
@@ -246,29 +255,27 @@ public final class MorgueScreen extends Screen {
                     || "Notifications".equals(module) || "Client Utilities".equals(module)
                     || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
                     || "Item Use".equals(module) || "HUD Editor".equals(module);
-            addRenderableWidget(Button.builder(
-                    Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
-                    button -> {
-                        if (viewOnly) {
-                            selectedModule = module;
-                            entityPage = false;
-                        } else {
-                            toggleModule(module);
-                        }
-                        rebuildWidgets();
-                    }
-            ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), buttonHeight).build());
+            String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+            addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
+                if (viewOnly) {
+                    selectedModule = module;
+                    entityPage = false;
+                } else {
+                    toggleModule(module);
+                }
+                rebuildWidgets();
+            }).bounds(cardX, moduleY, cardWidth - 76, buttonHeight).build());
 
-            addRenderableWidget(Button.builder(Component.literal("SETTINGS"), button -> {
+            addRenderableWidget(Button.builder(Component.literal("EDIT"), button -> {
                 selectedModule = module;
                 entityPage = false;
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 112, moduleY, 88, buttonHeight).build());
+            }).bounds(cardX + cardWidth - 68, moduleY, 68, buttonHeight).build());
         }
 
         if (moduleTotalCount == 0) {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
-                    button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
+                    button -> {}).bounds(moduleX, listTop, Math.max(200, contentWidth), buttonHeight).build());
         }
     }
 
@@ -1123,48 +1130,14 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        // Keep the live world visible; MORGUE draws only its own translucent panels.
+        graphics.fill(0, 0, width, height, 0x80060A10);
     }
 
     private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("minecraft", "default"));
 
-    private static String doubleStruck(String value) {
-        StringBuilder result = new StringBuilder(value.length());
-        for (int offset = 0; offset < value.length();) {
-            int codePoint = value.codePointAt(offset);
-            offset += Character.charCount(codePoint);
-            if (codePoint >= 'A' && codePoint <= 'Z') {
-                int index = codePoint - 'A';
-                // Mathematical double-struck has legacy letter code points for several capitals.
-                int[] capitals = {
-                        0x1D538, 0x1D539, 0x2102, 0x1D53B, 0x1D53C, 0x1D53D, 0x1D53E,
-                        0x210D, 0x1D53F, 0x1D540, 0x1D541, 0x1D542, 0x1D543, 0x1D544,
-                        0x1D546, 0x2119, 0x211A, 0x211D, 0x1D54A, 0x1D54B, 0x1D54C,
-                        0x1D54D, 0x1D54E, 0x1D54F, 0x1D550, 0x2124
-                };
-                result.appendCodePoint(capitals[index]);
-            } else if (codePoint >= 'a' && codePoint <= 'z') {
-                int index = codePoint - 'a';
-                int[] lowercase = {
-                        0x1D552, 0x1D553, 0x1D554, 0x1D555, 0x1D556, 0x1D557, 0x1D558,
-                        0x1D559, 0x1D55A, 0x1D55B, 0x1D55C, 0x1D55D, 0x1D55E, 0x1D55F,
-                        0x1D560, 0x1D561, 0x1D562, 0x1D563, 0x1D564, 0x1D565, 0x1D566,
-                        0x1D567, 0x1D568, 0x1D569, 0x1D56A, 0x1D56B
-                };
-                result.appendCodePoint(lowercase[index]);
-            } else if (codePoint >= '0' && codePoint <= '9') {
-                result.appendCodePoint(0x1D7D8 + codePoint - '0');
-            } else {
-                result.appendCodePoint(codePoint);
-            }
-        }
-        return result.toString();
-    }
-
     private static Component displayText(String value) {
-        return Component.literal(doubleStruck(value))
-                .withStyle(style -> style.withFont(DOUBLE_STRUCK_FONT).withBold(false));
+        return Component.literal(value).withStyle(style -> style.withBold(true));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
@@ -1173,161 +1146,68 @@ public final class MorgueScreen extends Screen {
         int y = widget.getY();
         int w = widget.getWidth();
         int h = widget.getHeight();
-        if (w <= 0 || h <= 0) {
-            return;
-        }
+        if (w <= 0 || h <= 0) return;
 
-        long now = System.nanoTime();
-        double pulse = (Math.sin(now / 310_000_000.0) + 1.0) * 0.5;
         boolean selected = rawLabel.equals(selectedCategory);
-        boolean activeState = rawLabel.startsWith("LIVE") || rawLabel.startsWith("ON")
+        boolean activeState = rawLabel.startsWith("ON") || rawLabel.startsWith("INFO")
                 || rawLabel.contains(": ON");
         boolean hovered = widget.isHoveredOrFocused() || widget.isMouseOver(mouseX, mouseY);
         boolean enabled = widget.isActive();
 
-        int background = !enabled ? 0xB0070D18
+        int background = !enabled ? 0xFF101722
                 : hovered ? BUTTON_HOVER
-                : selected ? 0xD0132340
-                : activeState ? 0xC5122035
+                : selected ? 0xFF1C2C3A
+                : activeState ? 0xFF172A31
                 : BUTTON_IDLE;
-        int accent = selected || activeState ? RED
-                : hovered ? 0xFFB5D2FF
-                : 0xFF587DAA;
-        int textColor = !enabled ? 0xFF71849F
-                : selected || activeState ? 0xFFE1EEFF
-                : WHITE;
+        int accent = selected || activeState ? RED : (hovered ? 0xFF9FB3C8 : BORDER);
+        int textColor = !enabled ? 0xFF667487 : WHITE;
 
-        // Layered glass plate, cut corners, and a restrained animated edge.
         graphics.fill(x, y, x + w, y + h, background);
-        graphics.fill(x + 2, y + 1, x + w - 2, y + h - 1, hovered ? 0x263D5E87 : 0x182A4263);
-        graphics.fill(x, y + 2, x + 3, y + h - 2, accent);
-        graphics.fill(x + 3, y, x + w - 5, y + 1, 0x806C86A8);
-        graphics.fill(x + 4, y + h - 1, x + w - 2, y + h, 0xA0030812);
-        graphics.fill(x + w - 5, y + 4, x + w - 4, y + h - 4,
-                selected || activeState ? RED_SOFT : 0xFF263B59);
-        graphics.fill(x, y, x + 8, y + 1, accent);
-        graphics.fill(x + w - 10, y + h - 1, x + w, y + h, accent);
-
-        if (hovered) {
-            int sweepWidth = Math.max(12, w / 4);
-            int travel = Math.max(1, w - sweepWidth - 8);
-            int sweepX = x + 4 + (int) (Math.floorMod(now / 5_000_000L, travel));
-            graphics.fill(sweepX, y + 2, Math.min(x + w - 4, sweepX + sweepWidth), y + h - 2, 0x247DB7FF);
-            graphics.fill(x + 3, y + 1, x + w - 4, y + 2, 0xA0A8CEFF);
-            graphics.outline(x - 1, y - 1, w + 2, h + 2,
-                    0x50000000 | ((int) (90 + pulse * 100) << 16) | 0x004E78B0);
+        graphics.outline(x, y, w, h, hovered ? 0xFF7B94AE : BORDER);
+        graphics.fill(x, y + 4, x + 3, y + h - 4, accent);
+        if (activeState) {
+            graphics.fill(x + w - 9, y + h / 2 - 3, x + w - 6, y + h / 2 + 3, RED);
         }
-
-        if (selected || activeState) {
-            int beaconAlpha = (int) (150 + pulse * 105);
-            graphics.fill(x + w - 12, y + h / 2 - 3, x + w - 6, y + h / 2 + 3,
-                    (beaconAlpha << 24) | 0x007FB5FF);
-            graphics.fill(x + w - 17, y + h / 2 - 1, x + w - 14, y + h / 2 + 1, 0xB5B5D5FF);
-        } else {
-            graphics.fill(x + w - 11, y + h / 2 - 1, x + w - 7, y + h / 2 + 1,
-                    hovered ? 0xFFB9D8FF : 0xFF54708F);
-        }
-
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int maxTextWidth = Math.max(8, w - 30);
+        int maxTextWidth = Math.max(8, w - 24);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
-        graphics.text(font, label, x + 10, textY, textColor);
-    }
-
-    private void drawAnimatedPanelEffects(GuiGraphicsExtractor graphics) {
-        long now = System.nanoTime();
-        double pulse = (Math.sin(now / 420_000_000.0) + 1.0) * 0.5;
-        int contentLeft = panelX + 140;
-        int contentRight = panelX + panelWidth - 10;
-        int contentTop = panelY + 78;
-        int contentBottom = panelY + panelHeight - 38;
-
-        // Technical grid behind the controls, kept deliberately faint.
-        for (int x = panelX + 12; x < panelX + panelWidth - 10; x += 24) {
-            graphics.fill(x, panelY + 5, x + 1, panelY + panelHeight - 5, 0x183E6492);
-        }
-        for (int y = panelY + 84; y < panelY + panelHeight - 38; y += 22) {
-            graphics.fill(contentLeft, y, contentRight, y + 1, 0x183E6492);
-        }
-
-        // A moving scanline adds life without dimming the Minecraft world.
-        int scanRange = Math.max(1, contentBottom - contentTop);
-        int scanY = contentTop + (int) Math.floorMod(now / 42_000_000L, scanRange);
-        graphics.fill(contentLeft, scanY, contentRight, scanY + 1, 0x247FB8FF);
-        graphics.fill(contentLeft, scanY + 1, contentRight, scanY + 2, 0x0C7FB8FF);
-
-        // Moving top-edge signal and pulsing corner brackets.
-        int sweepRange = Math.max(1, panelWidth - 54);
-        int sweepX = panelX + 12 + (int) Math.floorMod(now / 7_000_000L, sweepRange);
-        graphics.fill(sweepX, panelY + 2, Math.min(panelX + panelWidth - 12, sweepX + 34),
-                panelY + 4, 0xD08CBFFF);
-        int bracketAlpha = (int) (110 + pulse * 100);
-        int bracket = (bracketAlpha << 24) | 0x0085B8FF;
-        graphics.fill(panelX + 7, panelY + 8, panelX + 22, panelY + 9, bracket);
-        graphics.fill(panelX + 7, panelY + 8, panelX + 8, panelY + 21, bracket);
-        graphics.fill(panelX + panelWidth - 22, panelY + 8, panelX + panelWidth - 7, panelY + 9, bracket);
-        graphics.fill(panelX + panelWidth - 8, panelY + 8, panelX + panelWidth - 7, panelY + 21, bracket);
-
-        // Tiny diagnostic equalizer in the footer.
-        for (int i = 0; i < 9; i++) {
-            int barHeight = 2 + (int) ((Math.sin(now / 150_000_000.0 + i * 0.72) + 1.0) * 3.0);
-            int barX = panelX + panelWidth - 186 + i * 5;
-            graphics.fill(barX, panelY + panelHeight - 12 - barHeight,
-                    barX + 2, panelY + panelHeight - 12,
-                    i < 3 ? 0xD080B5FF : 0x806E8FB7);
-        }
+        graphics.text(font, label, x + 12, textY, textColor);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX + 1, panelY + 3, panelX + panelWidth - 1, panelY + panelHeight - 1, PANEL);
+        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1,
+                panelY + panelHeight - 1, PANEL);
         graphics.outline(panelX, panelY, panelWidth, panelHeight, BORDER);
+
+        // Clean card-based layout inspired by Ghost Client's multi-column GUI.
+        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + 72, PANEL_LIGHT);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
-        graphics.fill(panelX + panelWidth - 92, panelY + 3, panelX + panelWidth - 16,
-                panelY + 4, RED_SOFT);
-        drawAnimatedPanelEffects(graphics);
+        graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 18, WHITE);
+        graphics.text(font, displayText("CLIENT  /  26.3 FABRIC"), panelX + 20, panelY + 36, MUTED);
+        graphics.text(font, displayText("RIGHT SHIFT  ·  CLOSE"),
+                panelX + panelWidth - 154, panelY + 29, MUTED);
 
-        graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
-        graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
-        graphics.text(font, displayText("MORGUE"), panelX + 49, panelY + 17, WHITE);
-        graphics.text(font, displayText("REFINED CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
+        graphics.fill(panelX + 140, panelY + 82, panelX + 141,
+                panelY + panelHeight - 38, BORDER);
+        graphics.text(font, displayText("CATEGORIES"), panelX + 18, panelY + 88, MUTED);
 
-        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL_LIGHT);
-        graphics.fill(panelX + 145, panelY + 18, panelX + 148, panelY + 69, RED_SOFT);
-        String heading = selectedModule == null ? selectedCategory.toUpperCase() : selectedModule.toUpperCase();
-        graphics.text(font, displayText(heading), panelX + 161, panelY + 27, WHITE);
-        graphics.text(font, displayText(selectedModule == null
-                ? "INDEPENDENT CLIENT  //  BUILD 0.1.0"
-                : entityPage ? "TARGET ENTITY FILTER" : "MODULE SETTINGS"), panelX + 161, panelY + 43, MUTED);
-        long headerTime = System.nanoTime();
-        int headerPulse = (int) (150 + (Math.sin(headerTime / 300_000_000.0) + 1.0) * 52.0);
-        graphics.fill(panelX + panelWidth - 43, panelY + 34, panelX + panelWidth - 37, panelY + 40,
-                (headerPulse << 24) | 0x004C9FFF);
-        graphics.text(font, displayText("ONLINE"), panelX + panelWidth - 91, panelY + 33, 0xFF9FCBFF);
+        String heading = selectedModule == null
+                ? selectedCategory.toUpperCase(java.util.Locale.ROOT)
+                : selectedModule.toUpperCase(java.util.Locale.ROOT);
+        graphics.text(font, displayText(heading), panelX + 154, panelY + 88, WHITE);
 
-        graphics.fill(panelX + 136, panelY + 82, panelX + 137, panelY + panelHeight - 16, BORDER);
-        graphics.text(font, displayText(selectedModule == null ? "MODULES" : "CONFIGURATION"),
-                panelX + 151, panelY + 86, MUTED);
+        graphics.fill(panelX + 16, panelY + panelHeight - 34,
+                panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
+        graphics.text(font, displayText("MORGUE  /  LOCAL CONFIGURATION"),
+                panelX + 18, panelY + panelHeight - 24, MUTED);
 
-        graphics.fill(panelX + 16, panelY + panelHeight - 34, panelX + panelWidth - 16,
-                panelY + panelHeight - 33, BORDER);
-        graphics.fill(panelX + panelWidth - 14, panelY + panelHeight - 3,
-                panelX + panelWidth - 3, panelY + panelHeight - 2, RED);
-        graphics.fill(panelX + panelWidth - 9, panelY + panelHeight - 8,
-                panelX + panelWidth - 3, panelY + panelHeight - 3, BORDER);
-        graphics.text(font, displayText("MORGUE-CLIENT"), panelX + 17,
-                panelY + panelHeight - 24, MUTED);
-        graphics.text(font, displayText("RIGHT SHIFT  •  CLOSE"),
-                panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
-
-        // Suppress vanilla button captions before Minecraft renders widgets. We restore
-        // them immediately afterward so input, accessibility, and click behavior stay intact.
         Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
         for (var child : children()) {
             if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
@@ -1338,7 +1218,6 @@ public final class MorgueScreen extends Screen {
 
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
-        // Paint MORGUE controls once, above the now-captionless vanilla widget layer.
         for (var entry : buttonLabels.entrySet()) {
             AbstractWidget widget = entry.getKey();
             String rawLabel = entry.getValue();
@@ -1347,34 +1226,28 @@ public final class MorgueScreen extends Screen {
         }
 
         for (var child : children()) {
-            if (child instanceof AbstractWidget widget) {
-                if (widget instanceof EditBox) {
-                    int ex = widget.getX();
-                    int ey = widget.getY();
-                    int ew = widget.getWidth();
-                    int eh = widget.getHeight();
-                    boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
-                    graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
-                            searchHovered ? RED : 0xB86C8FB8);
-                    graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
-                            searchHovered ? 0xFF9BC8FF : 0xA049719F);
-                    graphics.fill(ex + 6, ey + 2, ex + 7, ey + eh - 2,
-                            searchHovered ? 0xFF9BC8FF : 0xA049719F);
-                    continue;
-                }
+            if (child instanceof AbstractWidget widget && widget instanceof EditBox) {
+                int ex = widget.getX();
+                int ey = widget.getY();
+                int ew = widget.getWidth();
+                int eh = widget.getHeight();
+                boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
+                graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
+                        searchHovered ? RED : BORDER);
+                graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
+                        searchHovered ? RED : 0xFF405065);
             }
         }
 
-        // A compact scroll track communicates that more modules are available.
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
-            int trackX = panelX + panelWidth - 17;
-            int trackTop = panelY + 140;
-            int trackBottom = panelY + panelHeight - 48;
+            int trackX = panelX + panelWidth - 14;
+            int trackTop = panelY + 148;
+            int trackBottom = panelY + panelHeight - 52;
             int trackHeight = Math.max(1, trackBottom - trackTop);
             int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
             int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
             int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
-            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0x805778A2);
+            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0xFF293747);
             graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
         }
     }
@@ -1430,8 +1303,8 @@ public final class MorgueScreen extends Screen {
         if (event.button() == 0 && resizingPanel) {
             int availableWidth = Math.max(280, width - panelX - 12);
             int availableHeight = Math.max(260, height - panelY - 12);
-            int minimumWidth = Math.min(560, availableWidth);
-            int minimumHeight = Math.min(360, availableHeight);
+            int minimumWidth = Math.min(640, availableWidth);
+            int minimumHeight = Math.min(400, availableHeight);
             panelWidth = Math.max(minimumWidth,
                     Math.min(availableWidth, panelWidth + (int) Math.round(deltaX)));
             panelHeight = Math.max(minimumHeight,
