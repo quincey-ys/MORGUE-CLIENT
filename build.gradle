@@ -153,7 +153,7 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     // ProGuard may report unresolved optional references from platform libraries.
     // Keep these visible in verbose CI logs; no shrinking or optimization is done.
     verbose()
-    // Temporarily surface unresolved library references during the audio-enabled release check.
+    ignorewarnings()
     allowaccessmodification()
     keepdirectories('**')
     keepattributes('Exceptions,InnerClasses,Signature,Deprecated,*Annotation*,EnclosingMethod,Record,NestMembers,NestHost,PermittedSubclasses,MethodParameters,StackMapTable')

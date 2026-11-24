@@ -26,10 +26,9 @@ public final class KillSoundDetector {
     private KillSoundDetector() {}
 
     public static void register() {
+        // Death notices are system/game messages; avoid subscribing to player-chat events
+        // so chat moderation and ordinary player chat never trigger the kill cue.
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> handle(message, true));
-        ClientReceiveMessageEvents.CHAT.register(
-                (message, playerChatMessage, sender, boundChatType, timeStamp) -> handle(message, false)
-        );
     }
 
     private static void handle(Component message, boolean allowPlainTextFallback) {
