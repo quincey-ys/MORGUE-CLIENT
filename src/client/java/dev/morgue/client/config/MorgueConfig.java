@@ -79,9 +79,6 @@ public final class MorgueConfig {
         UiSettings.setAnimationsEnabled(bool(values, "ui.animations.enabled", true));
         UiSettings.setSoundsEnabled(bool(values, "ui.sounds.enabled", false));
 
-        put(values, "ui.animations.enabled", UiSettings.isAnimationsEnabled());
-        put(values, "ui.sounds.enabled", UiSettings.isSoundsEnabled());
-
         MaceHitterModule mace = MorgueClient.maceHitter();
         mace.setEnabled(bool(values, "mace.enabled", false));
         mace.setRange(decimal(values, "mace.range", 3.2));
@@ -176,6 +173,9 @@ public final class MorgueConfig {
 
     public static void save() {
         Properties values = new Properties();
+
+        put(values, "ui.animations.enabled", UiSettings.isAnimationsEnabled());
+        put(values, "ui.sounds.enabled", UiSettings.isSoundsEnabled());
 
         MaceHitterModule mace = MorgueClient.maceHitter();
         put(values, "mace.enabled", mace.isEnabled());
