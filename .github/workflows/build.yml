@@ -57,7 +57,7 @@ jobs:
           java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$jar_file" VERIFIED true
           javac --release 25 -d "$RUNNER_TEMP/morgue-enum-smoke" tools/EnumSmokeTest.java
           java -cp "$RUNNER_TEMP/morgue-enum-smoke" EnumSmokeTest "$jar_file"
-          tampered_jar="$RUNNER_TEMP/MORGUE-CLIENT-tampered.jar"
+          tampered_jar="$RUNNER_TEMP/Morgue-Refined-tampered.jar"
           cp "$jar_file" "$tampered_jar"
           printf 'intentional test modification\n' > "$RUNNER_TEMP/morgue-integrity-tamper.txt"
           jar --update --file "$tampered_jar" -C "$RUNNER_TEMP" morgue-integrity-tamper.txt
@@ -71,5 +71,5 @@ jobs:
       - name: Upload protected release
         uses: actions/upload-artifact@v7
         with:
-          name: MORGUE-CLIENT
+          name: Morgue-Refined
           path: build/release/*
