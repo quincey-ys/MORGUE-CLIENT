@@ -1168,7 +1168,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
-                                      int mouseX, int mouseY) {
+                                      int mouseX, int mouseY, long now, double frameFactor) {
         int x = widget.getX();
         int y = widget.getY();
         int w = widget.getWidth();
@@ -1176,64 +1176,144 @@ public final class MorgueScreen extends Screen {
         if (w <= 0 || h <= 0) return;
 
         boolean selected = rawLabel.equals(selectedCategory);
+        boolean toggle = rawLabel.startsWith("ON  ") || rawLabel.startsWith("OFF ")
+                || rawLabel.contains(": ON") || rawLabel.contains(": OFF");
         boolean activeState = rawLabel.startsWith("ON") || rawLabel.startsWith("INFO")
                 || rawLabel.contains(": ON");
         boolean hovered = widget.isHoveredOrFocused() || widget.isMouseOver(mouseX, mouseY);
         boolean enabled = widget.isActive();
 
-        int background = !enabled ? 0xFF101722
-                : hovered ? BUTTON_HOVER
+        float previous = hoverProgress.getOrDefault(widget, 0.0F);
+        float target = hovered && enabled ? 1.0F : 0.0F;
+        float hover = previous + (target - previous)
+                * (UiSettings.isAnimationsEnabled() ? (float) frameFactor : 1.0F);
+        hoverProgress.put(widget, hover);
+
+        int idle = !enabled ? 0xFF101722
                 : selected ? 0xFF1C2C3A
                 : activeState ? 0xFF172A31
                 : BUTTON_IDLE;
-        int accent = selected || activeState ? RED : (hovered ? 0xFF9FB3C8 : BORDER);
+        int background = mixColor(idle, BUTTON_HOVER, hover);
+        int accent = selected || activeState ? RED : mixColor(BORDER, 0xFF9FB3C8, hover);
         int textColor = !enabled ? 0xFF667487 : WHITE;
 
         graphics.fill(x, y, x + w, y + h, background);
-        graphics.outline(x, y, w, h, hovered ? 0xFF7B94AE : BORDER);
-        graphics.fill(x, y + 4, x + 3, y + h - 4, accent);
-        if (activeState) {
-            graphics.fill(x + w - 9, y + h / 2 - 3, x + w - 6, y + h / 2 + 3, RED);
-        }
+        graphics.outline(x - (hover > 0.05F ? 1 : 0), y - (hover > 0.05F ? 1 : 0),
+                w + (hover > 0.05F ? 2 : 0), h + (hover > 0.05F ? 2 : 0),
+                mixColor(BORDER, 0xFF7B94AE, hover));
+        graphics.fill(x, y + 4, x + 3 + Math.round(2 * hover), y + h - 4, accent);
+
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int maxTextWidth = Math.max(8, w - 24);
+        int switchSpace = toggle ? 62 : 24;
+        int maxTextWidth = Math.max(8, w - switchSpace);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
         graphics.text(font, label, x + 12, textY, textColor);
+
+        if (toggle && w >= 70) {
+            int trackX = x + w - 48;
+            int trackY = y + (h - 16) / 2;
+            int trackColor = activeState ? RED_SOFT : 0xFF293747;
+            graphics.fill(trackX, trackY, trackX + 34, trackY + 16, trackColor);
+            graphics.outline(trackX, trackY, 34, 16, activeState ? RED : BORDER);
+            float knob = activeState ? 1.0F : 0.0F;
+            float animatedKnob = UiSettings.isAnimationsEnabled() ? knob : (activeState ? 1 : 0);
+            int knobX = trackX + 2 + Math.round(animatedKnob * 16);
+            graphics.fill(knobX, trackY + 2, knobX + 12, trackY + 14, WHITE);
+        }
+    }
+
+    private static int mixColor(int from, int to, float amount) {
+        float t = Math.max(0.0F, Math.min(1.0F, amount));
+        int a = (int) (((from >>> 24) & 0xFF) * (1.0F - t)
+                + ((to >>> 24) & 0xFF) * t);
+        int r = (int) (((from >>> 16) & 0xFF) * (1.0F - t)
+                + ((to >>> 16) & 0xFF) * t);
+        int g = (int) (((from >>> 8) & 0xFF) * (1.0F - t)
+                + ((to >>> 8) & 0xFF) * t);
+        int b = (int) ((from & 0xFF) * (1.0F - t) + (to & 0xFF) * t);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    private void drawClickRipples(GuiGraphicsExtractor graphics, long now) {
+        if (!UiSettings.isAnimationsEnabled()) {
+            clickRipples.clear();
+            return;
+        }
+        while (!clickRipples.isEmpty()
+                && now - clickRipples.peekFirst().startedAtNanos() > 520_000_000L) {
+            clickRipples.removeFirst();
+        }
+        for (ClickRipple ripple : clickRipples) {
+            float progress = Math.min(1.0F,
+                    (now - ripple.startedAtNanos()) / 520_000_000.0F);
+            int radius = 5 + Math.round(progress * 28.0F);
+            int alpha = Math.max(0, Math.round(170.0F * (1.0F - progress)));
+            int color = (alpha << 24) | (RED & 0x00FFFFFF);
+            int left = (int) Math.round(ripple.x()) - radius;
+            int right = (int) Math.round(ripple.x()) + radius;
+            int top = (int) Math.round(ripple.y()) - radius;
+            int bottom = (int) Math.round(ripple.y()) + radius;
+            graphics.fill(left, top, right, top + 1, color);
+            graphics.fill(left, bottom - 1, right, bottom, color);
+            graphics.fill(left, top, left + 1, bottom, color);
+            graphics.fill(right - 1, top, right, bottom, color);
+        }
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1,
-                panelY + panelHeight - 1, PANEL);
-        graphics.outline(panelX, panelY, panelWidth, panelHeight, BORDER);
+        long now = System.nanoTime();
+        double frameSeconds = lastFrameNanos == 0L ? 1.0 / 60.0
+                : Math.min(0.05, Math.max(0.0, (now - lastFrameNanos) / 1_000_000_000.0));
+        lastFrameNanos = now;
+        double frameFactor = 1.0 - Math.exp(-18.0 * frameSeconds);
+        double openProgress = Math.min(1.0, Math.max(0.0,
+                (now - openedAtNanos) / 240_000_000.0));
+        double navProgress = Math.min(1.0, Math.max(0.0,
+                (now - transitionAtNanos) / 170_000_000.0));
 
-        // Clean card-based layout inspired by Ghost Client's multi-column GUI.
+        graphics.fill(0, 0, width, height, 0xFF070B12);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
+        graphics.fill(panelX, panelY + 72, panelX + 140, panelY + panelHeight, PANEL_LIGHT);
+        graphics.fill(panelX + 140, panelY + 72, panelX + 141,
+                panelY + panelHeight, BORDER);
         graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + 72, PANEL_LIGHT);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
+
         graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 18, WHITE);
         graphics.text(font, displayText("CLIENT  /  26.3 FABRIC"), panelX + 20, panelY + 36, MUTED);
         graphics.text(font, displayText("RIGHT SHIFT  ·  CLOSE"),
                 panelX + panelWidth - 154, panelY + 29, MUTED);
 
-        graphics.fill(panelX + 140, panelY + 82, panelX + 141,
-                panelY + panelHeight - 38, BORDER);
         graphics.text(font, displayText("CATEGORIES"), panelX + 18, panelY + 88, MUTED);
-
         String heading = selectedModule == null
                 ? selectedCategory.toUpperCase(java.util.Locale.ROOT)
                 : selectedModule.toUpperCase(java.util.Locale.ROOT);
-        graphics.text(font, displayText(heading), panelX + 154, panelY + 88, WHITE);
+        graphics.text(font, displayText(heading), panelX + 158, panelY + 88, WHITE);
+        graphics.text(font, displayText(selectedModule == null
+                ? "BROWSE MODULES"
+                : entityPage ? "ENTITY FILTER" : "MODULE SETTINGS"),
+                panelX + 158, panelY + 103, MUTED);
+
+        // Short navigation underline sweeps in when the selected category or page changes.
+        int contentRight = Math.max(panelX + 180, panelX + panelWidth - 18);
+        int navWidth = (int) Math.round((contentRight - (panelX + 158)) * navProgress);
+        graphics.fill(panelX + 158, panelY + 124, panelX + 158 + navWidth, panelY + 126, RED);
+        // A restrained opening reveal underlines the full-screen masthead.
+        int openWidth = (int) Math.round((panelWidth - 40) * openProgress);
+        graphics.fill(panelX + 20, panelY + 69, panelX + 20 + openWidth, panelY + 71, RED_SOFT);
 
         graphics.fill(panelX + 16, panelY + panelHeight - 34,
                 panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
         graphics.text(font, displayText("MORGUE  /  LOCAL CONFIGURATION"),
                 panelX + 18, panelY + panelHeight - 24, MUTED);
+        graphics.text(font, displayText("UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF")),
+                panelX + panelWidth - 106, panelY + panelHeight - 24, MUTED);
 
         Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
         for (var child : children()) {
@@ -1249,7 +1329,7 @@ public final class MorgueScreen extends Screen {
             AbstractWidget widget = entry.getKey();
             String rawLabel = entry.getValue();
             widget.setMessage(Component.literal(rawLabel));
-            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY, now, frameFactor);
         }
 
         for (var child : children()) {
@@ -1259,17 +1339,16 @@ public final class MorgueScreen extends Screen {
                 int ew = widget.getWidth();
                 int eh = widget.getHeight();
                 boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
+                graphics.fill(ex, ey, ex + ew, ey + eh, 0xFF101722);
                 graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
                         searchHovered ? RED : BORDER);
-                graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
-                        searchHovered ? RED : 0xFF405065);
             }
         }
 
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
             int trackX = panelX + panelWidth - 14;
             int trackTop = panelY + 148;
-            int trackBottom = panelY + panelHeight - 52;
+            int trackBottom = panelY + panelHeight - 56;
             int trackHeight = Math.max(1, trackBottom - trackTop);
             int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
             int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
@@ -1277,6 +1356,8 @@ public final class MorgueScreen extends Screen {
             graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0xFF293747);
             graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
         }
+
+        drawClickRipples(graphics, now);
     }
 
     private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
