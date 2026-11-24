@@ -149,29 +149,16 @@ public final class MorgueScreen extends Screen {
             transitionAtNanos = System.nanoTime();
         }
 
-        int sidebarX = panelX + 16;
-        int sidebarY = panelY + 112;
-        for (String category : CATEGORIES) {
-            addRenderableWidget(Button.builder(Component.literal(category), button -> {
-                selectedCategory = category;
-                selectedModule = null;
-                searchQuery = "";
-                entityPage = false;
-                rebuildWidgets();
-            }).bounds(sidebarX, sidebarY, 116, 24).build());
-            sidebarY += 29;
-        }
-
         if (selectedModule == null) {
-            searchBox = new EditBox(font, panelX + 150, panelY + 102,
-                    Math.max(120, panelWidth - 285), 24, Component.literal("Search modules"));
+            searchBox = new EditBox(font, panelX + panelWidth - 330, panelY + 23,
+                    250, 26, Component.literal("Search modules"));
             searchBox.setValue(searchQuery);
             addRenderableWidget(searchBox);
             addRenderableWidget(Button.builder(Component.literal("FILTER"), button -> {
                 searchQuery = searchBox.getValue().trim();
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 120, panelY + 101, 88, 26).build());
-            buildModuleList();
+            }).bounds(panelX + panelWidth - 70, panelY + 22, 54, 28).build());
+            buildGhostOverview();
         } else if (entityPage) {
             buildEntitySelector();
         } else if ("Sprint".equals(selectedModule)) {
@@ -233,6 +220,72 @@ public final class MorgueScreen extends Screen {
         } else {
             buildPlaceholderSettings();
         }
+    }
+
+    private void buildGhostOverview() {
+        int columns = Math.max(2, Math.min(4, panelWidth / 360));
+        int rows = (CATEGORIES.size() + columns - 1) / columns;
+        int gap = 12;
+        int margin = 16;
+        int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
+        int gridTop = panelY + 78;
+        int gridBottom = panelY + panelHeight - 48;
+        int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
+        String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
+
+        moduleColumns = columns;
+        moduleTotalCount = 0;
+        moduleVisibleCount = 0;
+
+        for (int categoryIndex = 0; categoryIndex < CATEGORIES.size(); categoryIndex++) {
+            String category = CATEGORIES.get(categoryIndex);
+            int column = categoryIndex % columns;
+            int row = categoryIndex / columns;
+            int cardX = panelX + margin + column * (cardWidth + gap);
+            int cardY = gridTop + row * (rowHeight + gap);
+            List<String> filtered = MODULES.getOrDefault(category, List.of()).stream()
+                    .filter(module -> query.isEmpty()
+                            || module.toLowerCase(java.util.Locale.ROOT).contains(query)
+                            || category.toLowerCase(java.util.Locale.ROOT).contains(query))
+                    .toList();
+            moduleTotalCount += filtered.size();
+            moduleVisibleCount += filtered.size();
+
+            int itemY = cardY + 34;
+            for (String module : filtered) {
+                boolean viewOnly = isViewOnlyModule(module);
+                String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+                addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
+                    selectedCategory = category;
+                    if (viewOnly) {
+                        selectedModule = module;
+                        entityPage = false;
+                    } else {
+                        toggleModule(module);
+                    }
+                    rebuildWidgets();
+                }).bounds(cardX + 10, itemY, cardWidth - 58, 26).build());
+
+                addRenderableWidget(Button.builder(Component.literal("›"), button -> {
+                    selectedCategory = category;
+                    selectedModule = module;
+                    entityPage = false;
+                    rebuildWidgets();
+                }).bounds(cardX + cardWidth - 42, itemY, 32, 26).build());
+                itemY += 30;
+            }
+        }
+    }
+
+    private static boolean isViewOnlyModule(String module) {
+        return "AI Brain".equals(module) || "Build Integrity".equals(module)
+                || "Credits".equals(module) || "World Info".equals(module)
+                || "Client Metadata".equals(module) || "Module List".equals(module)
+                || "Environment".equals(module) || "Visual Settings".equals(module)
+                || "Notifications".equals(module) || "Client Utilities".equals(module)
+                || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
+                || "Item Use".equals(module) || "HUD Editor".equals(module)
+                || "UI Effects".equals(module) || "Theme".equals(module);
     }
 
     private void buildModuleList() {
@@ -1303,37 +1356,54 @@ public final class MorgueScreen extends Screen {
 
         graphics.fill(0, 0, width, height, 0xFF070B12);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX, panelY + 72, panelX + 140, panelY + panelHeight, PANEL_LIGHT);
-        graphics.fill(panelX + 140, panelY + 72, panelX + 141,
-                panelY + panelHeight, BORDER);
-        graphics.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + 72, PANEL_LIGHT);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 68, PANEL_LIGHT);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
 
-        graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 18, WHITE);
-        graphics.text(font, displayText("CLIENT  /  26.3 FABRIC"), panelX + 20, panelY + 36, MUTED);
+        graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 17, WHITE);
+        graphics.text(font, displayText("CLIENT  /  GHOST-INSPIRED WORKSPACE"), panelX + 20, panelY + 36, MUTED);
         graphics.text(font, displayText("RIGHT SHIFT  ·  CLOSE"),
                 panelX + panelWidth - 154, panelY + 29, MUTED);
 
-        graphics.text(font, displayText("CATEGORIES"), panelX + 18, panelY + 88, MUTED);
-        String heading = selectedModule == null
-                ? selectedCategory.toUpperCase(java.util.Locale.ROOT)
+        String heading = selectedModule == null ? "MODULE PANELS"
                 : selectedModule.toUpperCase(java.util.Locale.ROOT);
-        graphics.text(font, displayText(heading), panelX + 158, panelY + 88, WHITE);
+        graphics.text(font, displayText(heading), panelX + 20, panelY + 82, WHITE);
         graphics.text(font, displayText(selectedModule == null
-                ? "BROWSE MODULES"
+                ? "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE"
                 : entityPage ? "ENTITY FILTER" : "MODULE SETTINGS"),
-                panelX + 158, panelY + 103, MUTED);
+                panelX + 20, panelY + 97, MUTED);
 
-        // Short navigation underline sweeps in when the selected category or page changes.
         int contentRight = Math.max(panelX + 180, panelX + panelWidth - 18);
-        int navWidth = (int) Math.round((contentRight - (panelX + 158)) * navProgress);
-        graphics.fill(panelX + 158, panelY + 124, panelX + 158 + navWidth, panelY + 126, RED);
-        // A restrained opening reveal underlines the full-screen masthead.
+        int navWidth = (int) Math.round((contentRight - (panelX + 20)) * navProgress);
+        graphics.fill(panelX + 20, panelY + 108, panelX + 20 + navWidth, panelY + 110, RED);
         int openWidth = (int) Math.round((panelWidth - 40) * openProgress);
-        graphics.fill(panelX + 20, panelY + 69, panelX + 20 + openWidth, panelY + 71, RED_SOFT);
+        graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, RED_SOFT);
 
-        graphics.fill(panelX + 16, panelY + panelHeight - 34,
-                panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
+        if (selectedModule == null) {
+            int columns = Math.max(2, Math.min(4, panelWidth / 360));
+            int rows = (CATEGORIES.size() + columns - 1) / columns;
+            int gap = 12;
+            int margin = 16;
+            int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
+            int gridTop = panelY + 120;
+            int gridBottom = panelY + panelHeight - 48;
+            int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
+            for (int i = 0; i < CATEGORIES.size(); i++) {
+                int column = i % columns;
+                int row = i / columns;
+                int x = panelX + margin + column * (cardWidth + gap);
+                int y = gridTop + row * (rowHeight + gap);
+                graphics.fill(x, y, x + cardWidth, y + rowHeight, PANEL);
+                graphics.outline(x, y, cardWidth, rowHeight, BORDER);
+                graphics.fill(x + 1, y + 1, x + cardWidth - 1, y + 3, RED);
+                graphics.text(font, displayText(CATEGORIES.get(i).toUpperCase(java.util.Locale.ROOT)),
+                        x + 10, y + 11, WHITE);
+                graphics.fill(x + 10, y + 27, x + cardWidth - 10, y + 28, BORDER);
+            }
+        } else {
+            graphics.fill(panelX + 16, panelY + panelHeight - 34,
+                    panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
+        }
+
         graphics.text(font, displayText("MORGUE  /  LOCAL CONFIGURATION"),
                 panelX + 18, panelY + panelHeight - 24, MUTED);
         graphics.text(font, displayText("UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF")),
@@ -1392,7 +1462,7 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (selectedModule == null && moduleTotalCount > moduleVisibleCount
+        if (selectedModule != null && moduleTotalCount > moduleVisibleCount
                 && mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 10
                 && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
                 && verticalAmount != 0.0) {
@@ -1407,6 +1477,19 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.button() == 1 && selectedModule == null) {
+            for (var child : children()) {
+                if (!(child instanceof AbstractWidget widget)
+                        || !widget.isMouseOver(event.x(), event.y())) continue;
+                String label = widget.getMessage().getString();
+                if (label.startsWith("ON  ") || label.startsWith("OFF ") || label.startsWith("INFO  ")) {
+                    selectedModule = label.substring(5).trim();
+                    entityPage = false;
+                    rebuildWidgets();
+                    return true;
+                }
+            }
+        }
         if (event.button() == 0) {
             playClickSoundAt(event);
             if (UiSettings.isAnimationsEnabled()) {
