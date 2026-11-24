@@ -1421,13 +1421,13 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 1 && draggingPanel) {
+        if (event.button() == 0 && draggingPanel) {
             panelX = Math.max(12, Math.min(width - panelWidth - 12, panelX + (int) Math.round(deltaX)));
             panelY = Math.max(12, Math.min(height - panelHeight - 12, panelY + (int) Math.round(deltaY)));
             rebuildWidgets();
             return true;
         }
-        if (event.button() == 1 && resizingPanel) {
+        if (event.button() == 0 && resizingPanel) {
             int availableWidth = Math.max(280, width - panelX - 12);
             int availableHeight = Math.max(260, height - panelY - 12);
             int minimumWidth = Math.min(560, availableWidth);
