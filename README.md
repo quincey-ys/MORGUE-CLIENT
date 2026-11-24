@@ -23,7 +23,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Settings persist in `config/morgue-client.properties`; three named profile slots can be exported/imported under `config/morgue-client/profiles/`.
 - **Combat rotation:** KillAura and Mace Hitter share a capped, eased turn controller; KillAura briefly retains a still-valid target to reduce rapid target swapping.
 - **Mouse controls:** Mouse 4 toggles Mace Hitter and Mouse 5 toggles KillAura by default; both are rebindable in Minecraft's Controls screen. Existing keyboard bindings remain available.
-- The ClickGUI uses the left mouse button to move and resize its panel, matching normal GUI click behavior.
+- The ClickGUI occupies the full game window; module cards and category navigation are clicked directly, with no floating panel to drag or resize.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
 - **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
