@@ -123,62 +123,28 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
 
 // Verify every transformed class in a fresh JVM before creating the distributable.
 def bytecodeVerificationReport = layout.buildDirectory.file('reports/morgue/bytecode-verification.txt')
-tasks.register('verifyProtectedBytecode') {
-    dependsOn tasks.named('obfuscateClientJar')
-    inputs.file(obfuscatedJar)
-    inputs.file(file('tools/BytecodeSmokeTest.java'))
-    inputs.files(sourceSets.client.compileClasspath)
+def bytecodeVerifierClasses = layout.buildDirectory.dir('tmp/morgue-bytecode-verifier')
+
+tasks.register('compileBytecodeSmokeTest', JavaCompile) {
+    source = files('tools/BytecodeSmokeTest.java')
+    classpath = files()
+    destinationDirectory = bytecodeVerifierClasses
+    options.release = 25
+    options.encoding = 'UTF-8'
+}
+
+tasks.register('verifyProtectedBytecode', JavaExec) {
+    dependsOn tasks.named('obfuscateClientJar'), tasks.named('compileBytecodeSmokeTest')
+    classpath = files(bytecodeVerifierClasses, obfuscatedJar, sourceSets.client.compileClasspath)
+    mainClass = 'BytecodeSmokeTest'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = org.gradle.jvm.toolchain.JavaLanguageVersion.of(25)
+    }
+    jvmArgs '-Xverify:all'
+    args obfuscatedJar.get().asFile.absolutePath, bytecodeVerificationReport.get().asFile.absolutePath
     outputs.file(bytecodeVerificationReport)
-
-    doLast {
-        def windows = System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('win')
-        def suffix = windows ? '.exe' : ''
-        def javaHome = new File(System.getProperty('java.home'))
-        def javac = new File(javaHome, "bin/javac" + suffix)
-        def java = new File(javaHome, "bin/java" + suffix)
-        if (!javac.isFile() || !java.isFile()) {
-            throw new GradleException("JDK 25 compiler/runtime not found under " + javaHome)
-        }
-
-        def verifierSource = file('tools/BytecodeSmokeTest.java')
-        def verifierClasses = new File(buildDir, "tmp/morgue-bytecode-verifier")
-        verifierClasses.mkdirs()
-        def compileOutput = new ByteArrayOutputStream()
-        def compileErrors = new ByteArrayOutputStream()
-        def compileResult = exec {
-            executable = javac.absolutePath
-            args '--release', '25', '-d', verifierClasses.absolutePath, verifierSource.absolutePath
-            standardOutput = compileOutput
-            errorOutput = compileErrors
-            ignoreExitValue = true
-        }
-        if (compileResult.exitValue != 0) {
-            throw new GradleException("Could not compile the bytecode verifier:\n" +
-                    compileOutput + "\n" + compileErrors)
-        }
-
-        def releaseJar = obfuscatedJar.get().asFile
-        def runtimeClasspath = ([verifierClasses, releaseJar] + sourceSets.client.compileClasspath.files)
-                .collect { it.absolutePath }.join(File.pathSeparator)
-        def runOutput = new ByteArrayOutputStream()
-        def runErrors = new ByteArrayOutputStream()
-        def verifyResult = exec {
-            executable = java.absolutePath
-            args '-Xverify:all', '-cp', runtimeClasspath, 'BytecodeSmokeTest', releaseJar.absolutePath
-            standardOutput = runOutput
-            errorOutput = runErrors
-            ignoreExitValue = true
-        }
-
-        def reportFile = bytecodeVerificationReport.get().asFile
-        reportFile.parentFile.mkdirs()
-        def report = "status=" + (verifyResult.exitValue == 0 ? 'PASS' : 'FAIL') + "\n" +
-                "vm_flag=-Xverify:all\n" + runOutput.toString() + runErrors.toString()
-        reportFile.setText(report, 'UTF-8')
-        if (verifyResult.exitValue != 0) {
-            throw new GradleException("Protected-JAR JVM verification failed:\n" + report)
-        }
-        logger.lifecycle(runOutput.toString().trim())
+    doFirst {
+        bytecodeVerificationReport.get().asFile.parentFile.mkdirs()
     }
 }
 
