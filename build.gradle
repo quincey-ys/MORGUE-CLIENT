@@ -42,6 +42,60 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
+// MP3 source assets are converted to OGG Vorbis before client resources are packaged.
+def uiAudioSourceDir = layout.projectDirectory.dir("audio-src/ui-sfx")
+def generatedUiAudioDir = layout.buildDirectory.dir("generated/resources/client")
+sourceSets.client.resources.srcDir(generatedUiAudioDir)
+
+tasks.register("convertUiAudio") {
+    inputs.dir(uiAudioSourceDir)
+    outputs.dir(generatedUiAudioDir)
+    doLast {
+        def ffmpeg = System.getenv("FFMPEG") ?: "ffmpeg"
+        def audioFiles = [
+            "opensfx.mp3": "open",
+            "closesfx.mp3": "close",
+            "hover.mp3": "hover",
+            "click.mp3": "click",
+            "toggle_on.mp3": "toggle_on",
+            "toggle_off.mp3": "toggle_off",
+            "slider.mp3": "slider",
+            "kill.mp3": "kill"
+        ]
+        def soundDirectory = new File(generatedUiAudioDir.get().asFile, "assets/morgue/sounds/ui")
+        soundDirectory.mkdirs()
+        audioFiles.each { sourceName, soundName ->
+            def source = new File(uiAudioSourceDir.asFile, sourceName)
+            if (!source.isFile()) throw new GradleException("Missing UI sound source: ${source}")
+            def destination = new File(soundDirectory, soundName + ".ogg")
+            def command = [
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                "-i", source.absolutePath, "-map", "0:a:0", "-vn",
+                "-c:a", "libvorbis", "-q:a", "5", "-ar", "44100", "-ac", "2",
+                destination.absolutePath
+            ]
+            def process
+            try {
+                process = new ProcessBuilder(command).redirectErrorStream(true).start()
+            } catch (IOException exception) {
+                throw new GradleException(
+                    "FFmpeg is required for MORGUE audio conversion. Install FFmpeg and put it on PATH, or set FFMPEG.", exception
+                )
+            }
+            def log = process.inputStream.getText("UTF-8")
+            def exitCode = process.waitFor()
+            if (exitCode != 0 || !destination.isFile() || destination.length() == 0L) {
+                throw new GradleException("Could not convert ${sourceName} to OGG Vorbis (exit ${exitCode}): ${log}")
+            }
+        }
+        logger.lifecycle("Converted ${audioFiles.size()} MORGUE UI sound effects to OGG Vorbis.")
+    }
+}
+
+tasks.named("processClientResources") {
+    dependsOn tasks.named("convertUiAudio")
+}
+
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") {

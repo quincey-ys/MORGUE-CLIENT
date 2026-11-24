@@ -24,6 +24,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.8.0'
+      - name: Install FFmpeg for MP3-to-OGG resource conversion
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
       - name: Build protected mod and SBOM
         run: gradle build --stacktrace
       - name: Verify protected release package
@@ -44,6 +48,14 @@ jobs:
           (cd "$verify_dir" && sha256sum -c META-INF/morgue-integrity.sha256)
           grep -Fxq 'fabric.mod.json' build/release/jar-contents.txt
           grep -Fxq 'dev/morgue/client/MorgueClient.class' build/release/jar-contents.txt
+          grep -Fxq 'assets/morgue/sounds.json' build/release/jar-contents.txt
+          for effect in open close hover click toggle_on toggle_off slider kill; do
+            grep -Fxq "assets/morgue/sounds/ui/${effect}.ogg" build/release/jar-contents.txt
+          done
+          if grep -Eq '^assets/.+\\.mp3$' build/release/jar-contents.txt; then
+            echo "Source MP3 files must not be included in the release JAR."
+            exit 1
+          fi
           grep -Fxq 'META-INF/morgue-integrity.sha256' build/release/jar-contents.txt
           mod_version="$(sed -n 's/^mod_version=//p' gradle.properties)"
           unzip -p "$jar_file" fabric.mod.json | grep -Fq "\"version\": \"$mod_version\""

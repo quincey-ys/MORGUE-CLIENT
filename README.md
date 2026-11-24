@@ -9,8 +9,9 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Independent Fabric client with no AUTISM Client runtime dependency.
 - Full-screen dark ClickGUI inspired by Meteor Client and Ghost Client's multi-column workspace: a left category rail, responsive one-to-four-column module cards, module search, and dedicated settings pages.
 - Animated interaction layer with eased hover transitions, animated toggle switches, click ripples, and short opening/navigation reveals. Animation preferences are stored under Config → UI Effects.
-- Custom non-Minecraft UI sound preferences are prepared under Config → UI Effects. Actual sound playback will be enabled once the user-supplied OGG assets are added from the gpt-storage `ui-sfx/` folder.
-- Right Shift opens/closes the full-screen ClickGUI.
+- Custom non-Minecraft UI sounds are bundled for ClickGUI open/close, hover, click, toggle, slider, and player-kill cues. User-provided MP3 source files in `audio-src/ui-sfx/` are converted to OGG Vorbis during the build; FFmpeg must be available on PATH. Ambient music is intentionally deferred.
+- Right Shift opens/closes the full-screen ClickGUI. UI sound effects and the separate Player Kill Sound preference are configurable under Config → UI Effects.
+- **Player Kill Sound:** listens for server death messages and plays the local kill cue when the message identifies the local player as the attacker. Vanilla translatable death messages are checked by translation arguments; a conservative English fallback handles common plain-text server messages.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, configurable initial health activation threshold, recent-damage, fall-damage, and nearby-hostile pressure heuristics, plus persistent empty-offhand refill after a totem is equipped. Displaced offhand items stay in the inventory and are never automatically restored or swapped back.
 - **Aim Assist:** visible, smoothed player-only steering while the user holds attack; it yields whenever Mace Hitter or KillAura is enabled.
@@ -43,6 +44,7 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - Fabric API: 0.166.0+26.3
 - Fabric Loom: 1.19.4
 - Gradle: 9.8.0
+- FFmpeg: required on the build machine to convert the supplied MP3 sound sources into OGG Vorbis resources.
 
 Build with:
 

@@ -1,0 +1,10 @@
+{
+  "ui.open": { "sounds": [{ "name": "morgue:ui/open", "stream": false }] },
+  "ui.close": { "sounds": [{ "name": "morgue:ui/close", "stream": false }] },
+  "ui.hover": { "sounds": [{ "name": "morgue:ui/hover", "stream": false }] },
+  "ui.click": { "sounds": [{ "name": "morgue:ui/click", "stream": false }] },
+  "ui.toggle_on": { "sounds": [{ "name": "morgue:ui/toggle_on", "stream": false }] },
+  "ui.toggle_off": { "sounds": [{ "name": "morgue:ui/toggle_off", "stream": false }] },
+  "ui.slider": { "sounds": [{ "name": "morgue:ui/slider", "stream": false }] },
+  "ui.kill": { "sounds": [{ "name": "morgue:ui/kill", "stream": false }] }
+}

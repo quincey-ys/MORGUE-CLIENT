@@ -3,6 +3,7 @@ package dev.morgue.client;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.ui.UiSettings;
+import dev.morgue.client.ui.UiSoundManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -120,6 +121,8 @@ public final class MorgueScreen extends Screen {
     private long transitionAtNanos = openedAtNanos;
     private long lastFrameNanos;
     private String transitionKey = "";
+    private boolean openSoundPlayed;
+    private long lastSliderSoundNanos;
     private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
@@ -130,6 +133,10 @@ public final class MorgueScreen extends Screen {
     protected void init() {
         clearWidgets();
         hoverProgress.clear();
+        if (!openSoundPlayed) {
+            UiSoundManager.play(UiSoundManager.Effect.OPEN);
+            openSoundPlayed = true;
+        }
 
         // Full-screen workspace: no floating window, dragging, or resizing.
         panelX = 0;
@@ -1075,12 +1082,14 @@ public final class MorgueScreen extends Screen {
                 () -> UiSettings.setAnimationsEnabled(!UiSettings.isAnimationsEnabled()));
         addSettingButton(x, y + 38, toggleLabel("Custom UI Sounds", UiSettings.isSoundsEnabled()),
                 () -> UiSettings.setSoundsEnabled(!UiSettings.isSoundsEnabled()));
+        addSettingButton(x, y + 76, toggleLabel("Player Kill Sound", UiSettings.isKillSoundEnabled()),
+                () -> UiSettings.setKillSoundEnabled(!UiSettings.isKillSoundEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
-                "Custom sound files will be loaded from MORGUE's own sound assets."),
-                button -> {}).bounds(x, y + 86, Math.max(260, panelWidth - 190), 32).build());
+                "Bundled custom sounds: open, close, hover, click, toggles, slider, and kill."),
+                button -> {}).bounds(x, y + 118, Math.max(260, panelWidth - 190), 32).build());
         addRenderableWidget(Button.builder(Component.literal(
-                "Animated feedback includes eased hover states, click ripples, and navigation transitions."),
-                button -> {}).bounds(x, y + 124, Math.max(260, panelWidth - 190), 32).build());
+                "Ambient music is intentionally not included yet."),
+                button -> {}).bounds(x, y + 156, Math.max(260, panelWidth - 190), 32).build());
         addBackButton();
     }
 
@@ -1191,6 +1200,9 @@ public final class MorgueScreen extends Screen {
         float hover = previous + (target - previous)
                 * (UiSettings.isAnimationsEnabled() ? (float) frameFactor : 1.0F);
         hoverProgress.put(widget, hover);
+        if (hovered && enabled && previous <= 0.05F) {
+            UiSoundManager.play(UiSoundManager.Effect.HOVER);
+        }
 
         int idle = !enabled ? 0xFF101722
                 : selected ? 0xFF1C2C3A
@@ -1395,21 +1407,67 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0 && UiSettings.isAnimationsEnabled()) {
-            clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
-            while (clickRipples.size() > 16) clickRipples.removeFirst();
+        if (event.button() == 0) {
+            playClickSoundAt(event);
+            if (UiSettings.isAnimationsEnabled()) {
+                clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
+                while (clickRipples.size() > 16) clickRipples.removeFirst();
+            }
         }
         return super.mouseClicked(event, doubleClick);
     }
 
+    private void playClickSoundAt(MouseButtonEvent event) {
+        for (var child : children()) {
+            if (!(child instanceof AbstractWidget widget)
+                    || !widget.isMouseOver(event.x(), event.y())) continue;
+
+            String label = widget.getMessage().getString();
+            boolean isOnToggle = label.startsWith("ON  ") || label.endsWith(": ON");
+            boolean isOffToggle = label.startsWith("OFF ") || label.endsWith(": OFF");
+            if (isOnToggle || isOffToggle) {
+                boolean enabling = isOffToggle;
+                boolean enablingUiSounds = enabling && label.contains("Custom UI Sounds");
+                UiSoundManager.play(
+                        enabling ? UiSoundManager.Effect.TOGGLE_ON : UiSoundManager.Effect.TOGGLE_OFF,
+                        enablingUiSounds
+                );
+            } else {
+                UiSoundManager.play(UiSoundManager.Effect.CLICK);
+            }
+            return;
+        }
+        UiSoundManager.play(UiSoundManager.Effect.CLICK);
+    }
+
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 0) {
+            long now = System.nanoTime();
+            if (now - lastSliderSoundNanos >= 90_000_000L) {
+                for (var child : children()) {
+                    if (child instanceof AbstractWidget widget
+                            && widget.isMouseOver(event.x(), event.y())
+                            && widget.getClass().getSimpleName().toLowerCase(java.util.Locale.ROOT).contains("slider")) {
+                        UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                        lastSliderSoundNanos = now;
+                        break;
+                    }
+                }
+            }
+        }
         return super.mouseDragged(event, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         return super.mouseReleased(event);
+    }
+
+    @Override
+    public void removed() {
+        if (openSoundPlayed) UiSoundManager.play(UiSoundManager.Effect.CLOSE);
+        super.removed();
     }
 
     @Override
