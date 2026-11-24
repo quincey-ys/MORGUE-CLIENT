@@ -52,7 +52,7 @@ jobs:
           for effect in open close hover click toggle_on toggle_off slider kill; do
             grep -Fxq "assets/morgue/sounds/ui/${effect}.ogg" build/release/jar-contents.txt
           done
-          if grep -Eq '^assets/.+\.mp3 build/release/jar-contents.txt; then
+          if grep -Eq '^assets/.+\.mp3$' build/release/jar-contents.txt; then
             echo "Source MP3 files must not be included in the release JAR."
             exit 1
           fi
