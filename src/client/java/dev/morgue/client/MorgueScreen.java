@@ -232,7 +232,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildGhostOverview() {
-        int columns = Math.max(2, Math.min(4, panelWidth / 360));
+        int columns = Math.max(1, Math.min(4, panelWidth / 360));
         int rows = (CATEGORIES.size() + columns - 1) / columns;
         int gap = 12;
         int margin = 16;
@@ -1399,7 +1399,7 @@ public final class MorgueScreen extends Screen {
         graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, RED_SOFT);
 
         if (selectedModule == null) {
-            int columns = Math.max(2, Math.min(4, panelWidth / 360));
+            int columns = Math.max(1, Math.min(4, panelWidth / 360));
             int rows = (CATEGORIES.size() + columns - 1) / columns;
             int gap = 12;
             int margin = 16;
