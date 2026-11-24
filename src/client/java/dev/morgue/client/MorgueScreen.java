@@ -2,6 +2,7 @@ package dev.morgue.client;
 
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
+import dev.morgue.client.ui.UiSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -14,6 +15,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 
+import java.util.ArrayDeque;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +94,7 @@ public final class MorgueScreen extends Screen {
         MODULES.put("World", List.of("World Info", "Environment", "World Settings"));
         MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities", "Credits"));
         MODULES.put("Privacy", List.of("Privacy Dashboard", "Build Integrity", "Screenshot Privacy", "Client Metadata"));
-        MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme"));
+        MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme", "UI Effects"));
         MODULES.values().forEach(list -> list.forEach(name -> ENABLED.put(name, false)));
     }
 
@@ -105,11 +108,16 @@ public final class MorgueScreen extends Screen {
     private int panelHeight;
     private EditBox searchBox;
     private String searchQuery = "";
-    private boolean draggingPanel;
-    private boolean resizingPanel;
     private int moduleScrollOffset;
     private int moduleTotalCount;
     private int moduleVisibleCount;
+    private int moduleColumns = 2;
+    private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
+    private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
+    private long openedAtNanos = System.nanoTime();
+    private long transitionAtNanos = openedAtNanos;
+    private long lastFrameNanos;
+    private String transitionKey = "";
     private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
@@ -119,19 +127,17 @@ public final class MorgueScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
+        hoverProgress.clear();
 
-        int maxWidth = Math.max(320, width - 24);
-        int maxHeight = Math.max(300, height - 24);
-        if (panelWidth == 0 || panelHeight == 0) {
-            panelWidth = Math.min(960, maxWidth);
-            panelHeight = Math.min(580, maxHeight);
-            panelX = (width - panelWidth) / 2;
-            panelY = (height - panelHeight) / 2;
-        } else {
-            panelWidth = Math.max(Math.min(560, maxWidth), Math.min(panelWidth, maxWidth));
-            panelHeight = Math.max(Math.min(360, maxHeight), Math.min(panelHeight, maxHeight));
-            panelX = Math.max(12, Math.min(panelX, width - panelWidth - 12));
-            panelY = Math.max(12, Math.min(panelY, height - panelHeight - 12));
+        // Full-screen workspace: no floating window, dragging, or resizing.
+        panelX = 0;
+        panelY = 0;
+        panelWidth = Math.max(320, width);
+        panelHeight = Math.max(300, height);
+        String nextTransitionKey = selectedCategory + ":" + selectedModule + ":" + entityPage;
+        if (!nextTransitionKey.equals(transitionKey)) {
+            transitionKey = nextTransitionKey;
+            transitionAtNanos = System.nanoTime();
         }
 
         int sidebarX = panelX + 16;
@@ -213,20 +219,24 @@ public final class MorgueScreen extends Screen {
             buildKeybindSettings();
         } else if ("Profiles".equals(selectedModule)) {
             buildProfileSettings();
+        } else if ("UI Effects".equals(selectedModule)) {
+            buildUiEffectsSettings();
         } else {
             buildPlaceholderSettings();
         }
     }
 
     private void buildModuleList() {
-        int moduleX = panelX + 150;
+        int moduleX = panelX + 158;
         int listTop = panelY + 148;
-        int listBottom = panelY + panelHeight - 52;
+        int listBottom = panelY + panelHeight - 56;
         int rowHeight = 62;
         int buttonHeight = 48;
         int columnGap = 12;
-        int contentWidth = Math.max(420, panelWidth - 182);
-        int cardWidth = Math.max(200, (contentWidth - columnGap) / 2);
+        int contentWidth = Math.max(240, panelWidth - 190);
+        moduleColumns = Math.max(1, Math.min(4, (contentWidth + columnGap) / 360));
+        int cardWidth = Math.max(220,
+                (contentWidth - columnGap * (moduleColumns - 1)) / moduleColumns);
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
         List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
                 .filter(module -> query.isEmpty()
@@ -235,17 +245,17 @@ public final class MorgueScreen extends Screen {
 
         moduleTotalCount = filtered.size();
         int visibleRows = Math.max(1, (listBottom - listTop) / rowHeight);
-        moduleVisibleCount = visibleRows * 2;
+        moduleVisibleCount = visibleRows * moduleColumns;
         int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
         moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
-        moduleScrollOffset -= moduleScrollOffset % 2;
+        moduleScrollOffset -= moduleScrollOffset % moduleColumns;
 
         int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
         for (int i = moduleScrollOffset; i < end; i++) {
             String module = filtered.get(i);
             int relativeIndex = i - moduleScrollOffset;
-            int column = relativeIndex % 2;
-            int row = relativeIndex / 2;
+            int column = relativeIndex % moduleColumns;
+            int row = relativeIndex / moduleColumns;
             int cardX = moduleX + column * (cardWidth + columnGap);
             int moduleY = listTop + row * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
@@ -254,7 +264,8 @@ public final class MorgueScreen extends Screen {
                     || "Environment".equals(module) || "Visual Settings".equals(module)
                     || "Notifications".equals(module) || "Client Utilities".equals(module)
                     || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
-                    || "Item Use".equals(module) || "HUD Editor".equals(module);
+                    || "Item Use".equals(module) || "HUD Editor".equals(module)
+                    || "UI Effects".equals(module);
             String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
             addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
                 if (viewOnly) {
@@ -1055,6 +1066,22 @@ public final class MorgueScreen extends Screen {
         addBackButton();
     }
 
+    private void buildUiEffectsSettings() {
+        int x = panelX + 158;
+        int y = panelY + 148;
+        addSettingButton(x, y, toggleLabel("Interface Animations", UiSettings.isAnimationsEnabled()),
+                () -> UiSettings.setAnimationsEnabled(!UiSettings.isAnimationsEnabled()));
+        addSettingButton(x, y + 38, toggleLabel("Custom UI Sounds", UiSettings.isSoundsEnabled()),
+                () -> UiSettings.setSoundsEnabled(!UiSettings.isSoundsEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Custom sound files will be loaded from MORGUE's own sound assets."),
+                button -> {}).bounds(x, y + 86, Math.max(260, panelWidth - 190), 32).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Animated feedback includes eased hover states, click ripples, and navigation transitions."),
+                button -> {}).bounds(x, y + 124, Math.max(260, panelWidth - 190), 32).build());
+        addBackButton();
+    }
+
     private void addSettingButton(int x, int y, String label, Runnable action) {
         addRenderableWidget(Button.builder(Component.literal(label), button -> {
             action.run();
@@ -1263,9 +1290,8 @@ public final class MorgueScreen extends Screen {
                 && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
                 && verticalAmount != 0.0) {
             int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
-            int step = Math.max(1, Math.abs((int) Math.signum(verticalAmount)));
             moduleScrollOffset = Math.max(0, Math.min(maxOffset,
-                    moduleScrollOffset - (verticalAmount > 0 ? step : -step)));
+                    moduleScrollOffset - (verticalAmount > 0 ? moduleColumns : -moduleColumns)));
             rebuildWidgets();
             return true;
         }
@@ -1274,51 +1300,20 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
-            double mouseX = event.x();
-            double mouseY = event.y();
-
-            if (mouseX >= panelX + panelWidth - 18 && mouseY >= panelY + panelHeight - 18) {
-                resizingPanel = true;
-                return true;
-            }
-
-            if (mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 12
-                    && mouseY >= panelY + 3 && mouseY <= panelY + 68) {
-                draggingPanel = true;
-                return true;
-            }
+        if (event.button() == 0 && UiSettings.isAnimationsEnabled()) {
+            clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
+            while (clickRipples.size() > 16) clickRipples.removeFirst();
         }
         return super.mouseClicked(event, doubleClick);
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 0 && draggingPanel) {
-            panelX = Math.max(12, Math.min(width - panelWidth - 12, panelX + (int) Math.round(deltaX)));
-            panelY = Math.max(12, Math.min(height - panelHeight - 12, panelY + (int) Math.round(deltaY)));
-            rebuildWidgets();
-            return true;
-        }
-        if (event.button() == 0 && resizingPanel) {
-            int availableWidth = Math.max(280, width - panelX - 12);
-            int availableHeight = Math.max(260, height - panelY - 12);
-            int minimumWidth = Math.min(640, availableWidth);
-            int minimumHeight = Math.min(400, availableHeight);
-            panelWidth = Math.max(minimumWidth,
-                    Math.min(availableWidth, panelWidth + (int) Math.round(deltaX)));
-            panelHeight = Math.max(minimumHeight,
-                    Math.min(availableHeight, panelHeight + (int) Math.round(deltaY)));
-            rebuildWidgets();
-            return true;
-        }
         return super.mouseDragged(event, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        draggingPanel = false;
-        resizingPanel = false;
         return super.mouseReleased(event);
     }
 
@@ -1333,5 +1328,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private record EntityOption(String name, String id) {
+    }
+
+    private record ClickRipple(double x, double y, long startedAtNanos) {
     }
 }
