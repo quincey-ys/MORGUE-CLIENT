@@ -7,8 +7,10 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 ## Current implementation
 
 - Independent Fabric client with no AUTISM Client runtime dependency.
-- Gothic midnight-blue and black ClickGUI with mathematical double-struck typography, steel-blue borders, icy-blue accents, animated controls, and a scrollable module list.
-- Right Shift opens/closes the ClickGUI; its panel can be moved, resized, and filtered with the module search field.
+- Full-screen dark ClickGUI inspired by Meteor Client and Ghost Client's multi-column workspace: a left category rail, responsive one-to-four-column module cards, module search, and dedicated settings pages.
+- Animated interaction layer with eased hover transitions, animated toggle switches, click ripples, and short opening/navigation reveals. Animation preferences are stored under Config → UI Effects.
+- Custom non-Minecraft UI sound preferences are prepared under Config → UI Effects. Actual sound playback will be enabled once the user-supplied OGG assets are added from the gpt-storage `ui-sfx/` folder.
+- Right Shift opens/closes the full-screen ClickGUI.
 - **Mace Hitter (original baseline):** target selection, custom entity-type filtering, range/FOV/fall-distance controls, rotation, auto-swap, auto-jump, shield-stun, target priority, and team/wall checks. The later spear/Breach rework is intentionally excluded.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, configurable initial health activation threshold, recent-damage, fall-damage, and nearby-hostile pressure heuristics, plus persistent empty-offhand refill after a totem is equipped. Displaced offhand items stay in the inventory and are never automatically restored or swapped back.
 - **Aim Assist:** visible, smoothed player-only steering while the user holds attack; it yields whenever Mace Hitter or KillAura is enabled.
