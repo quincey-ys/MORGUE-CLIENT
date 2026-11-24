@@ -47,6 +47,9 @@ public final class KillAuraModule {
     private boolean criticalOnly;
     private boolean pauseOnThrowables = true;
     private boolean attackSound;
+    private double rotationSpeed = 0.55;
+    private long targetLockUntil;
+    private static final long TARGET_LOCK_MILLIS = 180L;
     private int minimumAgeTicks;
     private double range = 3.2;
     private double fov = 180.0;
@@ -87,7 +90,7 @@ public final class KillAuraModule {
             return;
         }
 
-        LivingEntity target = selectTarget(client);
+        LivingEntity target = selectStableTarget(client);
         lastTarget = target;
         if (target == null) {
             observedTarget = null;
@@ -102,6 +105,10 @@ public final class KillAuraModule {
         observedDamageCooldown = currentDamageCooldown;
 
         long now = System.currentTimeMillis();
+        // Keep rotating between attacks, but only attack once the eased aim is aligned.
+        if (rotate && !CombatRotation.rotateToward(player, target, rotationSpeed)) {
+            return;
+        }
         if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F
                 || (criticalOnly && !canLandVanillaCritical(player))) {
             return;
@@ -129,10 +136,6 @@ public final class KillAuraModule {
             if (changedSlot) player.getInventory().setSelectedSlot(originalSlot);
             return;
         }
-        if (rotate) {
-            faceTarget(player, target);
-        }
-
         client.gameMode.attack(player, target);
         if (attackSound) player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.45F, 1.55F);
         player.swing(net.minecraft.world.InteractionHand.MAIN_HAND,
@@ -156,17 +159,38 @@ public final class KillAuraModule {
         return TargetIntelligence.selectBest(
                 player,
                 candidates,
-                candidate -> isAllowed(candidate)
-                        && (!ignoreHurtTime || candidate.damageCooldownTime <= 10)
-                        && candidate.tickCount >= minimumAgeTicks
-                        && (!teamsCheck || !player.isAlliedTo(candidate))
-                        && (ignoreWalls || player.hasLineOfSight(candidate))
-                        && (!fovCheck || isWithinFov(player, candidate)),
+                candidate -> isEligible(player, candidate),
                 toIntelligencePriority(priority),
                 range
         );
     }
 
+
+    private LivingEntity selectStableTarget(Minecraft client) {
+        LivingEntity best = selectTarget(client);
+        long now = System.currentTimeMillis();
+
+        // Briefly retain a still-valid target so equal-priority entities do not
+        // alternate the camera direction from tick to tick.
+        if (lastTarget != null && now < targetLockUntil && isEligible(client.player, lastTarget)) {
+            return lastTarget;
+        }
+        if (best != lastTarget) {
+            targetLockUntil = now + TARGET_LOCK_MILLIS;
+        }
+        return best;
+    }
+
+    private boolean isEligible(Player player, LivingEntity candidate) {
+        return candidate != player && candidate.isAlive() && !candidate.isRemoved()
+                && player.distanceTo(candidate) <= range
+                && isAllowed(candidate)
+                && (!ignoreHurtTime || candidate.damageCooldownTime <= 10)
+                && candidate.tickCount >= minimumAgeTicks
+                && (!teamsCheck || !player.isAlliedTo(candidate))
+                && (ignoreWalls || player.hasLineOfSight(candidate))
+                && (!fovCheck || isWithinFov(player, candidate));
+    }
 
     private static boolean isThrowable(Item item) {
         return item == Items.SNOWBALL || item == Items.EGG || item == Items.ENDER_PEARL
@@ -222,16 +246,6 @@ public final class KillAuraModule {
         return Math.sqrt(yawDifference * yawDifference + pitchDifference * pitchDifference) <= fov * 0.5;
     }
 
-    private void faceTarget(Player player, LivingEntity target) {
-        Vec3 delta = target.getEyePosition().subtract(player.getEyePosition());
-        double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        float yaw = (float) (Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0);
-        float pitch = (float) -Math.toDegrees(Math.atan2(delta.y, horizontal));
-        player.setYRot(yaw);
-        player.setYHeadRot(yaw);
-        player.setXRot(pitch);
-    }
-
     private static float wrapDegrees(float value) {
         value %= 360.0F;
         if (value >= 180.0F) value -= 360.0F;
@@ -272,10 +286,20 @@ public final class KillAuraModule {
     }
 
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        if (!enabled) {
+            lastTarget = null;
+            observedTarget = null;
+            targetLockUntil = 0L;
+            nextAttackAt = 0L;
+        }
+    }
     public void toggle() { this.enabled = !this.enabled; }
     public boolean isRotate() { return rotate; }
     public void setRotate(boolean value) { rotate = value; }
+    public double getRotationSpeed() { return rotationSpeed; }
+    public void setRotationSpeed(double value) { rotationSpeed = Math.max(0.1, Math.min(1.0, value)); }
     public boolean isAutoSword() { return autoSword; }
     public void setAutoSword(boolean value) { autoSword = value; }
     public boolean isSwitchBack() { return switchBack; }
