@@ -52,7 +52,42 @@ jobs:
           for effect in open close hover click toggle_on toggle_off slider kill; do
             grep -Fxq "assets/morgue/sounds/ui/${effect}.ogg" build/release/jar-contents.txt
           done
-          if grep -Eq '^assets/.+\\.mp3$' build/release/jar-contents.txt; then
+          if grep -Eq '^assets/.+\.mp3 build/release/jar-contents.txt; then
+            echo "Source MP3 files must not be included in the release JAR."
+            exit 1
+          fi
+          grep -Fxq 'META-INF/morgue-integrity.sha256' build/release/jar-contents.txt
+          mod_version="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          unzip -p "$jar_file" fabric.mod.json | grep -Fq "\"version\": \"$mod_version\""
+          if unzip -p "$jar_file" fabric.mod.json | grep -Fq '${version}'; then
+            echo "fabric.mod.json still contains an unresolved version placeholder."
+            exit 1
+          fi
+          grep -Eq '^morgue/internal/[^/]+\.class$' build/release/jar-contents.txt
+          test -s build/release/sbom.cyclonedx.json
+          test -s build/release/BYTECODE-VERIFICATION.txt
+          grep -Fq 'JVM verification: -Xverify:all' build/release/BYTECODE-VERIFICATION.txt
+          javac --release 25 -d "$RUNNER_TEMP/morgue-integrity-smoke" tools/IntegritySmokeTest.java
+          java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$jar_file" VERIFIED true
+          javac --release 25 -d "$RUNNER_TEMP/morgue-enum-smoke" tools/EnumSmokeTest.java
+          java -cp "$RUNNER_TEMP/morgue-enum-smoke" EnumSmokeTest "$jar_file"
+          tampered_jar="$RUNNER_TEMP/Morgue-Refined-tampered.jar"
+          cp "$jar_file" "$tampered_jar"
+          printf 'intentional test modification\n' > "$RUNNER_TEMP/morgue-integrity-tamper.txt"
+          jar --update --file "$tampered_jar" -C "$RUNNER_TEMP" morgue-integrity-tamper.txt
+          java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$tampered_jar" FAILED false
+          echo "Protected release, enum runtime, metadata, integrity, tamper rejection, and SBOM verified."
+      - name: Generate build provenance for public repositories
+        if: ${{ github.event.repository.private == false }}
+        uses: actions/attest@v4
+        with:
+          subject-path: 'build/release/*.jar'
+      - name: Upload protected release
+        uses: actions/upload-artifact@v7
+        with:
+          name: Morgue-Refined
+          path: build/release/*
+ build/release/jar-contents.txt; then
             echo "Source MP3 files must not be included in the release JAR."
             exit 1
           fi
