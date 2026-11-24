@@ -2,6 +2,8 @@ package dev.morgue.client;
 
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
+import dev.morgue.client.ui.UiSettings;
+import dev.morgue.client.ui.UiSoundManager;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -14,22 +16,31 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 
+import java.util.ArrayDeque;
+import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xC8050914;
-    private static final int PANEL = 0xD00B1220;
-    private static final int PANEL_LIGHT = 0xE1121D30;
-    private static final int BORDER = 0xB34A6388;
-    private static final int WHITE = 0xFFE8F0FF;
-    private static final int MUTED = 0xFF91A5C1;
-    private static final int RED = 0xFF80AFFF;
-    private static final int RED_SOFT = 0xFF315A91;
-    private static final int BUTTON_IDLE = 0xF00A1220;
-    private static final int BUTTON_HOVER = 0xFF17263D;
+    private static final int BLACK = 0xA5000000;
+    private static final int PANEL = 0xF00D121B;
+    private static final int PANEL_LIGHT = 0xFF141E2B;
+    private static final int BORDER = 0xFF2B394B;
+    private static final int WHITE = 0xFFF1F5FA;
+    private static final int MUTED = 0xFF94A3B8;
+    private static int accentColor() { return UiSettings.accentColor(); }
+    private static int accentSoftColor() {
+        int color = UiSettings.accentColor();
+        int r = ((color >>> 16) & 0xFF) / 3;
+        int g = ((color >>> 8) & 0xFF) / 3;
+        int b = (color & 0xFF) / 3;
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+    private static final int BUTTON_IDLE = 0xF0141C28;
+    private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("morgue", "display"));
 
@@ -91,7 +102,7 @@ public final class MorgueScreen extends Screen {
         MODULES.put("World", List.of("World Info", "Environment", "World Settings"));
         MODULES.put("Misc", List.of("Resource Pack Manager", "Notifications", "Client Utilities", "Credits"));
         MODULES.put("Privacy", List.of("Privacy Dashboard", "Build Integrity", "Screenshot Privacy", "Client Metadata"));
-        MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme"));
+        MODULES.put("Config", List.of("Profiles", "Keybinds", "Theme", "UI Effects"));
         MODULES.values().forEach(list -> list.forEach(name -> ENABLED.put(name, false)));
     }
 
@@ -105,11 +116,19 @@ public final class MorgueScreen extends Screen {
     private int panelHeight;
     private EditBox searchBox;
     private String searchQuery = "";
-    private boolean draggingPanel;
-    private boolean resizingPanel;
     private int moduleScrollOffset;
     private int moduleTotalCount;
     private int moduleVisibleCount;
+    private int moduleColumns = 2;
+    private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
+    private final Map<String, Float> toggleProgress = new HashMap<>();
+    private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
+    private long openedAtNanos = System.nanoTime();
+    private long transitionAtNanos = openedAtNanos;
+    private long lastFrameNanos;
+    private String transitionKey = "";
+    private boolean openSoundPlayed;
+    private long lastSliderSoundNanos;
     private String profileStatus = "Profiles are stored locally in the MORGUE config folder.";
 
     public MorgueScreen() {
@@ -119,44 +138,34 @@ public final class MorgueScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-
-        int maxWidth = Math.max(320, width - 24);
-        int maxHeight = Math.max(300, height - 24);
-        if (panelWidth == 0 || panelHeight == 0) {
-            panelWidth = Math.min(720, maxWidth);
-            panelHeight = Math.min(440, maxHeight);
-            panelX = (width - panelWidth) / 2;
-            panelY = (height - panelHeight) / 2;
-        } else {
-            panelWidth = Math.max(Math.min(560, maxWidth), Math.min(panelWidth, maxWidth));
-            panelHeight = Math.max(Math.min(360, maxHeight), Math.min(panelHeight, maxHeight));
-            panelX = Math.max(12, Math.min(panelX, width - panelWidth - 12));
-            panelY = Math.max(12, Math.min(panelY, height - panelHeight - 12));
+        hoverProgress.clear();
+        if (!openSoundPlayed) {
+            UiSoundManager.play(UiSoundManager.Effect.OPEN);
+            openSoundPlayed = true;
         }
 
-        int sidebarX = panelX + 16;
-        int sidebarY = panelY + 88;
-        for (String category : CATEGORIES) {
-            addRenderableWidget(Button.builder(Component.literal(category), button -> {
-                selectedCategory = category;
-                selectedModule = null;
-                searchQuery = "";
-                entityPage = false;
-                rebuildWidgets();
-            }).bounds(sidebarX, sidebarY, 116, 24).build());
-            sidebarY += 29;
+        // Full-screen workspace: no floating window, dragging, or resizing.
+        panelX = 0;
+        panelY = 0;
+        panelWidth = Math.max(320, width);
+        panelHeight = Math.max(300, height);
+        String nextTransitionKey = selectedCategory + ":" + selectedModule + ":" + entityPage;
+        if (!nextTransitionKey.equals(transitionKey)) {
+            transitionKey = nextTransitionKey;
+            transitionAtNanos = System.nanoTime();
         }
 
         if (selectedModule == null) {
-            searchBox = new EditBox(font, panelX + 150, panelY + 102,
-                    Math.max(120, panelWidth - 285), 24, Component.literal("Search modules"));
+            int searchWidth = Math.max(100, Math.min(250, panelWidth - 110));
+            searchBox = new EditBox(font, panelX + panelWidth - searchWidth - 80, panelY + 23,
+                    searchWidth, 26, Component.literal("Search modules"));
             searchBox.setValue(searchQuery);
             addRenderableWidget(searchBox);
             addRenderableWidget(Button.builder(Component.literal("FILTER"), button -> {
                 searchQuery = searchBox.getValue().trim();
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 120, panelY + 101, 88, 26).build());
-            buildModuleList();
+            }).bounds(panelX + panelWidth - 70, panelY + 22, 54, 28).build());
+            buildGhostOverview();
         } else if (entityPage) {
             buildEntitySelector();
         } else if ("Sprint".equals(selectedModule)) {
@@ -213,17 +222,92 @@ public final class MorgueScreen extends Screen {
             buildKeybindSettings();
         } else if ("Profiles".equals(selectedModule)) {
             buildProfileSettings();
+        } else if ("Theme".equals(selectedModule)) {
+            buildThemeSettings();
+        } else if ("UI Effects".equals(selectedModule)) {
+            buildUiEffectsSettings();
         } else {
             buildPlaceholderSettings();
         }
     }
 
+    private void buildGhostOverview() {
+        int columns = Math.max(1, Math.min(4, panelWidth / 360));
+        int rows = (CATEGORIES.size() + columns - 1) / columns;
+        int gap = 12;
+        int margin = 16;
+        int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
+        int gridTop = panelY + 120;
+        int gridBottom = panelY + panelHeight - 48;
+        int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
+        String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
+
+        moduleColumns = columns;
+        moduleTotalCount = 0;
+        moduleVisibleCount = 0;
+
+        for (int categoryIndex = 0; categoryIndex < CATEGORIES.size(); categoryIndex++) {
+            String category = CATEGORIES.get(categoryIndex);
+            int column = categoryIndex % columns;
+            int row = categoryIndex / columns;
+            int cardX = panelX + margin + column * (cardWidth + gap);
+            int cardY = gridTop + row * (rowHeight + gap);
+            List<String> filtered = MODULES.getOrDefault(category, List.of()).stream()
+                    .filter(module -> query.isEmpty()
+                            || module.toLowerCase(java.util.Locale.ROOT).contains(query)
+                            || category.toLowerCase(java.util.Locale.ROOT).contains(query))
+                    .toList();
+            moduleTotalCount += filtered.size();
+            moduleVisibleCount += filtered.size();
+
+            int itemY = cardY + 34;
+            for (String module : filtered) {
+                boolean viewOnly = isViewOnlyModule(module);
+                String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+                addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
+                    selectedCategory = category;
+                    if (viewOnly) {
+                        selectedModule = module;
+                        entityPage = false;
+                    } else {
+                        toggleModule(module);
+                    }
+                    rebuildWidgets();
+                }).bounds(cardX + 10, itemY, cardWidth - 58, 26).build());
+
+                addRenderableWidget(Button.builder(Component.literal("›"), button -> {
+                    selectedCategory = category;
+                    selectedModule = module;
+                    entityPage = false;
+                    rebuildWidgets();
+                }).bounds(cardX + cardWidth - 42, itemY, 32, 26).build());
+                itemY += 30;
+            }
+        }
+    }
+
+    private static boolean isViewOnlyModule(String module) {
+        return "AI Brain".equals(module) || "Build Integrity".equals(module)
+                || "Credits".equals(module) || "World Info".equals(module)
+                || "Client Metadata".equals(module) || "Module List".equals(module)
+                || "Environment".equals(module) || "Visual Settings".equals(module)
+                || "Notifications".equals(module) || "Client Utilities".equals(module)
+                || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
+                || "Item Use".equals(module) || "HUD Editor".equals(module)
+                || "UI Effects".equals(module) || "Theme".equals(module);
+    }
+
     private void buildModuleList() {
-        int moduleX = panelX + 150;
-        int listTop = panelY + 140;
-        int listBottom = panelY + panelHeight - 48;
-        int rowHeight = 36;
-        int buttonHeight = 28;
+        int moduleX = panelX + 158;
+        int listTop = panelY + 148;
+        int listBottom = panelY + panelHeight - 56;
+        int rowHeight = 62;
+        int buttonHeight = 48;
+        int columnGap = 12;
+        int contentWidth = Math.max(240, panelWidth - 190);
+        moduleColumns = Math.max(1, Math.min(4, (contentWidth + columnGap) / 360));
+        int cardWidth = Math.max(220,
+                (contentWidth - columnGap * (moduleColumns - 1)) / moduleColumns);
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
         List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
                 .filter(module -> query.isEmpty()
@@ -231,44 +315,49 @@ public final class MorgueScreen extends Screen {
                 .toList();
 
         moduleTotalCount = filtered.size();
-        moduleVisibleCount = Math.min(4, Math.max(1, (listBottom - listTop - buttonHeight) / rowHeight + 1));
+        int visibleRows = Math.max(1, (listBottom - listTop) / rowHeight);
+        moduleVisibleCount = visibleRows * moduleColumns;
         int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
         moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
+        moduleScrollOffset -= moduleScrollOffset % moduleColumns;
 
         int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
         for (int i = moduleScrollOffset; i < end; i++) {
             String module = filtered.get(i);
-            int moduleY = listTop + (i - moduleScrollOffset) * rowHeight;
+            int relativeIndex = i - moduleScrollOffset;
+            int column = relativeIndex % moduleColumns;
+            int row = relativeIndex / moduleColumns;
+            int cardX = moduleX + column * (cardWidth + columnGap);
+            int moduleY = listTop + row * rowHeight;
             boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
                     || "Credits".equals(module) || "World Info".equals(module)
                     || "Client Metadata".equals(module) || "Module List".equals(module)
                     || "Environment".equals(module) || "Visual Settings".equals(module)
                     || "Notifications".equals(module) || "Client Utilities".equals(module)
                     || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
-                    || "Item Use".equals(module) || "HUD Editor".equals(module);
-            addRenderableWidget(Button.builder(
-                    Component.literal((viewOnly ? "LIVE  " : (isModuleEnabled(module) ? "ON   " : "OFF   ")) + module),
-                    button -> {
-                        if (viewOnly) {
-                            selectedModule = module;
-                            entityPage = false;
-                        } else {
-                            toggleModule(module);
-                        }
-                        rebuildWidgets();
-                    }
-            ).bounds(moduleX, moduleY, Math.max(150, panelWidth - 275), buttonHeight).build());
+                    || "Item Use".equals(module) || "HUD Editor".equals(module)
+                    || "UI Effects".equals(module);
+            String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+            addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
+                if (viewOnly) {
+                    selectedModule = module;
+                    entityPage = false;
+                } else {
+                    toggleModule(module);
+                }
+                rebuildWidgets();
+            }).bounds(cardX, moduleY, cardWidth - 76, buttonHeight).build());
 
-            addRenderableWidget(Button.builder(Component.literal("SETTINGS"), button -> {
+            addRenderableWidget(Button.builder(Component.literal("EDIT"), button -> {
                 selectedModule = module;
                 entityPage = false;
                 rebuildWidgets();
-            }).bounds(panelX + panelWidth - 112, moduleY, 88, buttonHeight).build());
+            }).bounds(cardX + cardWidth - 68, moduleY, 68, buttonHeight).build());
         }
 
         if (moduleTotalCount == 0) {
             addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
-                    button -> {}).bounds(moduleX, listTop, Math.max(150, panelWidth - 275), buttonHeight).build());
+                    button -> {}).bounds(moduleX, listTop, Math.max(200, contentWidth), buttonHeight).build());
         }
     }
 
@@ -1048,6 +1137,35 @@ public final class MorgueScreen extends Screen {
         addBackButton();
     }
 
+    private void buildThemeSettings() {
+        int x = panelX + 158;
+        int y = panelY + 148;
+        addSettingButton(x, y, "Accent Color: " + UiSettings.accentName() + "  ›",
+                () -> UiSettings.cycleAccent());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Choose a palette inspired by Ghost Client's clean, high-contrast panel styling."),
+                button -> {}).bounds(x, y + 42, Math.max(260, panelWidth - 190), 32).build());
+        addBackButton();
+    }
+
+    private void buildUiEffectsSettings() {
+        int x = panelX + 158;
+        int y = panelY + 148;
+        addSettingButton(x, y, toggleLabel("Interface Animations", UiSettings.isAnimationsEnabled()),
+                () -> UiSettings.setAnimationsEnabled(!UiSettings.isAnimationsEnabled()));
+        addSettingButton(x, y + 38, toggleLabel("Custom UI Sounds", UiSettings.isSoundsEnabled()),
+                () -> UiSettings.setSoundsEnabled(!UiSettings.isSoundsEnabled()));
+        addSettingButton(x, y + 76, toggleLabel("Player Kill Sound", UiSettings.isKillSoundEnabled()),
+                () -> UiSettings.setKillSoundEnabled(!UiSettings.isKillSoundEnabled()));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Bundled custom sounds: open, close, hover, click, toggles, slider, and kill."),
+                button -> {}).bounds(x, y + 118, Math.max(260, panelWidth - 190), 32).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Ambient music is intentionally not included yet."),
+                button -> {}).bounds(x, y + 156, Math.max(260, panelWidth - 190), 32).build());
+        addBackButton();
+    }
+
     private void addSettingButton(int x, int y, String label, Runnable action) {
         addRenderableWidget(Button.builder(Component.literal(label), button -> {
             action.run();
@@ -1123,211 +1241,194 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        // Keep the live world visible; MORGUE draws only its own translucent panels.
+        graphics.fill(0, 0, width, height, 0x80060A10);
     }
 
     private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("minecraft", "default"));
 
-    private static String doubleStruck(String value) {
-        StringBuilder result = new StringBuilder(value.length());
-        for (int offset = 0; offset < value.length();) {
-            int codePoint = value.codePointAt(offset);
-            offset += Character.charCount(codePoint);
-            if (codePoint >= 'A' && codePoint <= 'Z') {
-                int index = codePoint - 'A';
-                // Mathematical double-struck has legacy letter code points for several capitals.
-                int[] capitals = {
-                        0x1D538, 0x1D539, 0x2102, 0x1D53B, 0x1D53C, 0x1D53D, 0x1D53E,
-                        0x210D, 0x1D53F, 0x1D540, 0x1D541, 0x1D542, 0x1D543, 0x1D544,
-                        0x1D546, 0x2119, 0x211A, 0x211D, 0x1D54A, 0x1D54B, 0x1D54C,
-                        0x1D54D, 0x1D54E, 0x1D54F, 0x1D550, 0x2124
-                };
-                result.appendCodePoint(capitals[index]);
-            } else if (codePoint >= 'a' && codePoint <= 'z') {
-                int index = codePoint - 'a';
-                int[] lowercase = {
-                        0x1D552, 0x1D553, 0x1D554, 0x1D555, 0x1D556, 0x1D557, 0x1D558,
-                        0x1D559, 0x1D55A, 0x1D55B, 0x1D55C, 0x1D55D, 0x1D55E, 0x1D55F,
-                        0x1D560, 0x1D561, 0x1D562, 0x1D563, 0x1D564, 0x1D565, 0x1D566,
-                        0x1D567, 0x1D568, 0x1D569, 0x1D56A, 0x1D56B
-                };
-                result.appendCodePoint(lowercase[index]);
-            } else if (codePoint >= '0' && codePoint <= '9') {
-                result.appendCodePoint(0x1D7D8 + codePoint - '0');
-            } else {
-                result.appendCodePoint(codePoint);
-            }
-        }
-        return result.toString();
-    }
-
     private static Component displayText(String value) {
-        return Component.literal(doubleStruck(value))
-                .withStyle(style -> style.withFont(DOUBLE_STRUCK_FONT).withBold(false));
+        return Component.literal(value).withStyle(style -> style.withBold(true));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
-                                      int mouseX, int mouseY) {
+                                      int mouseX, int mouseY, long now, double frameFactor,
+                                      double revealFactor) {
         int x = widget.getX();
         int y = widget.getY();
         int w = widget.getWidth();
         int h = widget.getHeight();
-        if (w <= 0 || h <= 0) {
-            return;
-        }
+        if (w <= 0 || h <= 0) return;
 
-        long now = System.nanoTime();
-        double pulse = (Math.sin(now / 310_000_000.0) + 1.0) * 0.5;
         boolean selected = rawLabel.equals(selectedCategory);
-        boolean activeState = rawLabel.startsWith("LIVE") || rawLabel.startsWith("ON")
+        boolean toggle = rawLabel.startsWith("ON  ") || rawLabel.startsWith("OFF ")
+                || rawLabel.contains(": ON") || rawLabel.contains(": OFF");
+        boolean activeState = rawLabel.startsWith("ON") || rawLabel.startsWith("INFO")
                 || rawLabel.contains(": ON");
         boolean hovered = widget.isHoveredOrFocused() || widget.isMouseOver(mouseX, mouseY);
         boolean enabled = widget.isActive();
 
-        int background = !enabled ? 0xB0070D18
-                : hovered ? BUTTON_HOVER
-                : selected ? 0xD0132340
-                : activeState ? 0xC5122035
+        float previous = hoverProgress.getOrDefault(widget, 0.0F);
+        float target = hovered && enabled ? 1.0F : 0.0F;
+        float hover = previous + (target - previous)
+                * (UiSettings.isAnimationsEnabled() ? (float) frameFactor : 1.0F);
+        hoverProgress.put(widget, hover);
+        if (hovered && enabled && previous <= 0.05F) {
+            UiSoundManager.play(UiSoundManager.Effect.HOVER);
+        }
+
+        int idle = !enabled ? 0xFF101722
+                : selected ? 0xFF1C2C3A
+                : activeState ? 0xFF172A31
                 : BUTTON_IDLE;
-        int accent = selected || activeState ? RED
-                : hovered ? 0xFFB5D2FF
-                : 0xFF587DAA;
-        int textColor = !enabled ? 0xFF71849F
-                : selected || activeState ? 0xFFE1EEFF
-                : WHITE;
+        int background = mixColor(0xFF070B12, mixColor(idle, BUTTON_HOVER, hover),
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
+        int accent = mixColor(BORDER,
+                selected || activeState ? accentColor() : mixColor(BORDER, 0xFF9FB3C8, hover),
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
+        int textColor = mixColor(0xFF667487, !enabled ? 0xFF667487 : WHITE,
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
 
-        // Layered glass plate, cut corners, and a restrained animated edge.
         graphics.fill(x, y, x + w, y + h, background);
-        graphics.fill(x + 2, y + 1, x + w - 2, y + h - 1, hovered ? 0x263D5E87 : 0x182A4263);
-        graphics.fill(x, y + 2, x + 3, y + h - 2, accent);
-        graphics.fill(x + 3, y, x + w - 5, y + 1, 0x806C86A8);
-        graphics.fill(x + 4, y + h - 1, x + w - 2, y + h, 0xA0030812);
-        graphics.fill(x + w - 5, y + 4, x + w - 4, y + h - 4,
-                selected || activeState ? RED_SOFT : 0xFF263B59);
-        graphics.fill(x, y, x + 8, y + 1, accent);
-        graphics.fill(x + w - 10, y + h - 1, x + w, y + h, accent);
-
-        if (hovered) {
-            int sweepWidth = Math.max(12, w / 4);
-            int travel = Math.max(1, w - sweepWidth - 8);
-            int sweepX = x + 4 + (int) (Math.floorMod(now / 5_000_000L, travel));
-            graphics.fill(sweepX, y + 2, Math.min(x + w - 4, sweepX + sweepWidth), y + h - 2, 0x247DB7FF);
-            graphics.fill(x + 3, y + 1, x + w - 4, y + 2, 0xA0A8CEFF);
-            graphics.outline(x - 1, y - 1, w + 2, h + 2,
-                    0x50000000 | ((int) (90 + pulse * 100) << 16) | 0x004E78B0);
-        }
-
-        if (selected || activeState) {
-            int beaconAlpha = (int) (150 + pulse * 105);
-            graphics.fill(x + w - 12, y + h / 2 - 3, x + w - 6, y + h / 2 + 3,
-                    (beaconAlpha << 24) | 0x007FB5FF);
-            graphics.fill(x + w - 17, y + h / 2 - 1, x + w - 14, y + h / 2 + 1, 0xB5B5D5FF);
-        } else {
-            graphics.fill(x + w - 11, y + h / 2 - 1, x + w - 7, y + h / 2 + 1,
-                    hovered ? 0xFFB9D8FF : 0xFF54708F);
-        }
+        graphics.outline(x - (hover > 0.05F ? 1 : 0), y - (hover > 0.05F ? 1 : 0),
+                w + (hover > 0.05F ? 2 : 0), h + (hover > 0.05F ? 2 : 0),
+                mixColor(BORDER, 0xFF7B94AE, hover));
+        graphics.fill(x, y + 4, x + 3 + Math.round(2 * hover), y + h - 4, accent);
 
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int maxTextWidth = Math.max(8, w - 30);
+        int switchSpace = toggle ? 62 : 24;
+        int maxTextWidth = Math.max(8, w - switchSpace);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
-        graphics.text(font, label, x + 10, textY, textColor);
+        graphics.text(font, label, x + 12, textY, textColor);
+
+        if (toggle && w >= 70) {
+            int trackX = x + w - 48;
+            int trackY = y + (h - 16) / 2;
+            int trackColor = activeState ? accentSoftColor() : 0xFF293747;
+            graphics.fill(trackX, trackY, trackX + 34, trackY + 16, trackColor);
+            graphics.outline(trackX, trackY, 34, 16, activeState ? accentColor() : BORDER);
+            String toggleKey = rawLabel.startsWith("ON  ") || rawLabel.startsWith("OFF ")
+                    ? rawLabel.substring(4) : rawLabel.replaceFirst(": (ON|OFF)$", "");
+            float targetToggle = activeState ? 1.0F : 0.0F;
+            float previousToggle = toggleProgress.getOrDefault(toggleKey, targetToggle);
+            float animatedToggle = previousToggle + (targetToggle - previousToggle)
+                    * (UiSettings.isAnimationsEnabled() ? (float) frameFactor : 1.0F);
+            toggleProgress.put(toggleKey, animatedToggle);
+            int knobX = trackX + 2 + Math.round(animatedToggle * 16);
+            graphics.fill(knobX, trackY + 2, knobX + 12, trackY + 14, WHITE);
+        }
     }
 
-    private void drawAnimatedPanelEffects(GuiGraphicsExtractor graphics) {
-        long now = System.nanoTime();
-        double pulse = (Math.sin(now / 420_000_000.0) + 1.0) * 0.5;
-        int contentLeft = panelX + 140;
-        int contentRight = panelX + panelWidth - 10;
-        int contentTop = panelY + 78;
-        int contentBottom = panelY + panelHeight - 38;
+    private static int mixColor(int from, int to, float amount) {
+        float t = Math.max(0.0F, Math.min(1.0F, amount));
+        int a = (int) (((from >>> 24) & 0xFF) * (1.0F - t)
+                + ((to >>> 24) & 0xFF) * t);
+        int r = (int) (((from >>> 16) & 0xFF) * (1.0F - t)
+                + ((to >>> 16) & 0xFF) * t);
+        int g = (int) (((from >>> 8) & 0xFF) * (1.0F - t)
+                + ((to >>> 8) & 0xFF) * t);
+        int b = (int) ((from & 0xFF) * (1.0F - t) + (to & 0xFF) * t);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
 
-        // Technical grid behind the controls, kept deliberately faint.
-        for (int x = panelX + 12; x < panelX + panelWidth - 10; x += 24) {
-            graphics.fill(x, panelY + 5, x + 1, panelY + panelHeight - 5, 0x183E6492);
+    private void drawClickRipples(GuiGraphicsExtractor graphics, long now) {
+        if (!UiSettings.isAnimationsEnabled()) {
+            clickRipples.clear();
+            return;
         }
-        for (int y = panelY + 84; y < panelY + panelHeight - 38; y += 22) {
-            graphics.fill(contentLeft, y, contentRight, y + 1, 0x183E6492);
+        while (!clickRipples.isEmpty()
+                && now - clickRipples.peekFirst().startedAtNanos() > 520_000_000L) {
+            clickRipples.removeFirst();
         }
-
-        // A moving scanline adds life without dimming the Minecraft world.
-        int scanRange = Math.max(1, contentBottom - contentTop);
-        int scanY = contentTop + (int) Math.floorMod(now / 42_000_000L, scanRange);
-        graphics.fill(contentLeft, scanY, contentRight, scanY + 1, 0x247FB8FF);
-        graphics.fill(contentLeft, scanY + 1, contentRight, scanY + 2, 0x0C7FB8FF);
-
-        // Moving top-edge signal and pulsing corner brackets.
-        int sweepRange = Math.max(1, panelWidth - 54);
-        int sweepX = panelX + 12 + (int) Math.floorMod(now / 7_000_000L, sweepRange);
-        graphics.fill(sweepX, panelY + 2, Math.min(panelX + panelWidth - 12, sweepX + 34),
-                panelY + 4, 0xD08CBFFF);
-        int bracketAlpha = (int) (110 + pulse * 100);
-        int bracket = (bracketAlpha << 24) | 0x0085B8FF;
-        graphics.fill(panelX + 7, panelY + 8, panelX + 22, panelY + 9, bracket);
-        graphics.fill(panelX + 7, panelY + 8, panelX + 8, panelY + 21, bracket);
-        graphics.fill(panelX + panelWidth - 22, panelY + 8, panelX + panelWidth - 7, panelY + 9, bracket);
-        graphics.fill(panelX + panelWidth - 8, panelY + 8, panelX + panelWidth - 7, panelY + 21, bracket);
-
-        // Tiny diagnostic equalizer in the footer.
-        for (int i = 0; i < 9; i++) {
-            int barHeight = 2 + (int) ((Math.sin(now / 150_000_000.0 + i * 0.72) + 1.0) * 3.0);
-            int barX = panelX + panelWidth - 186 + i * 5;
-            graphics.fill(barX, panelY + panelHeight - 12 - barHeight,
-                    barX + 2, panelY + panelHeight - 12,
-                    i < 3 ? 0xD080B5FF : 0x806E8FB7);
+        for (ClickRipple ripple : clickRipples) {
+            float progress = Math.min(1.0F,
+                    (now - ripple.startedAtNanos()) / 520_000_000.0F);
+            int radius = 5 + Math.round(progress * 28.0F);
+            int alpha = Math.max(0, Math.round(170.0F * (1.0F - progress)));
+            int color = (alpha << 24) | (accentColor() & 0x00FFFFFF);
+            int left = (int) Math.round(ripple.x()) - radius;
+            int right = (int) Math.round(ripple.x()) + radius;
+            int top = (int) Math.round(ripple.y()) - radius;
+            int bottom = (int) Math.round(ripple.y()) + radius;
+            graphics.fill(left, top, right, top + 1, color);
+            graphics.fill(left, bottom - 1, right, bottom, color);
+            graphics.fill(left, top, left + 1, bottom, color);
+            graphics.fill(right - 1, top, right, bottom, color);
         }
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        long now = System.nanoTime();
+        double frameSeconds = lastFrameNanos == 0L ? 1.0 / 60.0
+                : Math.min(0.05, Math.max(0.0, (now - lastFrameNanos) / 1_000_000_000.0));
+        lastFrameNanos = now;
+        double frameFactor = 1.0 - Math.exp(-18.0 * frameSeconds);
+        double openProgress = Math.min(1.0, Math.max(0.0,
+                (now - openedAtNanos) / 240_000_000.0));
+        double navProgress = Math.min(1.0, Math.max(0.0,
+                (now - transitionAtNanos) / 170_000_000.0));
+
+        graphics.fill(0, 0, width, height, 0xFF070B12);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX + 1, panelY + 3, panelX + panelWidth - 1, panelY + panelHeight - 1, PANEL);
-        graphics.outline(panelX, panelY, panelWidth, panelHeight, BORDER);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, RED);
-        graphics.fill(panelX + panelWidth - 92, panelY + 3, panelX + panelWidth - 16,
-                panelY + 4, RED_SOFT);
-        drawAnimatedPanelEffects(graphics);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 68, PANEL_LIGHT);
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, accentColor());
 
-        graphics.fill(panelX + 1, panelY + 4, panelX + 132, panelY + 72, PANEL_LIGHT);
-        graphics.text(font, displayText("M"), panelX + 20, panelY + 14, WHITE);
-        graphics.text(font, displayText("MORGUE"), panelX + 49, panelY + 17, WHITE);
-        graphics.text(font, displayText("REFINED CLIENT  /  26.3"), panelX + 49, panelY + 32, MUTED);
+        graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 17, WHITE);
+        graphics.text(font, displayText("CLIENT  /  GHOST-INSPIRED WORKSPACE"), panelX + 20, panelY + 36, MUTED);
+        graphics.text(font, displayText("RIGHT SHIFT  ·  CLOSE"),
+                panelX + panelWidth - 154, panelY + 29, MUTED);
 
-        graphics.fill(panelX + 145, panelY + 18, panelX + panelWidth - 16, panelY + 69, PANEL_LIGHT);
-        graphics.fill(panelX + 145, panelY + 18, panelX + 148, panelY + 69, RED_SOFT);
-        String heading = selectedModule == null ? selectedCategory.toUpperCase() : selectedModule.toUpperCase();
-        graphics.text(font, displayText(heading), panelX + 161, panelY + 27, WHITE);
+        String heading = selectedModule == null ? "MODULE PANELS"
+                : selectedModule.toUpperCase(java.util.Locale.ROOT);
+        graphics.text(font, displayText(heading), panelX + 20, panelY + 82, WHITE);
         graphics.text(font, displayText(selectedModule == null
-                ? "INDEPENDENT CLIENT  //  BUILD 0.1.0"
-                : entityPage ? "TARGET ENTITY FILTER" : "MODULE SETTINGS"), panelX + 161, panelY + 43, MUTED);
-        long headerTime = System.nanoTime();
-        int headerPulse = (int) (150 + (Math.sin(headerTime / 300_000_000.0) + 1.0) * 52.0);
-        graphics.fill(panelX + panelWidth - 43, panelY + 34, panelX + panelWidth - 37, panelY + 40,
-                (headerPulse << 24) | 0x004C9FFF);
-        graphics.text(font, displayText("ONLINE"), panelX + panelWidth - 91, panelY + 33, 0xFF9FCBFF);
+                ? "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE"
+                : entityPage ? "ENTITY FILTER" : "MODULE SETTINGS"),
+                panelX + 20, panelY + 97, MUTED);
 
-        graphics.fill(panelX + 136, panelY + 82, panelX + 137, panelY + panelHeight - 16, BORDER);
-        graphics.text(font, displayText(selectedModule == null ? "MODULES" : "CONFIGURATION"),
-                panelX + 151, panelY + 86, MUTED);
+        int contentRight = Math.max(panelX + 180, panelX + panelWidth - 18);
+        int navWidth = (int) Math.round((contentRight - (panelX + 20)) * navProgress);
+        graphics.fill(panelX + 20, panelY + 108, panelX + 20 + navWidth, panelY + 110, accentColor());
+        int openWidth = (int) Math.round((panelWidth - 40) * openProgress);
+        graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, accentSoftColor());
 
-        graphics.fill(panelX + 16, panelY + panelHeight - 34, panelX + panelWidth - 16,
-                panelY + panelHeight - 33, BORDER);
-        graphics.fill(panelX + panelWidth - 14, panelY + panelHeight - 3,
-                panelX + panelWidth - 3, panelY + panelHeight - 2, RED);
-        graphics.fill(panelX + panelWidth - 9, panelY + panelHeight - 8,
-                panelX + panelWidth - 3, panelY + panelHeight - 3, BORDER);
-        graphics.text(font, displayText("MORGUE-CLIENT"), panelX + 17,
-                panelY + panelHeight - 24, MUTED);
-        graphics.text(font, displayText("RIGHT SHIFT  •  CLOSE"),
-                panelX + panelWidth - 153, panelY + panelHeight - 24, MUTED);
+        if (selectedModule == null) {
+            int columns = Math.max(1, Math.min(4, panelWidth / 360));
+            int rows = (CATEGORIES.size() + columns - 1) / columns;
+            int gap = 12;
+            int margin = 16;
+            int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
+            int gridTop = panelY + 120;
+            int gridBottom = panelY + panelHeight - 48;
+            int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
+            for (int i = 0; i < CATEGORIES.size(); i++) {
+                int column = i % columns;
+                int row = i / columns;
+                int x = panelX + margin + column * (cardWidth + gap);
+                int y = gridTop + row * (rowHeight + gap);
+                graphics.fill(x, y, x + cardWidth, y + rowHeight, PANEL);
+                graphics.outline(x, y, cardWidth, rowHeight, BORDER);
+                graphics.fill(x + 1, y + 1, x + cardWidth - 1, y + 3, accentColor());
+                graphics.text(font, displayText(CATEGORIES.get(i).toUpperCase(java.util.Locale.ROOT)),
+                        x + 10, y + 11, WHITE);
+                graphics.fill(x + 10, y + 27, x + cardWidth - 10, y + 28, BORDER);
+            }
+        } else {
+            graphics.fill(panelX + 16, panelY + panelHeight - 34,
+                    panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
+        }
 
-        // Suppress vanilla button captions before Minecraft renders widgets. We restore
-        // them immediately afterward so input, accessibility, and click behavior stay intact.
+        graphics.text(font, displayText("MORGUE  /  LOCAL CONFIGURATION"),
+                panelX + 18, panelY + panelHeight - 24, MUTED);
+        graphics.text(font, displayText("UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF")),
+                panelX + panelWidth - 106, panelY + panelHeight - 24, MUTED);
+
         Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
         for (var child : children()) {
             if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
@@ -1338,61 +1439,56 @@ public final class MorgueScreen extends Screen {
 
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
-        // Paint MORGUE controls once, above the now-captionless vanilla widget layer.
         for (var entry : buttonLabels.entrySet()) {
             AbstractWidget widget = entry.getKey();
             String rawLabel = entry.getValue();
             widget.setMessage(Component.literal(rawLabel));
-            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY);
+            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY, now, frameFactor, navProgress * openProgress);
         }
 
         for (var child : children()) {
-            if (child instanceof AbstractWidget widget) {
-                if (widget instanceof EditBox) {
-                    int ex = widget.getX();
-                    int ey = widget.getY();
-                    int ew = widget.getWidth();
-                    int eh = widget.getHeight();
-                    boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
-                    graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
-                            searchHovered ? RED : 0xB86C8FB8);
-                    graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
-                            searchHovered ? 0xFF9BC8FF : 0xA049719F);
-                    graphics.fill(ex + 6, ey + 2, ex + 7, ey + eh - 2,
-                            searchHovered ? 0xFF9BC8FF : 0xA049719F);
-                    continue;
-                }
+            if (child instanceof AbstractWidget widget && widget instanceof EditBox) {
+                int ex = widget.getX();
+                int ey = widget.getY();
+                int ew = widget.getWidth();
+                int eh = widget.getHeight();
+                boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
+                // Keep the vanilla text/edit handling visible; decorate only its frame.
+                graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
+                        searchHovered ? accentColor() : BORDER);
+                graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
+                        searchHovered ? accentColor() : 0xFF405065);
             }
         }
 
-        // A compact scroll track communicates that more modules are available.
         if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
-            int trackX = panelX + panelWidth - 17;
-            int trackTop = panelY + 140;
-            int trackBottom = panelY + panelHeight - 48;
+            int trackX = panelX + panelWidth - 14;
+            int trackTop = panelY + 148;
+            int trackBottom = panelY + panelHeight - 56;
             int trackHeight = Math.max(1, trackBottom - trackTop);
             int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
             int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
             int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
-            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0x805778A2);
-            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, RED);
+            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0xFF293747);
+            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, accentColor());
         }
+
+        drawClickRipples(graphics, now);
     }
 
     private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
-        return widget.isMouseOver(mouseX, mouseY) ? RED : 0xFF6586AC;
+        return widget.isMouseOver(mouseX, mouseY) ? accentColor() : 0xFF6586AC;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (selectedModule == null && moduleTotalCount > moduleVisibleCount
+        if (selectedModule != null && moduleTotalCount > moduleVisibleCount
                 && mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 10
                 && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
                 && verticalAmount != 0.0) {
             int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
-            int step = Math.max(1, Math.abs((int) Math.signum(verticalAmount)));
             moduleScrollOffset = Math.max(0, Math.min(maxOffset,
-                    moduleScrollOffset - (verticalAmount > 0 ? step : -step)));
+                    moduleScrollOffset - (verticalAmount > 0 ? moduleColumns : -moduleColumns)));
             rebuildWidgets();
             return true;
         }
@@ -1401,52 +1497,80 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
-            double mouseX = event.x();
-            double mouseY = event.y();
-
-            if (mouseX >= panelX + panelWidth - 18 && mouseY >= panelY + panelHeight - 18) {
-                resizingPanel = true;
-                return true;
+        if (event.button() == 1 && selectedModule == null) {
+            for (var child : children()) {
+                if (!(child instanceof AbstractWidget widget)
+                        || !widget.isMouseOver(event.x(), event.y())) continue;
+                String label = widget.getMessage().getString();
+                if (label.startsWith("ON  ") || label.startsWith("OFF ") || label.startsWith("INFO  ")) {
+                    selectedModule = label.startsWith("INFO  ") ? label.substring(6).trim() : label.substring(4).trim();
+                    entityPage = false;
+                    rebuildWidgets();
+                    return true;
+                }
             }
-
-            if (mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 12
-                    && mouseY >= panelY + 3 && mouseY <= panelY + 68) {
-                draggingPanel = true;
-                return true;
+        }
+        if (event.button() == 0) {
+            playClickSoundAt(event);
+            if (UiSettings.isAnimationsEnabled()) {
+                clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
+                while (clickRipples.size() > 16) clickRipples.removeFirst();
             }
         }
         return super.mouseClicked(event, doubleClick);
     }
 
+    private void playClickSoundAt(MouseButtonEvent event) {
+        for (var child : children()) {
+            if (!(child instanceof AbstractWidget widget)
+                    || !widget.isMouseOver(event.x(), event.y())) continue;
+
+            String label = widget.getMessage().getString();
+            boolean isOnToggle = label.startsWith("ON  ") || label.endsWith(": ON");
+            boolean isOffToggle = label.startsWith("OFF ") || label.endsWith(": OFF");
+            if (isOnToggle || isOffToggle) {
+                boolean enabling = isOffToggle;
+                boolean enablingUiSounds = enabling && label.contains("Custom UI Sounds");
+                UiSoundManager.play(
+                        enabling ? UiSoundManager.Effect.TOGGLE_ON : UiSoundManager.Effect.TOGGLE_OFF,
+                        enablingUiSounds
+                );
+            } else {
+                UiSoundManager.play(UiSoundManager.Effect.CLICK);
+            }
+            return;
+        }
+        UiSoundManager.play(UiSoundManager.Effect.CLICK);
+    }
+
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 0 && draggingPanel) {
-            panelX = Math.max(12, Math.min(width - panelWidth - 12, panelX + (int) Math.round(deltaX)));
-            panelY = Math.max(12, Math.min(height - panelHeight - 12, panelY + (int) Math.round(deltaY)));
-            rebuildWidgets();
-            return true;
-        }
-        if (event.button() == 0 && resizingPanel) {
-            int availableWidth = Math.max(280, width - panelX - 12);
-            int availableHeight = Math.max(260, height - panelY - 12);
-            int minimumWidth = Math.min(560, availableWidth);
-            int minimumHeight = Math.min(360, availableHeight);
-            panelWidth = Math.max(minimumWidth,
-                    Math.min(availableWidth, panelWidth + (int) Math.round(deltaX)));
-            panelHeight = Math.max(minimumHeight,
-                    Math.min(availableHeight, panelHeight + (int) Math.round(deltaY)));
-            rebuildWidgets();
-            return true;
+        if (event.button() == 0) {
+            long now = System.nanoTime();
+            if (now - lastSliderSoundNanos >= 90_000_000L) {
+                for (var child : children()) {
+                    if (child instanceof AbstractWidget widget
+                            && widget.isMouseOver(event.x(), event.y())
+                            && widget.getClass().getSimpleName().toLowerCase(java.util.Locale.ROOT).contains("slider")) {
+                        UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                        lastSliderSoundNanos = now;
+                        break;
+                    }
+                }
+            }
         }
         return super.mouseDragged(event, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        draggingPanel = false;
-        resizingPanel = false;
         return super.mouseReleased(event);
+    }
+
+    @Override
+    public void removed() {
+        if (openSoundPlayed) UiSoundManager.play(UiSoundManager.Effect.CLOSE);
+        super.removed();
     }
 
     @Override
@@ -1460,5 +1584,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private record EntityOption(String name, String id) {
+    }
+
+    private record ClickRipple(double x, double y, long startedAtNanos) {
     }
 }

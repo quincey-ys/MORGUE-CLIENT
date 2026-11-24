@@ -6,6 +6,8 @@ import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.AimAssistModule;
 import dev.morgue.client.modules.combat.ClickAssistModule;
 import dev.morgue.client.config.MorgueConfig;
+import dev.morgue.client.ui.KillSoundDetector;
+import dev.morgue.client.ui.UiSoundManager;
 import dev.morgue.client.security.MorgueIntegrity;
 import dev.morgue.client.modules.player.AutoTotemModule;
 import dev.morgue.client.modules.player.InventoryHelperModule;
@@ -38,6 +40,8 @@ public final class MorgueClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         MorgueHud.register();
+        UiSoundManager.register();
+        KillSoundDetector.register();
         MorgueIntegrity.verify();
         if (MorgueIntegrity.isActivationAllowed()) {
             MorgueConfig.load();
