@@ -3,14 +3,13 @@ package dev.morgue.client.ui;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Detects server death messages whose attacker argument identifies the local player.
+ * Detects system death messages that identify the local player as the attacker.
  * It does not infer kills from attack animations or predicted damage.
  */
 public final class KillSoundDetector {
@@ -36,40 +35,13 @@ public final class KillSoundDetector {
         if (message == null || player == null || !UiSettings.isKillSoundEnabled()) return;
 
         String plainText = message.getString();
-        if (!isLocalPlayerKiller(message, player)
-                && (!allowPlainTextFallback || !isPlainTextKillByLocalPlayer(plainText, player))) return;
+        if (!allowPlainTextFallback || !isPlainTextKillByLocalPlayer(plainText, player)) return;
 
         long now = System.currentTimeMillis();
         if (plainText.equals(lastMessage) && now - lastMessageAt < 900L) return;
         lastMessage = plainText;
         lastMessageAt = now;
         UiSoundManager.play(UiSoundManager.Effect.KILL);
-    }
-
-    private static boolean isLocalPlayerKiller(Component component, Player player) {
-        if (component.getContents() instanceof TranslatableContents translated
-                && translated.getKey().startsWith("death.")) {
-            Object[] arguments = translated.getArgs();
-            // Argument zero is the victim; later arguments include the attacker.
-            for (int i = 1; i < arguments.length; i++) {
-                if (matchesPlayerName(arguments[i], player)) return true;
-            }
-        }
-        for (Component sibling : component.getSiblings()) {
-            if (isLocalPlayerKiller(sibling, player)) return true;
-        }
-        return false;
-    }
-
-    private static boolean matchesPlayerName(Object argument, Player player) {
-        String candidate;
-        if (argument instanceof Component component) candidate = component.getString();
-        else if (argument instanceof String value) candidate = value;
-        else return false;
-
-        String username = player.getName().getString();
-        String displayName = player.getDisplayName().getString();
-        return candidate.equalsIgnoreCase(username) || candidate.equalsIgnoreCase(displayName);
     }
 
     private static boolean isPlainTextKillByLocalPlayer(String message, Player player) {
