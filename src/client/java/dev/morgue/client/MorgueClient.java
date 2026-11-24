@@ -23,6 +23,8 @@ public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping toggleMaceHitter;
     private static KeyMapping toggleKillAura;
     private static KeyMapping toggleAutoTotem;
+    private static KeyMapping toggleMaceHitterMouse4;
+    private static KeyMapping toggleKillAuraMouse5;
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
@@ -61,6 +63,13 @@ public final class MorgueClient implements ClientModInitializer {
         toggleAutoTotem = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.morgue.toggle_auto_totem", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, category
         ));
+        // GLFW button indices 3 and 4 are the fourth and fifth mouse buttons.
+        toggleMaceHitterMouse4 = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.morgue.toggle_mace_hitter_mouse4", InputConstants.Type.MOUSE, 3, category
+        ));
+        toggleKillAuraMouse5 = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.morgue.toggle_kill_aura_mouse5", InputConstants.Type.MOUSE, 4, category
+        ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
@@ -74,6 +83,14 @@ public final class MorgueClient implements ClientModInitializer {
                 }
                 while (toggleAutoTotem.consumeClick()) {
                     setAutoTotemEnabled(!AUTO_TOTEM.isEnabled());
+                    MorgueConfig.save();
+                }
+                while (toggleMaceHitterMouse4.consumeClick()) {
+                    setMaceHitterEnabled(!MACE_HITTER.isEnabled());
+                    MorgueConfig.save();
+                }
+                while (toggleKillAuraMouse5.consumeClick()) {
+                    setKillAuraEnabled(!KILL_AURA.isEnabled());
                     MorgueConfig.save();
                 }
             }
