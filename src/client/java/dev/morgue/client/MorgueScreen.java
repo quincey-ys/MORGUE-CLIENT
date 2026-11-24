@@ -228,7 +228,7 @@ public final class MorgueScreen extends Screen {
         int gap = 12;
         int margin = 16;
         int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
-        int gridTop = panelY + 78;
+        int gridTop = panelY + 120;
         int gridBottom = panelY + panelHeight - 48;
         int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
@@ -1483,7 +1483,7 @@ public final class MorgueScreen extends Screen {
                         || !widget.isMouseOver(event.x(), event.y())) continue;
                 String label = widget.getMessage().getString();
                 if (label.startsWith("ON  ") || label.startsWith("OFF ") || label.startsWith("INFO  ")) {
-                    selectedModule = label.substring(5).trim();
+                    selectedModule = label.startsWith("INFO  ") ? label.substring(6).trim() : label.substring(4).trim();
                     entityPage = false;
                     rebuildWidgets();
                     return true;

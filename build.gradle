@@ -96,6 +96,10 @@ tasks.named("processClientResources") {
     dependsOn tasks.named("convertUiAudio")
 }
 
+tasks.matching { it.name == "sourcesJar" }.configureEach {
+    dependsOn tasks.named("convertUiAudio")
+}
+
 
 processResources {
     inputs.property "version", project.version
