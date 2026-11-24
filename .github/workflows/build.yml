@@ -53,6 +53,8 @@ jobs:
           fi
           grep -Eq '^morgue/internal/[^/]+\.class$' build/release/jar-contents.txt
           test -s build/release/sbom.cyclonedx.json
+          test -s build/release/BYTECODE-VERIFICATION.txt
+          grep -Fq 'JVM verification: -Xverify:all' build/release/BYTECODE-VERIFICATION.txt
           javac --release 25 -d "$RUNNER_TEMP/morgue-integrity-smoke" tools/IntegritySmokeTest.java
           java -cp "$RUNNER_TEMP/morgue-integrity-smoke" IntegritySmokeTest "$jar_file" VERIFIED true
           javac --release 25 -d "$RUNNER_TEMP/morgue-enum-smoke" tools/EnumSmokeTest.java
