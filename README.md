@@ -1,4 +1,4 @@
-# MORGUE-CLIENT
+# Morgue Refined
 
 A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 
@@ -13,12 +13,15 @@ A standalone client-side Minecraft project for **Minecraft Java 26.3 + Fabric**.
 - **Auto Totem:** Smart, Switch, and PickUp inventory-search modes, hotbar/inventory priority, switch delay, pause-while-using-item option, configurable health activation threshold, recent-damage, fall-damage, and nearby-hostile pressure heuristics, and optional restoration of the displaced offhand item after the totem is consumed.
 - **Aim Assist:** visible, smoothed player-only steering while the user holds attack; it yields whenever Mace Hitter or KillAura is enabled.
 - **Click Assist:** repeats the user's held attack input at a fixed configurable CPS against the entity under the crosshair, using vanilla cooldowns and shared combat arbitration.
-- **KillAura:** independent MORGUE implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, hurt-time and minimum-age filters, vanilla-critical-only option, throwable pause, rotation, auto-sword, shield breaking, switch-back, and optional local attack sound.
+- **KillAura:** independent Morgue Refined implementation with player/hostile/all-living/custom entity target modes, a paginated entity picker, persisted entity selections, range/FOV, target priority, hurt-time and minimum-age filters, vanilla-critical-only option, throwable pause, eased rotation with a brief target lock, auto-sword, shield breaking, switch-back, and optional local attack sound.
 - **Shared Target Intelligence:** one local evaluator ranks eligible targets by distance, health, or a threat heuristic that considers entity hostility, proximity, approach movement, and held weapon. Both combat modules use the same explainable evaluator.
 - **AI Brain dashboard:** displays the active combat controller, latest target assessment, selected priority, distance, threat score, health, and selection reason. This is an on-device heuristic engine, not a remote or trained model.
 - **Shared Combat Action Coordinator:** Mace Hitter and KillAura may both be enabled. Mace Hitter gets first opportunity to claim one attack action per client tick; KillAura acts only when Mace Hitter does not attack.
 - Target Intelligence centralizes ranking only; each combat module retains its own target filters and action logic.
 - Settings persist in `config/morgue-client.properties`; three named profile slots can be exported/imported under `config/morgue-client/profiles/`.
+- **Combat rotation:** KillAura and Mace Hitter share a capped, eased turn controller; KillAura briefly retains a still-valid target to reduce rapid target swapping.
+- **Mouse controls:** Mouse 4 toggles Mace Hitter and Mouse 5 toggles KillAura by default; both are rebindable in Minecraft's Controls screen. Existing keyboard bindings remain available.
+- The ClickGUI uses the left mouse button to move and resize its panel, matching normal GUI click behavior.
 - The Resource Pack Manager opens Minecraft's normal local resource-pack screen.
 - The Privacy Dashboard explains MORGUE's network/privacy behavior; it does not hide mods, fake server responses, or evade anti-cheat.
 - **Movement:** optional auto-sprint while horizontal movement is detected and Safe Walk edge protection that preserves the user's own sneak key.
@@ -55,6 +58,8 @@ The normal Loom JAR and sources JAR are written to `build/libs/`. The protected 
 | M | Toggle Mace Hitter |
 | K | Toggle KillAura |
 | V | Toggle Auto Totem |
+| Mouse 4 | Toggle Mace Hitter |
+| Mouse 5 | Toggle KillAura |
 | Escape | Close the current screen |
 
 M, K, and V can be rebound in **Options → Controls → Key Binds**, or opened from the Config → Keybinds panel.
@@ -73,7 +78,7 @@ MORGUE protects its distributed build and makes package changes visible; these c
 - **Runtime integrity check:** at startup, MORGUE compares every packaged JAR entry (except its own manifest) against embedded SHA-256 values. Missing, unexpected, duplicated, or modified entries mark the package as failed and block MORGUE gameplay-module activation. Only a confirmed Fabric development environment can skip the packaged-JAR check; an unrecognized or unverifiable production package fails closed and blocks MORGUE gameplay-module activation.
 - **Integrity test:** CI loads the obfuscated verifier from the packaged JAR, checks that a clean build reports `VERIFIED`, then adds a test entry to a copy and checks that it reports `FAILED` and denies module activation.
 - **Integrity limitation:** an embedded checksum manifest is not a digital signature. A determined person who modifies the code can also replace the manifest or patch the verifier. Use the separately distributed release checksum to compare a downloaded JAR against the build output.
-- **External SHA-256:** the release bundle contains a `.sha256` sidecar. Verify it with `sha256sum -c MORGUE-CLIENT-0.1.0.jar.sha256` (use the matching versioned filename).
+- **External SHA-256:** the release bundle contains a `.sha256` sidecar. Verify it with `sha256sum -c MORGUE-REFINED-0.1.0.jar.sha256` (use the matching versioned filename).
 - **Software Bill of Materials:** the build produces CycloneDX JSON and XML SBOM files listing the resolved project dependencies.
 - **Source separation:** the distributable release bundle contains the obfuscated runtime JAR and build metadata, not the unobfuscated sources JAR. The source JAR remains a local build output under `build/libs`.
 - MORGUE currently has no custom telemetry or remote account service. Its normal Minecraft/Fabric networking remains subject to Minecraft, Fabric Loader, the server, and installed dependencies.

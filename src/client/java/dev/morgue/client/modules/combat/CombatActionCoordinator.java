@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
  * eligible attack. This prevents duplicate attacks and conflicting rotations.
  */
 public final class CombatActionCoordinator {
+    private static net.minecraft.world.entity.player.Player claimedPlayer;
     private static int claimedTick = Integer.MIN_VALUE;
 
     private CombatActionCoordinator() {}
@@ -15,7 +16,8 @@ public final class CombatActionCoordinator {
     public static boolean tryClaim(Minecraft client) {
         if (client == null || client.player == null) return false;
         int tick = client.player.tickCount;
-        if (claimedTick == tick) return false;
+        if (claimedPlayer == client.player && claimedTick == tick) return false;
+        claimedPlayer = client.player;
         claimedTick = tick;
         return true;
     }

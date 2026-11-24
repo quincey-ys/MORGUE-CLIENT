@@ -86,6 +86,9 @@ public final class MaceHitterModule {
         if (target == null) {
             return;
         }
+        if (rotate && !CombatRotation.rotateToward(player, target, 0.55)) {
+            return;
+        }
 
         if (autoJump && player.onGround()) {
             player.jumpFromGround();
@@ -111,9 +114,6 @@ public final class MaceHitterModule {
             int axeSlot = findHotbarAxe(player);
             if (axeSlot >= 0) {
                 if (!CombatActionCoordinator.tryClaim(client)) return;
-                if (rotate) {
-                    faceTarget(player, target);
-                }
                 player.getInventory().setSelectedSlot(axeSlot);
                 client.gameMode.attack(player, target);
                 player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
@@ -148,10 +148,6 @@ public final class MaceHitterModule {
             }
             return;
         }
-        if (rotate) {
-            faceTarget(player, target);
-        }
-
         client.gameMode.attack(player, target);
         player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
         if (autoSwap && originalSlot != player.getInventory().getSelectedSlot()) {
@@ -223,16 +219,6 @@ public final class MaceHitterModule {
         float pitchDifference = targetPitch - player.getXRot();
         double angle = Math.sqrt(yawDifference * yawDifference + pitchDifference * pitchDifference);
         return angle <= fov * 0.5;
-    }
-
-    private void faceTarget(Player player, LivingEntity target) {
-        Vec3 delta = target.getEyePosition().subtract(player.getEyePosition());
-        double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        float yaw = (float) (Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0);
-        float pitch = (float) -Math.toDegrees(Math.atan2(delta.y, horizontal));
-        player.setYRot(yaw);
-        player.setYHeadRot(yaw);
-        player.setXRot(pitch);
     }
 
     private static float wrapDegrees(float value) {

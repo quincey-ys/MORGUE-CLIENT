@@ -137,6 +137,7 @@ public final class MorgueConfig {
         aura.setRange(decimal(values, "aura.range", 3.2));
         aura.setFov(decimal(values, "aura.fov", 180.0));
         aura.setAttackDelayMillis(integer(values, "aura.attackDelayMillis", 0));
+        aura.setRotationSpeed(decimal(values, "aura.rotationSpeed", 0.55));
         aura.setRotate(bool(values, "aura.rotate", true));
         aura.setAutoSword(bool(values, "aura.autoSword", true));
         aura.setSwitchBack(bool(values, "aura.switchBack", true));
@@ -218,6 +219,7 @@ public final class MorgueConfig {
         put(values, "aura.range", aura.getRange());
         put(values, "aura.fov", aura.getFov());
         put(values, "aura.attackDelayMillis", aura.getAttackDelayMillis());
+        put(values, "aura.rotationSpeed", aura.getRotationSpeed());
         put(values, "aura.rotate", aura.isRotate());
         put(values, "aura.autoSword", aura.isAutoSword());
         put(values, "aura.switchBack", aura.isSwitchBack());

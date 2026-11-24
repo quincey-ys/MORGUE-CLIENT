@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "morgue",
   "version": "${version}",
-  "name": "MORGUE-CLIENT",
+  "name": "Morgue Refined",
   "description": "A standalone client-side Minecraft interface and utility framework.",
   "environment": "client",
   "entrypoints": {
