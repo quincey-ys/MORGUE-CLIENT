@@ -96,6 +96,10 @@ tasks.named("processClientResources") {
     dependsOn tasks.named("convertUiAudio")
 }
 
+tasks.named("sourcesJar") {
+    dependsOn tasks.named("convertUiAudio")
+}
+
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") {
