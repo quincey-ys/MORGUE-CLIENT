@@ -139,17 +139,19 @@ tasks.register('obfuscateClientJar', proguard.gradle.ProGuardTask) {
     injars(tasks.named('jar').get().archiveFile.get().asFile)
     outjars(obfuscatedJar.get().asFile)
 
-    // JDK modules plus the compile classpath used by the client source set.
+    // JDK modules plus the compile and runtime libraries used by the client source set.
     fileTree("${System.getProperty('java.home')}/jmods").matching {
         include '*.jmod'
     }.files.each { jmod ->
         libraryjars("${jmod.absolutePath}(!**.jar;!module-info.class)")
     }
-    libraryjars(sourceSets.client.compileClasspath)
-    // Include runtime-only transitive libraries too, but never feed this project's own
-    // compiled output back to ProGuard as a library JAR.
+    def clientCompileLibraries = sourceSets.client.compileClasspath.files as Set
+    libraryjars(clientCompileLibraries)
+    // RuntimeClasspath contains the compile classpath as well; add only runtime-only
+    // dependencies to avoid passing the same JAR (notably Fabric Loader) twice.
     def clientRuntimeLibraries = sourceSets.client.runtimeClasspath.filter { dependencyFile ->
-        !dependencyFile.toPath().startsWith(layout.buildDirectory.get().asFile.toPath())
+        !clientCompileLibraries.contains(dependencyFile) &&
+                !dependencyFile.toPath().startsWith(layout.buildDirectory.get().asFile.toPath())
     }
     libraryjars(clientRuntimeLibraries)
 
