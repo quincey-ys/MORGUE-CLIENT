@@ -75,9 +75,9 @@ public final class BytecodeSmokeTest {
             }
         }
 
-        String report = "JVM verification: -Xverify:all\\n"
-                + "Protected JAR class definitions verified: " + loaded + "\\n"
-                + "Release JAR: " + jarPath.getFileName() + "\\n";
+        String report = "JVM verification: -Xverify:all\n"
+                + "Protected JAR class definitions verified: " + loaded + "\n"
+                + "Release JAR: " + jarPath.getFileName() + "\n";
         Files.createDirectories(reportPath.getParent());
         Files.writeString(reportPath, report, StandardCharsets.UTF_8);
         System.out.print(report);
