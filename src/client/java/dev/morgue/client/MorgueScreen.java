@@ -1170,7 +1170,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
-                                      int mouseX, int mouseY, long now, double frameFactor) {
+                                      int mouseX, int mouseY, long now, double frameFactor,
+                                      double revealFactor) {
         int x = widget.getX();
         int y = widget.getY();
         int w = widget.getWidth();
@@ -1195,9 +1196,13 @@ public final class MorgueScreen extends Screen {
                 : selected ? 0xFF1C2C3A
                 : activeState ? 0xFF172A31
                 : BUTTON_IDLE;
-        int background = mixColor(idle, BUTTON_HOVER, hover);
-        int accent = selected || activeState ? RED : mixColor(BORDER, 0xFF9FB3C8, hover);
-        int textColor = !enabled ? 0xFF667487 : WHITE;
+        int background = mixColor(0xFF070B12, mixColor(idle, BUTTON_HOVER, hover),
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
+        int accent = mixColor(BORDER,
+                selected || activeState ? RED : mixColor(BORDER, 0xFF9FB3C8, hover),
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
+        int textColor = mixColor(0xFF667487, !enabled ? 0xFF667487 : WHITE,
+                (float) Math.max(0.0, Math.min(1.0, revealFactor)));
 
         graphics.fill(x, y, x + w, y + h, background);
         graphics.outline(x - (hover > 0.05F ? 1 : 0), y - (hover > 0.05F ? 1 : 0),
@@ -1336,7 +1341,7 @@ public final class MorgueScreen extends Screen {
             AbstractWidget widget = entry.getKey();
             String rawLabel = entry.getValue();
             widget.setMessage(Component.literal(rawLabel));
-            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY, now, frameFactor);
+            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY, now, frameFactor, navProgress * openProgress);
         }
 
         for (var child : children()) {
