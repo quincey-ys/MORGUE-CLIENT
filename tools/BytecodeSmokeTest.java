@@ -58,11 +58,11 @@ public final class BytecodeSmokeTest {
 
         int loaded = 0;
         URL jarUrl = jarPath.toUri().toURL();
-        try (URLClassLoader loader = new ReleaseClassLoader(
+        try (ReleaseClassLoader loader = new ReleaseClassLoader(
                 new URL[]{jarUrl}, ClassLoader.getSystemClassLoader(), classNames)) {
             for (String className : classNames) {
                 try {
-                    Class<?> loadedClass = Class.forName(className, false, loader);
+                    Class<?> loadedClass = loader.loadAndResolve(className);
                     if (loadedClass.getClassLoader() != loader) {
                         throw new IllegalStateException(
                                 "Class resolved outside the release JAR: " + className);
@@ -90,6 +90,14 @@ public final class BytecodeSmokeTest {
         private ReleaseClassLoader(URL[] urls, ClassLoader parent, Set<String> releaseClasses) {
             super(urls, parent);
             this.releaseClasses = Collections.unmodifiableSet(new LinkedHashSet<>(releaseClasses));
+        }
+
+        private Class<?> loadAndResolve(String name) throws ClassNotFoundException {
+            Class<?> type = loadClass(name, false);
+            // Class.forName(..., false, loader) can leave method verification deferred.
+            // Resolve explicitly so invalid StackMapTable frames fail the release build.
+            resolveClass(type);
+            return type;
         }
 
         @Override
