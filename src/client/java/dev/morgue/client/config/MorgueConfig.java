@@ -43,7 +43,16 @@ public final class MorgueConfig {
             Files.createDirectories(destination.getParent());
             Files.copy(FILE, destination, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             return true;
-        } catch (IOException | IllegalArgumentException exception) {
+        } catch (Exception exception) {
+            // A single catch type avoids a ProGuard 7.10 preverification bug with
+            // multi-catch handlers in the protected release JAR.
+            if (exception instanceof RuntimeException runtimeException
+                    && !(runtimeException instanceof IllegalArgumentException)) {
+                throw runtimeException;
+            }
+            if (!(exception instanceof IOException) && !(exception instanceof IllegalArgumentException)) {
+                throw new IllegalStateException(exception);
+            }
             System.err.println("[MORGUE] Could not export profile: " + exception.getMessage());
             return false;
         }
@@ -56,7 +65,16 @@ public final class MorgueConfig {
             Files.copy(source, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             load();
             return true;
-        } catch (IOException | IllegalArgumentException exception) {
+        } catch (Exception exception) {
+            // A single catch type avoids a ProGuard 7.10 preverification bug with
+            // multi-catch handlers in the protected release JAR.
+            if (exception instanceof RuntimeException runtimeException
+                    && !(runtimeException instanceof IllegalArgumentException)) {
+                throw runtimeException;
+            }
+            if (!(exception instanceof IOException) && !(exception instanceof IllegalArgumentException)) {
+                throw new IllegalStateException(exception);
+            }
             System.err.println("[MORGUE] Could not import profile: " + exception.getMessage());
             return false;
         }
