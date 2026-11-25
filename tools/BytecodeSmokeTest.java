@@ -12,8 +12,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Loads every class from the transformed release JAR without initializing it.
- * Run with -Xverify:all so the JVM verifies bytecode as each class is defined.
+ * Loads and explicitly links every class from the transformed release JAR.
+ * Run with -Xverify:all so deferred bytecode verification also fails the build.
  */
 public final class BytecodeSmokeTest {
     private BytecodeSmokeTest() {
