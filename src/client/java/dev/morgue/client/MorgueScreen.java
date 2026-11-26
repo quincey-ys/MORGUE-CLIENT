@@ -108,7 +108,7 @@ public final class MorgueScreen extends Screen {
     );
 
     static {
-        MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
+        MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Auto Crystal", "Aim Assist", "Click Assist"));
         MODULES.put("Movement", List.of("Sprint", "Safe Walk", "Movement Settings"));
         MODULES.put("Player", List.of("Auto Totem", "Inventory Helper", "Item Use"));
         MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
@@ -227,6 +227,8 @@ public final class MorgueScreen extends Screen {
             buildAimAssistSettings();
         } else if ("Click Assist".equals(selectedModule)) {
             buildClickAssistSettings();
+        } else if ("Auto Crystal".equals(selectedModule)) {
+            buildAutoCrystalSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -603,6 +605,91 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(
                 "Automatically disables its steering while Mace Hitter or KillAura is enabled."),
                 button -> {}).bounds(x, y + 186, settingsWideWidth(), 28).build());
+        addBackButton();
+    }
+
+    private void buildAutoCrystalSettings() {
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int leftWidth = settingsColumnWidth();
+        int rightX = settingsRightX();
+        var module = MorgueClient.autoCrystal();
+
+        addSettingButton(x, y, toggleLabel("Auto Crystal", module.isEnabled()),
+                () -> MorgueClient.setAutoCrystalEnabled(!module.isEnabled()));
+        addSettingButton(rightX, y, toggleLabel("Place", module.isPlaceEnabled()),
+                () -> module.setPlaceEnabled(!module.isPlaceEnabled()));
+        addSettingButton(x, y + 34, toggleLabel("Explode", module.isExplodeEnabled()),
+                () -> module.setExplodeEnabled(!module.isExplodeEnabled()));
+        addSettingButton(rightX, y + 34, toggleLabel("Auto Switch", module.isAutoSwitch()),
+                () -> module.setAutoSwitch(!module.isAutoSwitch()));
+        addSettingButton(x, y + 68, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
+                () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
+        addSettingButton(rightX, y + 68, toggleLabel("Instant Place", module.isInstantPlace()),
+                () -> module.setInstantPlace(!module.isInstantPlace()));
+        addSettingButton(x, y + 102, toggleLabel("Only Own Crystals", module.isOnlyOwn()),
+                () -> module.setOnlyOwn(!module.isOnlyOwn()));
+        addSettingButton(rightX, y + 102, toggleLabel("Inhibit", module.isInhibit()),
+                () -> module.setInhibit(!module.isInhibit()));
+        addSettingButton(x, y + 136, toggleLabel("Ignore Terrain", module.isIgnoreTerrain()),
+                () -> module.setIgnoreTerrain(!module.isIgnoreTerrain()));
+        addSettingButton(rightX, y + 136, toggleLabel("Performance Mode", module.isPerformanceMode()),
+                () -> module.setPerformanceMode(!module.isPerformanceMode()));
+
+        int row = y + 174;
+        addSliderSetting(x, row, leftWidth, 28, "Range", 2, 6, 0.1, " blocks",
+                module::getRange, module::setRange);
+        addSliderSetting(rightX, row, leftWidth, 28, "Place Speed", 1, 20, 1, " CPS",
+                () -> module.getPlaceSpeed(), value -> module.setPlaceSpeed((int) value));
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Slow Speed", 1, 20, 1, " CPS",
+                () -> module.getSlowSpeed(), value -> module.setSlowSpeed((int) value));
+        addSliderSetting(rightX, row, leftWidth, 28, "Explode Speed", 1, 20, 1, " CPS",
+                () -> module.getExplodeSpeed(), value -> module.setExplodeSpeed((int) value));
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Slow Damage", 0, 20, 0.5, " HP",
+                module::getSlowDamage, module::setSlowDamage);
+        addSliderSetting(rightX, row, leftWidth, 28, "Min Place Damage", 0, 20, 0.5, " HP",
+                module::getMinPlaceDamage, module::setMinPlaceDamage);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Max Self Place", 0, 40, 0.5, " HP",
+                module::getMaxSelfPlaceDamage, module::setMaxSelfPlaceDamage);
+        addSliderSetting(rightX, row, leftWidth, 28, "Min Place Ratio", 0, 5, 0.1, "x",
+                module::getMinPlaceRatio, module::setMinPlaceRatio);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Max Ally Place", 0, 40, 0.5, " HP",
+                module::getMaxAllyPlaceDamage, module::setMaxAllyPlaceDamage);
+        addSliderSetting(rightX, row, leftWidth, 28, "Min Ally Place Ratio", 0, 5, 0.1, "x",
+                module::getMinAllyPlaceRatio, module::setMinAllyPlaceRatio);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Min Explode Damage", 0, 20, 0.5, " HP",
+                module::getMinExplodeDamage, module::setMinExplodeDamage);
+        addSliderSetting(rightX, row, leftWidth, 28, "Max Self Explode", 0, 40, 0.5, " HP",
+                module::getMaxSelfExplodeDamage, module::setMaxSelfExplodeDamage);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Min Explode Ratio", 0, 5, 0.1, "x",
+                module::getMinExplodeRatio, module::setMinExplodeRatio);
+        addSliderSetting(rightX, row, leftWidth, 28, "Max Ally Explode", 0, 40, 0.5, " HP",
+                module::getMaxAllyExplodeDamage, module::setMaxAllyExplodeDamage);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Min Ally Explode Ratio", 0, 5, 0.1, "x",
+                module::getMinAllyExplodeRatio, module::setMinAllyExplodeRatio);
+        addSliderSetting(rightX, row, leftWidth, 28, "Force Pop", 0, 10, 0.1, "x",
+                module::getForcePop, module::setForcePop);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Anti Self Pop", 0, 10, 0.1, "x",
+                module::getAntiSelfPop, module::setAntiSelfPop);
+        addSliderSetting(rightX, row, leftWidth, 28, "Anti Ally Pop", 0, 10, 0.1, "x",
+                module::getAntiAllyPop, module::setAntiAllyPop);
+        row += 34;
+        addSliderSetting(x, row, leftWidth, 28, "Place Delay", 0, 1000, 25, " ms",
+                () -> module.getPlaceDelayMillis(), value -> module.setPlaceDelayMillis((long) value));
+        addSliderSetting(rightX, row, leftWidth, 28, "Crystal Age", 0, 1000, 25, " ms",
+                () -> module.getCrystalAgeMillis(), value -> module.setCrystalAgeMillis((long) value));
+
+        addRenderableWidget(Button.builder(Component.literal(
+                "BlackOut-style scoring: prioritizes enemy damage while limiting self and allied damage."),
+                button -> {}).bounds(x, row + 36, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
@@ -1416,6 +1503,7 @@ public final class MorgueScreen extends Screen {
             case "Item Use" -> MorgueClient.autoEat().isEnabled();
             case "Aim Assist" -> MorgueClient.aimAssist().isEnabled();
             case "Click Assist" -> MorgueClient.clickAssist().isEnabled();
+            case "Auto Crystal" -> MorgueClient.autoCrystal().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -1441,6 +1529,8 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setAimAssistEnabled(enabled);
         } else if ("Click Assist".equals(module)) {
             MorgueClient.setClickAssistEnabled(enabled);
+        } else if ("Auto Crystal".equals(module)) {
+            MorgueClient.setAutoCrystalEnabled(enabled);
         }
         MorgueConfig.save();
     }

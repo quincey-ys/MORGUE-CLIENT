@@ -2,6 +2,7 @@ package dev.morgue.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
+import dev.morgue.client.modules.combat.AutoCrystalModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.CombatMovementAssist;
 import dev.morgue.client.modules.combat.AimAssistModule;
@@ -30,10 +31,12 @@ public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping toggleMaceHitter;
     private static KeyMapping toggleKillAura;
     private static KeyMapping toggleAutoTotem;
+    private static KeyMapping toggleAutoCrystal;
     private static KeyMapping toggleMaceHitterMouse4;
     private static KeyMapping toggleKillAuraMouse5;
     private static final Map<String, KeyMapping> EDITABLE_KEYBINDINGS = new LinkedHashMap<>();
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
+    private static final AutoCrystalModule AUTO_CRYSTAL = new AutoCrystalModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
     private static final ClickAssistModule CLICK_ASSIST = new ClickAssistModule();
@@ -73,6 +76,9 @@ public final class MorgueClient implements ClientModInitializer {
         toggleAutoTotem = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.morgue.toggle_auto_totem", InputConstants.Type.KEYBOARD, InputConstants.KEY_V, category
         ));
+        toggleAutoCrystal = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.morgue.toggle_auto_crystal", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category
+        ));
         // GLFW button indices 3 and 4 are the fourth and fifth mouse buttons.
         toggleMaceHitterMouse4 = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.morgue.toggle_mace_hitter_mouse4", InputConstants.Type.MOUSE, 3, category
@@ -84,6 +90,7 @@ public final class MorgueClient implements ClientModInitializer {
         EDITABLE_KEYBINDINGS.put("Mace Hitter", toggleMaceHitter);
         EDITABLE_KEYBINDINGS.put("KillAura", toggleKillAura);
         EDITABLE_KEYBINDINGS.put("Auto Totem", toggleAutoTotem);
+        EDITABLE_KEYBINDINGS.put("Auto Crystal", toggleAutoCrystal);
         EDITABLE_KEYBINDINGS.put("Mace Hitter · Mouse 4", toggleMaceHitterMouse4);
         EDITABLE_KEYBINDINGS.put("KillAura · Mouse 5", toggleKillAuraMouse5);
 
@@ -100,6 +107,10 @@ public final class MorgueClient implements ClientModInitializer {
                 }
                 while (toggleAutoTotem.consumeClick()) {
                     setAutoTotemEnabled(!AUTO_TOTEM.isEnabled());
+                    MorgueConfig.save();
+                }
+                while (toggleAutoCrystal.consumeClick()) {
+                    setAutoCrystalEnabled(!AUTO_CRYSTAL.isEnabled());
                     MorgueConfig.save();
                 }
                 while (toggleMaceHitterMouse4.consumeClick()) {
@@ -122,6 +133,7 @@ public final class MorgueClient implements ClientModInitializer {
 
             // Mace Hitter gets first claim when a falling smash is ready.
             MACE_HITTER.tick(client);
+            AUTO_CRYSTAL.tick(client);
             KILL_AURA.tick(client);
             AIM_ASSIST.tick(client);
             CLICK_ASSIST.tick(client);
@@ -149,6 +161,16 @@ public final class MorgueClient implements ClientModInitializer {
         }
         KILL_AURA.setEnabled(enabled);
     }
+
+    public static void setAutoCrystalEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        AUTO_CRYSTAL.setEnabled(enabled);
+    }
+
+    public static AutoCrystalModule autoCrystal() { return AUTO_CRYSTAL; }
 
     public static void setAutoTotemEnabled(boolean enabled) {
         if (enabled && !MorgueIntegrity.isActivationAllowed()) {

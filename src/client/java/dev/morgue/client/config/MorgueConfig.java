@@ -192,6 +192,38 @@ public final class MorgueConfig {
         aura.setPriority(enumValue(values, "aura.priority", KillAuraModule.Priority.class,
                 KillAuraModule.Priority.CLOSEST));
 
+        var crystal = MorgueClient.autoCrystal();
+        crystal.setEnabled(bool(values, "crystal.enabled", false));
+        crystal.setPlaceEnabled(bool(values, "crystal.place", true));
+        crystal.setExplodeEnabled(bool(values, "crystal.explode", true));
+        crystal.setPauseWhileUsingItem(bool(values, "crystal.pauseWhileUsingItem", true));
+        crystal.setInstantPlace(bool(values, "crystal.instantPlace", true));
+        crystal.setOnlyOwn(bool(values, "crystal.onlyOwn", false));
+        crystal.setInhibit(bool(values, "crystal.inhibit", true));
+        crystal.setAutoSwitch(bool(values, "crystal.autoSwitch", true));
+        crystal.setIgnoreTerrain(bool(values, "crystal.ignoreTerrain", false));
+        crystal.setPerformanceMode(bool(values, "crystal.performanceMode", false));
+        crystal.setRange(decimal(values, "crystal.range", 5.0));
+        crystal.setPlaceSpeed((int) integer(values, "crystal.placeSpeed", 10));
+        crystal.setSlowSpeed((int) integer(values, "crystal.slowSpeed", 2));
+        crystal.setExplodeSpeed((int) integer(values, "crystal.explodeSpeed", 4));
+        crystal.setSlowDamage(decimal(values, "crystal.slowDamage", 3.0));
+        crystal.setMinPlaceDamage(decimal(values, "crystal.minPlaceDamage", 4.0));
+        crystal.setMaxSelfPlaceDamage(decimal(values, "crystal.maxSelfPlaceDamage", 8.0));
+        crystal.setMinPlaceRatio(decimal(values, "crystal.minPlaceRatio", 1.4));
+        crystal.setMaxAllyPlaceDamage(decimal(values, "crystal.maxAllyPlaceDamage", 8.0));
+        crystal.setMinAllyPlaceRatio(decimal(values, "crystal.minAllyPlaceRatio", 2.0));
+        crystal.setMinExplodeDamage(decimal(values, "crystal.minExplodeDamage", 2.5));
+        crystal.setMaxSelfExplodeDamage(decimal(values, "crystal.maxSelfExplodeDamage", 9.0));
+        crystal.setMinExplodeRatio(decimal(values, "crystal.minExplodeRatio", 1.1));
+        crystal.setMaxAllyExplodeDamage(decimal(values, "crystal.maxAllyExplodeDamage", 12.0));
+        crystal.setMinAllyExplodeRatio(decimal(values, "crystal.minAllyExplodeRatio", 2.0));
+        crystal.setForcePop(decimal(values, "crystal.forcePop", 1.0));
+        crystal.setAntiSelfPop(decimal(values, "crystal.antiSelfPop", 1.0));
+        crystal.setAntiAllyPop(decimal(values, "crystal.antiAllyPop", 1.0));
+        crystal.setPlaceDelayMillis(integer(values, "crystal.placeDelayMillis", 0));
+        crystal.setCrystalAgeMillis(integer(values, "crystal.crystalAgeMillis", 0));
+
         // Both modules may remain enabled; CombatActionCoordinator arbitrates attacks.
     }
 
@@ -276,6 +308,38 @@ public final class MorgueConfig {
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
+
+        var crystal = MorgueClient.autoCrystal();
+        put(values, "crystal.enabled", crystal.isEnabled());
+        put(values, "crystal.place", crystal.isPlaceEnabled());
+        put(values, "crystal.explode", crystal.isExplodeEnabled());
+        put(values, "crystal.pauseWhileUsingItem", crystal.isPauseWhileUsingItem());
+        put(values, "crystal.instantPlace", crystal.isInstantPlace());
+        put(values, "crystal.onlyOwn", crystal.isOnlyOwn());
+        put(values, "crystal.inhibit", crystal.isInhibit());
+        put(values, "crystal.autoSwitch", crystal.isAutoSwitch());
+        put(values, "crystal.ignoreTerrain", crystal.isIgnoreTerrain());
+        put(values, "crystal.performanceMode", crystal.isPerformanceMode());
+        put(values, "crystal.range", crystal.getRange());
+        put(values, "crystal.placeSpeed", crystal.getPlaceSpeed());
+        put(values, "crystal.slowSpeed", crystal.getSlowSpeed());
+        put(values, "crystal.explodeSpeed", crystal.getExplodeSpeed());
+        put(values, "crystal.slowDamage", crystal.getSlowDamage());
+        put(values, "crystal.minPlaceDamage", crystal.getMinPlaceDamage());
+        put(values, "crystal.maxSelfPlaceDamage", crystal.getMaxSelfPlaceDamage());
+        put(values, "crystal.minPlaceRatio", crystal.getMinPlaceRatio());
+        put(values, "crystal.maxAllyPlaceDamage", crystal.getMaxAllyPlaceDamage());
+        put(values, "crystal.minAllyPlaceRatio", crystal.getMinAllyPlaceRatio());
+        put(values, "crystal.minExplodeDamage", crystal.getMinExplodeDamage());
+        put(values, "crystal.maxSelfExplodeDamage", crystal.getMaxSelfExplodeDamage());
+        put(values, "crystal.minExplodeRatio", crystal.getMinExplodeRatio());
+        put(values, "crystal.maxAllyExplodeDamage", crystal.getMaxAllyExplodeDamage());
+        put(values, "crystal.minAllyExplodeRatio", crystal.getMinAllyExplodeRatio());
+        put(values, "crystal.forcePop", crystal.getForcePop());
+        put(values, "crystal.antiSelfPop", crystal.getAntiSelfPop());
+        put(values, "crystal.antiAllyPop", crystal.getAntiAllyPop());
+        put(values, "crystal.placeDelayMillis", crystal.getPlaceDelayMillis());
+        put(values, "crystal.crystalAgeMillis", crystal.getCrystalAgeMillis());
 
         try {
             Files.createDirectories(FILE.getParent());
