@@ -268,14 +268,15 @@ public final class AutoCrystalModule {
 
         int visible = 0;
         int total = 0;
-        // A compact 3 x 3 x 3 sample gives a stable approximation without
-        // doing the much larger sample grid for every nearby placement block.
-        for (int ix = 0; ix < 3; ix++) {
-            for (int iy = 0; iy < 3; iy++) {
-                for (int iz = 0; iz < 3; iz++) {
-                    double fx = (ix + 0.5) / 3.0;
-                    double fy = (iy + 0.5) / 3.0;
-                    double fz = (iz + 0.5) / 3.0;
+        int samples = performanceMode ? 2 : 3;
+        // Normal mode samples a 3 x 3 x 3 grid. Performance mode uses a
+        // 2 x 2 x 2 grid to reduce raycasts during dense crystal fights.
+        for (int ix = 0; ix < samples; ix++) {
+            for (int iy = 0; iy < samples; iy++) {
+                for (int iz = 0; iz < samples; iz++) {
+                    double fx = (ix + 0.5) / samples;
+                    double fy = (iy + 0.5) / samples;
+                    double fz = (iz + 0.5) / samples;
                     Vec3 sample = new Vec3(
                             box.minX + (box.maxX - box.minX) * fx,
                             box.minY + (box.maxY - box.minY) * fy,
