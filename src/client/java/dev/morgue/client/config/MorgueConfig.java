@@ -194,6 +194,14 @@ public final class MorgueConfig {
         aura.setPriority(enumValue(values, "aura.priority", KillAuraModule.Priority.class,
                 KillAuraModule.Priority.CLOSEST));
 
+        MorgueClient.autoCrystal().setEnabled(bool(values, "autoCrystal.enabled", false));
+        MorgueClient.autoCrystal().setRange(decimal(values, "autoCrystal.range", 5.0));
+        MorgueClient.autoCrystal().setActionDelayMillis(
+                integer(values, "autoCrystal.actionDelayMillis", 250));
+        MorgueClient.anchorMacro().setEnabled(bool(values, "anchorMacro.enabled", false));
+        MorgueClient.anchorMacro().setActionDelayMillis(
+                integer(values, "anchorMacro.actionDelayMillis", 180));
+
         // Both modules may remain enabled; CombatActionCoordinator arbitrates attacks.
     }
 
@@ -279,6 +287,12 @@ public final class MorgueConfig {
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
+
+        put(values, "autoCrystal.enabled", MorgueClient.autoCrystal().isEnabled());
+        put(values, "autoCrystal.range", MorgueClient.autoCrystal().getRange());
+        put(values, "autoCrystal.actionDelayMillis", MorgueClient.autoCrystal().getActionDelayMillis());
+        put(values, "anchorMacro.enabled", MorgueClient.anchorMacro().isEnabled());
+        put(values, "anchorMacro.actionDelayMillis", MorgueClient.anchorMacro().getActionDelayMillis());
 
         try {
             Files.createDirectories(FILE.getParent());

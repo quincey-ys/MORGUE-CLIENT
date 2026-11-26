@@ -5,6 +5,8 @@ import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
 import dev.morgue.client.modules.combat.AimAssistModule;
 import dev.morgue.client.modules.combat.ClickAssistModule;
+import dev.morgue.client.modules.combat.AutoCrystalModule;
+import dev.morgue.client.modules.combat.AnchorMacroModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.ui.KillSoundDetector;
 import dev.morgue.client.ui.UiSoundManager;
@@ -36,6 +38,8 @@ public final class MorgueClient implements ClientModInitializer {
     private static final AutoEatModule AUTO_EAT = new AutoEatModule();
     private static final SprintModule SPRINT = new SprintModule();
     private static final SafeWalkModule SAFE_WALK = new SafeWalkModule();
+    private static final AutoCrystalModule AUTO_CRYSTAL = new AutoCrystalModule();
+    private static final AnchorMacroModule ANCHOR_MACRO = new AnchorMacroModule();
 
     @Override
     public void onInitializeClient() {
@@ -76,6 +80,10 @@ public final class MorgueClient implements ClientModInitializer {
                 () -> setInventoryHelperEnabled(!INVENTORY_HELPER.isEnabled()));
         registerModuleToggle(category, "auto_eat", InputConstants.UNKNOWN.getValue(),
                 () -> setAutoEatEnabled(!AUTO_EAT.isEnabled()));
+        registerModuleToggle(category, "auto_crystal", InputConstants.UNKNOWN.getValue(),
+                () -> setAutoCrystalEnabled(!AUTO_CRYSTAL.isEnabled()));
+        registerModuleToggle(category, "anchor_macro", InputConstants.UNKNOWN.getValue(),
+                () -> setAnchorMacroEnabled(!ANCHOR_MACRO.isEnabled()));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             for (var binding : MODULE_TOGGLE_BINDINGS.entrySet()) {
@@ -98,6 +106,7 @@ public final class MorgueClient implements ClientModInitializer {
             // Mace Hitter gets first claim when a falling smash is ready.
             MACE_HITTER.tick(client);
             KILL_AURA.tick(client);
+            AUTO_CRYSTAL.tick(client);
             AIM_ASSIST.tick(client);
             CLICK_ASSIST.tick(client);
             AUTO_TOTEM.tick(client);
@@ -105,6 +114,7 @@ public final class MorgueClient implements ClientModInitializer {
             AUTO_EAT.tick(client);
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
+            ANCHOR_MACRO.tick(client);
         });
     }
 
@@ -238,4 +248,30 @@ public final class MorgueClient implements ClientModInitializer {
     public static AutoTotemModule autoTotem() {
         return AUTO_TOTEM;
     }
+
+    public static void setAutoCrystalEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        boolean changed = AUTO_CRYSTAL.isEnabled() != enabled;
+        AUTO_CRYSTAL.setEnabled(enabled);
+        if (changed) ClientNotifications.postModuleToggle(Minecraft.getInstance(),
+                ClientNotifications.Module.AUTO_CRYSTAL, enabled);
+    }
+
+    public static AutoCrystalModule autoCrystal() { return AUTO_CRYSTAL; }
+
+    public static void setAnchorMacroEnabled(boolean enabled) {
+        if (enabled && !MorgueIntegrity.isActivationAllowed()) {
+            System.err.println("[MORGUE] Module activation blocked: package integrity is not verified.");
+            return;
+        }
+        boolean changed = ANCHOR_MACRO.isEnabled() != enabled;
+        ANCHOR_MACRO.setEnabled(enabled);
+        if (changed) ClientNotifications.postModuleToggle(Minecraft.getInstance(),
+                ClientNotifications.Module.ANCHOR_MACRO, enabled);
+    }
+
+    public static AnchorMacroModule anchorMacro() { return ANCHOR_MACRO; }
 }

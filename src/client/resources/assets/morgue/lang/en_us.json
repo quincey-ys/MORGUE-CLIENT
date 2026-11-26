@@ -9,5 +9,7 @@
   "key.morgue.toggle_auto_sprint": "Toggle Auto Sprint",
   "key.morgue.toggle_safe_walk": "Toggle Safe Walk",
   "key.morgue.toggle_inventory_helper": "Toggle Inventory Helper",
-  "key.morgue.toggle_auto_eat": "Toggle Auto Eat"
+  "key.morgue.toggle_auto_eat": "Toggle Auto Eat",
+  "key.morgue.toggle_auto_crystal": "Toggle Auto Crystal",
+  "key.morgue.toggle_anchor_macro": "Toggle Anchor Macro"
 }

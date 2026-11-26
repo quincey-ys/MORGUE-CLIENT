@@ -17,7 +17,9 @@ public final class ClientNotifications {
         AUTO_SPRINT("Auto Sprint", "autoSprint"),
         SAFE_WALK("Safe Walk", "safeWalk"),
         INVENTORY_HELPER("Inventory Helper", "inventoryHelper"),
-        AUTO_EAT("Auto Eat", "autoEat");
+        AUTO_EAT("Auto Eat", "autoEat"),
+        AUTO_CRYSTAL("Auto Crystal", "autoCrystal"),
+        ANCHOR_MACRO("Anchor Macro", "anchorMacro");
 
         private final String displayName;
         private final String configKey;
