@@ -25,6 +25,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleSupplier;
 
 public final class MorgueScreen extends Screen {
     private static final int BLACK = 0xA5000000;
@@ -146,6 +148,8 @@ public final class MorgueScreen extends Screen {
     private int moduleTotalCount;
     private int moduleVisibleCount;
     private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
+    private final Map<AbstractWidget, SliderBinding> sliderBindings = new IdentityHashMap<>();
+    private SliderBinding activeSlider;
     private final Map<String, Float> toggleProgress = new HashMap<>();
     private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
     private long openedAtNanos = System.nanoTime();
@@ -164,6 +168,8 @@ public final class MorgueScreen extends Screen {
     protected void init() {
         clearWidgets();
         hoverProgress.clear();
+        sliderBindings.clear();
+        activeSlider = null;
         if (!openSoundPlayed) {
             UiSoundManager.play(UiSoundManager.Effect.OPEN);
             openSoundPlayed = true;
@@ -482,8 +488,9 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.inventoryHelper();
         addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
                 () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Refill At: " + module.getRefillAt() + " items",
-                () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
+        addSliderSetting(x, y + 36, settingsColumnWidth(), 34, "Refill At",
+                1.0, 16.0, 1.0, " items", module::getRefillAt,
+                value -> module.setRefillAt((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Swaps matching low-count hotbar stacks with main-inventory stacks."),
                 button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
@@ -840,12 +847,12 @@ public final class MorgueScreen extends Screen {
                     ? dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.INVENTORY_FIRST
                     : dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.HOTBAR_FIRST);
         });
-        addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
-            module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
-        });
-        addSettingButton(leftX, y + 108, "Activation Health: " + format(module.getActivationHealth()),
-                () -> module.setActivationHealth(module.getActivationHealth() <= 0.0F ? 20.0F
-                        : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
+        addSliderSetting(leftX, y + 72, settingsColumnWidth(), 32, "Switch Delay",
+                0.0, 250.0, 25.0, " ms", module::getSwitchDelayMillis,
+                value -> module.setSwitchDelayMillis(Math.round(value)));
+        addSliderSetting(leftX, y + 108, settingsColumnWidth(), 32, "Activation Health",
+                0.0, 20.0, 0.5, " HP", module::getActivationHealth,
+                value -> module.setActivationHealth((float) value));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
         addSettingButton(rightX, y + 72, toggleLabel("Predict Recent Damage", module.isPredictRecentDamage()),
@@ -984,9 +991,9 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.autoEat();
         addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
                 () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Hunger Threshold: " + module.getHungerThreshold(),
-                () -> module.setHungerThreshold(module.getHungerThreshold() >= 19
-                        ? 1 : module.getHungerThreshold() + 1));
+        addSliderSetting(x, y + 36, settingsColumnWidth(), 34, "Hunger Threshold",
+                1.0, 19.0, 1.0, " hunger", module::getHungerThreshold,
+                value -> module.setHungerThreshold((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Selects the most nutritious food already in your hotbar."),
                 button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
@@ -1292,6 +1299,34 @@ public final class MorgueScreen extends Screen {
         }).bounds(x, y, settingsColumnWidth(), 27).build());
     }
 
+    private void addSliderSetting(int x, int y, int width, int height, String label,
+                                  double min, double max, double step, String suffix,
+                                  DoubleSupplier getter, DoubleConsumer setter) {
+        Button widget = Button.builder(Component.literal(sliderLabel(label, getter.getAsDouble(), step, suffix)),
+                button -> {}).bounds(x, y, width, height).build();
+        addRenderableWidget(widget);
+        sliderBindings.put(widget, new SliderBinding(widget, label, min, max, step, suffix, getter, setter));
+    }
+
+    private static String sliderLabel(String label, double value, double step, String suffix) {
+        String formatted = step < 1.0
+                ? String.format(java.util.Locale.ROOT, "%.1f", value)
+                : String.format(java.util.Locale.ROOT, "%.0f", value);
+        return label + ": " + formatted + suffix;
+    }
+
+    private void updateSliderFromMouse(SliderBinding slider, double mouseX) {
+        int trackX = slider.widget.getX() + 12;
+        int trackWidth = Math.max(1, slider.widget.getWidth() - 24);
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - trackX) / trackWidth));
+        double rawValue = slider.min + progress * (slider.max - slider.min);
+        double steps = Math.rint((rawValue - slider.min) / slider.step);
+        double value = Math.max(slider.min, Math.min(slider.max, slider.min + steps * slider.step));
+        if (!Double.isFinite(value) || Math.abs(slider.getter.getAsDouble() - value) < 0.000001) return;
+        slider.setter.accept(value);
+        slider.widget.setMessage(Component.literal(sliderLabel(slider.label, value, slider.step, slider.suffix)));
+    }
+
     private void addBackButton() {
         AbstractWidget back = Button.builder(Component.literal("< BACK TO MODULES"), button -> {
             selectedModule = null;
@@ -1368,7 +1403,7 @@ public final class MorgueScreen extends Screen {
             Identifier.fromNamespaceAndPath("minecraft", "default"));
 
     private static Component displayText(String value) {
-        return Component.literal(value).withStyle(style -> style.withBold(true));
+        return Component.literal(value).withStyle(style -> style.withFont(DISPLAY_FONT).withBold(true));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
@@ -1426,6 +1461,19 @@ public final class MorgueScreen extends Screen {
         }
         int textY = y + Math.max(2, (h - 10) / 2);
         graphics.text(font, label, x + textPad, textY, textColor);
+
+        SliderBinding slider = sliderBindings.get(widget);
+        if (slider != null) {
+            int trackX = x + textPad;
+            int trackWidth = Math.max(8, w - textPad * 2);
+            int trackY = y + h - 7;
+            int filledWidth = (int) Math.round(trackWidth * slider.progress());
+            graphics.fill(trackX, trackY, trackX + trackWidth, trackY + 3, 0xFF293747);
+            if (filledWidth > 0) graphics.fill(trackX, trackY, trackX + filledWidth, trackY + 3, accentColor());
+            int knobX = trackX + filledWidth;
+            graphics.fill(knobX - 3, trackY - 2, knobX + 3, trackY + 5, WHITE);
+            graphics.outline(knobX - 3, trackY - 2, 6, 7, accentColor());
+        }
 
         if (toggle && w >= 110) {
             int trackX = x + w - 48;
@@ -1713,6 +1761,15 @@ public final class MorgueScreen extends Screen {
             }
         }
         if (event.button() == MOUSE_BUTTON_LEFT) {
+            for (var entry : sliderBindings.entrySet()) {
+                if (entry.getKey().isMouseOver(event.x(), event.y())) {
+                    activeSlider = entry.getValue();
+                    updateSliderFromMouse(activeSlider, event.x());
+                    UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                    lastSliderSoundNanos = System.nanoTime();
+                    return true;
+                }
+            }
             playClickSoundAt(event);
             if (UiSettings.isAnimationsEnabled()) {
                 clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
@@ -1747,6 +1804,15 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (activeSlider != null && event.button() == MOUSE_BUTTON_LEFT) {
+            updateSliderFromMouse(activeSlider, event.x());
+            long now = System.nanoTime();
+            if (now - lastSliderSoundNanos >= 90_000_000L) {
+                UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                lastSliderSoundNanos = now;
+            }
+            return true;
+        }
         if (event.button() == MOUSE_BUTTON_LEFT) {
             long now = System.nanoTime();
             if (now - lastSliderSoundNanos >= 90_000_000L) {
@@ -1766,11 +1832,20 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        if (activeSlider != null && event.button() == MOUSE_BUTTON_LEFT) {
+            activeSlider = null;
+            MorgueConfig.save();
+            return true;
+        }
         return super.mouseReleased(event);
     }
 
     @Override
     public void removed() {
+        if (activeSlider != null) {
+            activeSlider = null;
+            MorgueConfig.save();
+        }
         if (openSoundPlayed) UiSoundManager.play(UiSoundManager.Effect.CLOSE);
         super.removed();
     }
@@ -1803,6 +1878,34 @@ public final class MorgueScreen extends Screen {
         height = screenHeight;
         computeLayout();
         rebuildWidgets();
+    }
+
+    private static final class SliderBinding {
+        private final AbstractWidget widget;
+        private final String label;
+        private final double min;
+        private final double max;
+        private final double step;
+        private final String suffix;
+        private final DoubleSupplier getter;
+        private final DoubleConsumer setter;
+
+        private SliderBinding(AbstractWidget widget, String label, double min, double max, double step,
+                              String suffix, DoubleSupplier getter, DoubleConsumer setter) {
+            this.widget = widget;
+            this.label = label;
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            this.suffix = suffix;
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        private double progress() {
+            if (max <= min) return 0.0;
+            return Math.max(0.0, Math.min(1.0, (getter.getAsDouble() - min) / (max - min)));
+        }
     }
 
     private record OverviewCard(String name, int moduleCount, int x, int y, int width, int height) {
