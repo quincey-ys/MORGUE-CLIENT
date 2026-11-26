@@ -669,6 +669,10 @@ public final class MorgueScreen extends Screen {
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
         addSettingButton(rightX, y + row++ * 27, toggleLabel("Ignore Cooldown", module.isIgnoreCooldown()),
                 () -> module.setIgnoreCooldown(!module.isIgnoreCooldown()));
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Strafe Assist", module.isStrafeAssistEnabled()),
+                () -> module.setStrafeAssistEnabled(!module.isStrafeAssistEnabled()));
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("W-Tap", module.isWTapEnabled()),
+                () -> module.setWTapEnabled(!module.isWTapEnabled()));
 
         addRenderableWidget(Button.builder(Component.literal("ENTITY TARGET FILTER  >"), button -> {
             entityPage = true;
@@ -832,6 +836,10 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Attack Sound", module.isAttackSound()),
                 () -> module.setAttackSound(!module.isAttackSound()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Strafe Assist", module.isStrafeAssistEnabled()),
+                () -> module.setStrafeAssistEnabled(!module.isStrafeAssistEnabled()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("W-Tap", module.isWTapEnabled()),
+                () -> module.setWTapEnabled(!module.isWTapEnabled()));
         addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
                 () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
         addSettingButton(leftX, y + (leftRow + 2) * 27, "Rotation Speed: " + format(module.getRotationSpeed()),
