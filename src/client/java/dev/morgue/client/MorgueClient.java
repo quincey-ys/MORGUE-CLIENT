@@ -3,6 +3,7 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
+import dev.morgue.client.modules.combat.CombatMovementAssist;
 import dev.morgue.client.modules.combat.AimAssistModule;
 import dev.morgue.client.modules.combat.ClickAssistModule;
 import dev.morgue.client.config.MorgueConfig;
@@ -86,6 +87,7 @@ public final class MorgueClient implements ClientModInitializer {
         EDITABLE_KEYBINDINGS.put("Mace Hitter · Mouse 4", toggleMaceHitterMouse4);
         EDITABLE_KEYBINDINGS.put("KillAura · Mouse 5", toggleKillAuraMouse5);
 
+        ClientTickEvents.START_CLIENT_TICK.register(CombatMovementAssist::beginClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
                 while (toggleMaceHitter.consumeClick()) {
@@ -128,6 +130,7 @@ public final class MorgueClient implements ClientModInitializer {
             AUTO_EAT.tick(client);
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
+            CombatMovementAssist.endClientTick(client);
         });
     }
 
