@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -87,7 +87,7 @@ public final class AutoCrystalModule {
 
         long now = System.currentTimeMillis();
         ticksEnabled++;
-        expireTransientState(now);
+        expireTransientState(client, now);
 
         List<Player> nearbyPlayers = collectPlayers(client);
         if (nearbyPlayers.size() <= 1) {
@@ -431,10 +431,22 @@ public final class AutoCrystalModule {
         return -1;
     }
 
-    private void expireTransientState(long now) {
+    private void expireTransientState(Minecraft client, long now) {
         ownCrystals.entrySet().removeIf(entry -> now - entry.getValue() > 5000L);
         inhibitedIds.entrySet().removeIf(entry -> now >= entry.getValue());
-        existedAt.entrySet().removeIf(entry -> ticksEnabled - entry.getValue() > 200);
+
+        // Track the first client tick on which every visible crystal appeared,
+        // not just crystals placed by this module. This keeps Existed timing
+        // meaningful for crystals placed manually or by another player.
+        HashSet<BlockPos> visible = new HashSet<>();
+        for (EndCrystal crystal : client.level.getEntitiesOfClass(
+                EndCrystal.class, client.player.getBoundingBox().inflate(16.0))) {
+            BlockPos position = crystal.blockPosition();
+            visible.add(position);
+            existedAt.putIfAbsent(position, (long) ticksEnabled);
+        }
+        existedAt.keySet().removeIf(position ->
+                !visible.contains(position) && !ownCrystals.containsKey(position));
     }
 
     public boolean isEnabled() { return enabled; }
