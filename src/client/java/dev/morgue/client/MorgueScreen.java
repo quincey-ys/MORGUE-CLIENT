@@ -106,7 +106,8 @@ public final class MorgueScreen extends Screen {
     );
 
     static {
-        MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Aim Assist", "Click Assist"));
+        MODULES.put("Combat", List.of("AI Brain", "Mace Hitter", "KillAura", "Auto Crystal",
+                "Anchor Macro", "Aim Assist", "Click Assist"));
         MODULES.put("Movement", List.of("Sprint", "Safe Walk", "Movement Settings"));
         MODULES.put("Player", List.of("Auto Totem", "Inventory Helper", "Item Use"));
         MODULES.put("Render", List.of("HUD Editor", "Module List", "Visual Settings"));
@@ -219,6 +220,10 @@ public final class MorgueScreen extends Screen {
             buildAimAssistSettings();
         } else if ("Click Assist".equals(selectedModule)) {
             buildClickAssistSettings();
+        } else if ("Auto Crystal".equals(selectedModule)) {
+            buildAutoCrystalSettings();
+        } else if ("Anchor Macro".equals(selectedModule)) {
+            buildAnchorMacroSettings();
         } else if ("Mace Hitter".equals(selectedModule)) {
             buildMaceHitterSettings();
         } else if ("Auto Totem".equals(selectedModule)) {
@@ -559,6 +564,44 @@ public final class MorgueScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses vanilla attack cooldown and shared combat arbitration; no packet spoofing."),
                 button -> {}).bounds(x, y + 114, settingsWideWidth(), 28).build());
+        addBackButton();
+    }
+
+    private void buildAutoCrystalSettings() {
+        int x = settingsLeftX();
+        int y = settingsTop();
+        var module = MorgueClient.autoCrystal();
+        addSettingButton(x, y, toggleLabel("Auto Crystal", module.isEnabled()),
+                () -> MorgueClient.setAutoCrystalEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Target / Placement Range: " + format(module.getRange()),
+                () -> module.setRange(module.getRange() >= 6.0 ? 2.0 : module.getRange() + 0.5));
+        addSettingButton(x, y + 72, "Action Delay: " + module.getActionDelayMillis() + " ms",
+                () -> module.setActionDelayMillis(module.getActionDelayMillis() >= 1000
+                        ? 100 : module.getActionDelayMillis() + 50));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Uses normal item placement on nearby obsidian / bedrock, then attacks a nearby crystal."),
+                button -> {}).bounds(x, y + 112, settingsWideWidth(), 32).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Requires a visible player target and an End Crystal in your hotbar."),
+                button -> {}).bounds(x, y + 150, settingsWideWidth(), 28).build());
+        addBackButton();
+    }
+
+    private void buildAnchorMacroSettings() {
+        int x = settingsLeftX();
+        int y = settingsTop();
+        var module = MorgueClient.anchorMacro();
+        addSettingButton(x, y, toggleLabel("Anchor Macro", module.isEnabled()),
+                () -> MorgueClient.setAnchorMacroEnabled(!module.isEnabled()));
+        addSettingButton(x, y + 36, "Action Delay: " + module.getActionDelayMillis() + " ms",
+                () -> module.setActionDelayMillis(module.getActionDelayMillis() >= 1000
+                        ? 100 : module.getActionDelayMillis() + 20));
+        addRenderableWidget(Button.builder(Component.literal(
+                "Hold Use while aiming at a support block or an existing Respawn Anchor."),
+                button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Places, charges with Glowstone, then activates at full charge. It never detonates in the Nether."),
+                button -> {}).bounds(x, y + 112, settingsWideWidth(), 36).build());
         addBackButton();
     }
 
@@ -1036,16 +1079,29 @@ public final class MorgueScreen extends Screen {
     private void buildNotificationsSettings() {
         int x = settingsLeftX();
         int y = settingsTop();
-        addSettingButton(x, y, toggleLabel("Local Chat Notifications",
-                dev.morgue.client.ClientNotifications.isEnabled()),
+        int row = 0;
+        addSettingButton(x, y + row++ * 32,
+                toggleLabel("Action Chat Notifications", dev.morgue.client.ClientNotifications.isEnabled()),
                 () -> dev.morgue.client.ClientNotifications.setEnabled(
                         !dev.morgue.client.ClientNotifications.isEnabled()));
+        addSettingButton(x, y + row++ * 32,
+                toggleLabel("Module Toggle Feedback (Master)",
+                        dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled()),
+                () -> dev.morgue.client.ClientNotifications.setModuleFeedbackEnabled(
+                        !dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled()));
+
+        for (dev.morgue.client.ClientNotifications.Module module
+                : dev.morgue.client.ClientNotifications.Module.values()) {
+            addSettingButton(x, y + row++ * 32,
+                    toggleLabel(module.displayName() + " Chat Feedback",
+                            dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled(module)),
+                    () -> dev.morgue.client.ClientNotifications.setModuleFeedbackEnabled(module,
+                            !dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled(module)));
+        }
+
         addRenderableWidget(Button.builder(Component.literal(
-                "Notifications are local chat messages for AutoTotem and Inventory Helper actions."),
-                button -> {}).bounds(x, y + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal(
-                "No notification content is sent to a remote service."),
-                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
+                "Each module has its own saved preference. The master switch mutes all module-toggle messages."),
+                button -> {}).bounds(x, y + row * 32 + 2, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
@@ -1197,13 +1253,19 @@ public final class MorgueScreen extends Screen {
 
     private void buildKeybindSettings() {
         int x = settingsLeftX();
+        int y = settingsTop();
         addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
             minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
-        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
-        addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
-                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
-                button -> {}).bounds(x, settingsTop() + 78, settingsWideWidth(), 28).build());
+        }).bounds(x, y, settingsWideWidth(), 30).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Every MORGUE module has its own keybind entry in Controls > Key Binds."),
+                button -> {}).bounds(x, y + 40, settingsWideWidth(), 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Bind any module to a keyboard key, Mouse 4, or Mouse 5. Unbound modules stay off."),
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Defaults: Right Shift opens the GUI; M / K / V toggle Mace Hitter / KillAura / Auto Totem."),
+                button -> {}).bounds(x, y + 116, settingsWideWidth(), 36).build());
         addBackButton();
     }
 
@@ -1313,6 +1375,8 @@ public final class MorgueScreen extends Screen {
             case "Item Use" -> MorgueClient.autoEat().isEnabled();
             case "Aim Assist" -> MorgueClient.aimAssist().isEnabled();
             case "Click Assist" -> MorgueClient.clickAssist().isEnabled();
+            case "Auto Crystal" -> MorgueClient.autoCrystal().isEnabled();
+            case "Anchor Macro" -> MorgueClient.anchorMacro().isEnabled();
             default -> ENABLED.getOrDefault(module, false);
         };
     }
@@ -1338,6 +1402,10 @@ public final class MorgueScreen extends Screen {
             MorgueClient.setAimAssistEnabled(enabled);
         } else if ("Click Assist".equals(module)) {
             MorgueClient.setClickAssistEnabled(enabled);
+        } else if ("Auto Crystal".equals(module)) {
+            MorgueClient.setAutoCrystalEnabled(enabled);
+        } else if ("Anchor Macro".equals(module)) {
+            MorgueClient.setAnchorMacroEnabled(enabled);
         }
         MorgueConfig.save();
     }
