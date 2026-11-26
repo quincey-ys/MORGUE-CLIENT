@@ -1947,7 +1947,7 @@ public final class MorgueScreen extends Screen {
                 return true;
             }
             if (event.key() == InputConstants.UNKNOWN.getValue()) return true;
-            finishKeybindCapture(InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+            finishKeybindCapture(InputConstants.Type.KEYBOARD.getOrCreate(event.key()));
             return true;
         }
         // Open screens receive key events directly; the global key mapping does not
