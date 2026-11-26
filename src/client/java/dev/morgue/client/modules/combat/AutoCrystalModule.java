@@ -1,6 +1,7 @@
 package dev.morgue.client.modules.combat;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Difficulty;
@@ -253,7 +254,8 @@ public final class AutoCrystalModule {
         if (difficulty == Difficulty.EASY) damage = Math.min(damage / 2.0 + 1.0, damage);
         else if (difficulty == Difficulty.HARD) damage *= 1.5;
 
-        double armor = target.getArmor();
+        double armor = target.getAttributeValue(
+                net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
         double toughness = target.getAttributeValue(
                 net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS);
         double divisor = 2.0 + toughness / 4.0;
@@ -386,7 +388,7 @@ public final class AutoCrystalModule {
     }
 
     private boolean placeCrystal(Minecraft client, Placement placement, long now) {
-        Player player = client.player;
+        LocalPlayer player = client.player;
         int previousSlot = player.getInventory().getSelectedSlot();
         InteractionHand hand = InteractionHand.MAIN_HAND;
         boolean offhandCrystal = player.getOffhandItem().is(Items.END_CRYSTAL);
