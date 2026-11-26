@@ -28,7 +28,7 @@ public final class AutoCrystalModule {
         if (!enabled || client == null || client.player == null || client.level == null
                 || client.gameMode == null || client.gui.screen() != null) return;
 
-        Player player = client.player;
+        var player = client.player;
         if (player.isSpectator() || player.isDeadOrDying()) return;
 
         long now = System.currentTimeMillis();

@@ -26,7 +26,7 @@ public final class AnchorMacroModule {
                 || !client.options.keyUse.isDown()
                 || !(client.hitResult instanceof BlockHitResult hit)) return;
 
-        Player player = client.player;
+        var player = client.player;
         if (player.isSpectator() || player.isDeadOrDying()) return;
         long now = System.currentTimeMillis();
         if (now < nextActionAt) return;
