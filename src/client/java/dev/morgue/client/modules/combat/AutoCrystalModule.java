@@ -42,7 +42,7 @@ public final class AutoCrystalModule {
                         && player.hasLineOfSight(target)
         );
         Player target = targets.stream()
-                .min(Comparator.comparingDouble(player::distanceToSqr))
+                .min(Comparator.comparingDouble(target -> player.distanceToSqr(target)))
                 .orElse(null);
         if (target == null) return;
 
@@ -77,7 +77,7 @@ public final class AutoCrystalModule {
         client.gameMode.useItemOn(player, InteractionHand.MAIN_HAND,
                 new BlockHitResult(hitLocation, Direction.UP, base, false));
         player.swing(InteractionHand.MAIN_HAND,
-                player.getMainHandItem().getUseAnimation(), true);
+                player.getMainHandItem().getAttackAnimation(), true);
         player.getInventory().setSelectedSlot(previousSlot);
         nextActionAt = now + actionDelayMillis;
     }

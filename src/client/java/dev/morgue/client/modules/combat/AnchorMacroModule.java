@@ -55,7 +55,7 @@ public final class AnchorMacroModule {
         player.getInventory().setSelectedSlot(selectedSlot);
         client.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hit);
         player.swing(InteractionHand.MAIN_HAND,
-                player.getMainHandItem().getUseAnimation(), true);
+                player.getMainHandItem().getAttackAnimation(), true);
         player.getInventory().setSelectedSlot(previousSlot);
         nextActionAt = now + actionDelayMillis;
     }
