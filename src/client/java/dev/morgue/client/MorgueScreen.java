@@ -1036,16 +1036,29 @@ public final class MorgueScreen extends Screen {
     private void buildNotificationsSettings() {
         int x = settingsLeftX();
         int y = settingsTop();
-        addSettingButton(x, y, toggleLabel("Local Chat Notifications",
-                dev.morgue.client.ClientNotifications.isEnabled()),
+        int row = 0;
+        addSettingButton(x, y + row++ * 32,
+                toggleLabel("Action Chat Notifications", dev.morgue.client.ClientNotifications.isEnabled()),
                 () -> dev.morgue.client.ClientNotifications.setEnabled(
                         !dev.morgue.client.ClientNotifications.isEnabled()));
+        addSettingButton(x, y + row++ * 32,
+                toggleLabel("Module Toggle Feedback (Master)",
+                        dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled()),
+                () -> dev.morgue.client.ClientNotifications.setModuleFeedbackEnabled(
+                        !dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled()));
+
+        for (dev.morgue.client.ClientNotifications.Module module
+                : dev.morgue.client.ClientNotifications.Module.values()) {
+            addSettingButton(x, y + row++ * 32,
+                    toggleLabel(module.displayName() + " Chat Feedback",
+                            dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled(module)),
+                    () -> dev.morgue.client.ClientNotifications.setModuleFeedbackEnabled(module,
+                            !dev.morgue.client.ClientNotifications.isModuleFeedbackEnabled(module)));
+        }
+
         addRenderableWidget(Button.builder(Component.literal(
-                "Notifications are local chat messages for AutoTotem and Inventory Helper actions."),
-                button -> {}).bounds(x, y + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal(
-                "No notification content is sent to a remote service."),
-                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
+                "Each module has its own saved preference. The master switch mutes all module-toggle messages."),
+                button -> {}).bounds(x, y + row * 32 + 2, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
@@ -1197,13 +1210,19 @@ public final class MorgueScreen extends Screen {
 
     private void buildKeybindSettings() {
         int x = settingsLeftX();
+        int y = settingsTop();
         addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
             minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
-        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
-        addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
-                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
-                button -> {}).bounds(x, settingsTop() + 78, settingsWideWidth(), 28).build());
+        }).bounds(x, y, settingsWideWidth(), 30).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Every MORGUE module has its own keybind entry in Controls > Key Binds."),
+                button -> {}).bounds(x, y + 40, settingsWideWidth(), 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Bind any module to a keyboard key, Mouse 4, or Mouse 5. Unbound modules stay off."),
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
+        addRenderableWidget(Button.builder(Component.literal(
+                "Defaults: Right Shift opens the GUI; M / K / V toggle Mace Hitter / KillAura / Auto Totem."),
+                button -> {}).bounds(x, y + 116, settingsWideWidth(), 36).build());
         addBackButton();
     }
 

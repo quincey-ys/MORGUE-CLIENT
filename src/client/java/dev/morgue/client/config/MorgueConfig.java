@@ -129,6 +129,12 @@ public final class MorgueConfig {
         }
 
         ClientNotifications.setEnabled(bool(values, "notifications.enabled", true));
+        ClientNotifications.setModuleFeedbackEnabled(
+                bool(values, "notifications.moduleFeedback.enabled", true));
+        for (ClientNotifications.Module module : ClientNotifications.Module.values()) {
+            ClientNotifications.setModuleFeedbackEnabled(module, bool(values,
+                    "notifications.moduleFeedback." + module.configKey(), true));
+        }
         MorgueClient.setAimAssistEnabled(bool(values, "combat.aimAssist.enabled", false));
         MorgueClient.setClickAssistEnabled(bool(values, "combat.clickAssist.enabled", false));
         MorgueClient.clickAssist().setClicksPerSecond((int) integer(values, "combat.clickAssist.cps", 8));
@@ -220,6 +226,11 @@ public final class MorgueConfig {
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
 
         put(values, "notifications.enabled", ClientNotifications.isEnabled());
+        put(values, "notifications.moduleFeedback.enabled", ClientNotifications.isModuleFeedbackEnabled());
+        for (ClientNotifications.Module module : ClientNotifications.Module.values()) {
+            put(values, "notifications.moduleFeedback." + module.configKey(),
+                    ClientNotifications.isModuleFeedbackEnabled(module));
+        }
         put(values, "combat.aimAssist.enabled", MorgueClient.aimAssist().isEnabled());
         put(values, "combat.clickAssist.enabled", MorgueClient.clickAssist().isEnabled());
         put(values, "combat.clickAssist.cps", MorgueClient.clickAssist().getClicksPerSecond());
