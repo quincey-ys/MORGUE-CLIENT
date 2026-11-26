@@ -1,5 +1,6 @@
 package dev.morgue.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.ui.UiSettings;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
@@ -48,6 +50,10 @@ public final class MorgueScreen extends Screen {
     private static final String OVERVIEW_HINT =
             "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE";
     private static final String CLOSE_HINT = "RIGHT SHIFT  ·  CLOSE";
+
+    // Minecraft 26.3 receives SDL mouse buttons, which are 1-based.
+    private static final int MOUSE_BUTTON_LEFT = 1;
+    private static final int MOUSE_BUTTON_RIGHT = 3;
 
     private static final List<String> CATEGORIES = List.of(
             "Combat", "Movement", "Player", "Render", "World", "Misc", "Privacy", "Config"
@@ -1693,7 +1699,7 @@ public final class MorgueScreen extends Screen {
         if (!isInteractiveClick(event.x(), event.y())) {
             return false;
         }
-        if (event.button() == 1 && selectedModule == null) {
+        if (event.button() == MOUSE_BUTTON_RIGHT && selectedModule == null) {
             for (var child : children()) {
                 if (!(child instanceof AbstractWidget widget)
                         || !widget.isMouseOver(event.x(), event.y())) continue;
@@ -1706,7 +1712,7 @@ public final class MorgueScreen extends Screen {
                 }
             }
         }
-        if (event.button() == 0) {
+        if (event.button() == MOUSE_BUTTON_LEFT) {
             playClickSoundAt(event);
             if (UiSettings.isAnimationsEnabled()) {
                 clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
@@ -1741,7 +1747,7 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 0) {
+        if (event.button() == MOUSE_BUTTON_LEFT) {
             long now = System.nanoTime();
             if (now - lastSliderSoundNanos >= 90_000_000L) {
                 for (var child : children()) {
@@ -1767,6 +1773,17 @@ public final class MorgueScreen extends Screen {
     public void removed() {
         if (openSoundPlayed) UiSoundManager.play(UiSoundManager.Effect.CLOSE);
         super.removed();
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        // Open screens receive key events directly; the global key mapping does not
+        // see them, so the advertised Right Shift close is handled here.
+        if (event.key() == InputConstants.KEY_RSHIFT) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(event);
     }
 
     @Override
