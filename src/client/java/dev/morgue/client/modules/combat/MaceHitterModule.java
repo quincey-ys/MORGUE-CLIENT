@@ -3,7 +3,6 @@ package dev.morgue.client.modules.combat;
 import dev.morgue.client.ai.TargetIntelligence;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -46,6 +45,8 @@ public final class MaceHitterModule {
     private boolean fovCheck = true;
     private boolean teamsCheck = true;
     private boolean ignoreCooldown;
+    private boolean strafeAssist;
+    private boolean wTap;
     private double range = 3.2;
     private double fov = 180.0;
     private double minimumFallDistance = 1.5;
@@ -98,27 +99,19 @@ public final class MaceHitterModule {
         if (now < nextAttackAt) {
             return;
         }
-        // Holding the mace directly must not be blocked by the vanilla attack-strength
-        // meter. Mace Hitter's falling-smash checks and its own Attack Delay setting
-        // remain authoritative; the server still decides whether an attack deals damage.
-        boolean alreadyHoldingMace = isMace(player.getMainHandItem());
-        if (!alreadyHoldingMace && !ignoreCooldown
-                && player.getAttackStrengthScale(0.5F) < 1.0F) {
-            return;
-        }
 
         int originalSlot = player.getInventory().getSelectedSlot();
 
-        // Shield stun is a separate axe tap, so it can happen even while grounded.
+        // Shield stun remains a separate grounded axe tap, but uses the same
+        // aimed-hit, cooldown, click cadence and action arbitration as Mace Hitter.
         if (shieldStun && target instanceof Player targetPlayer && targetPlayer.isBlocking()) {
             int axeSlot = findHotbarAxe(player);
             if (axeSlot >= 0) {
-                if (!CombatActionCoordinator.tryClaim(client)) return;
                 player.getInventory().setSelectedSlot(axeSlot);
-                client.gameMode.attack(player, target);
-                player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
+                boolean attacked = CombatHitController.attack(
+                        client, target, range, ignoreWalls, ignoreCooldown, wTap);
                 player.getInventory().setSelectedSlot(originalSlot);
-                nextAttackAt = now + attackDelayMillis;
+                if (attacked) nextAttackAt = now + attackDelayMillis;
                 return;
             }
         }
@@ -142,18 +135,14 @@ public final class MaceHitterModule {
             return;
         }
 
-        if (!CombatActionCoordinator.tryClaim(client)) {
-            if (autoSwap && originalSlot != player.getInventory().getSelectedSlot()) {
-                player.getInventory().setSelectedSlot(originalSlot);
-            }
-            return;
-        }
-        client.gameMode.attack(player, target);
-        player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), true);
+        boolean attacked = CombatHitController.attack(
+                client, target, range, ignoreWalls, ignoreCooldown, wTap);
         if (autoSwap && originalSlot != player.getInventory().getSelectedSlot()) {
             player.getInventory().setSelectedSlot(originalSlot);
         }
-        nextAttackAt = now + attackDelayMillis;
+        if (attacked) {
+            nextAttackAt = now + attackDelayMillis;
+        }
     }
 
     private LivingEntity selectTarget(Minecraft client) {
@@ -254,7 +243,10 @@ public final class MaceHitterModule {
     }
 
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        if (!enabled) lastTarget = null;
+    }
     public void toggle() { this.enabled = !this.enabled; }
     public boolean isRotate() { return rotate; }
     public void setRotate(boolean rotate) { this.rotate = rotate; }
@@ -276,6 +268,10 @@ public final class MaceHitterModule {
     public void setTeamsCheck(boolean teamsCheck) { this.teamsCheck = teamsCheck; }
     public boolean isIgnoreCooldown() { return ignoreCooldown; }
     public void setIgnoreCooldown(boolean ignoreCooldown) { this.ignoreCooldown = ignoreCooldown; }
+    public boolean isStrafeAssistEnabled() { return strafeAssist; }
+    public void setStrafeAssistEnabled(boolean value) { strafeAssist = value; }
+    public boolean isWTapEnabled() { return wTap; }
+    public void setWTapEnabled(boolean value) { wTap = value; }
     public double getRange() { return range; }
     public void setRange(double range) { this.range = Math.max(1.0, Math.min(6.0, range)); }
     public double getFov() { return fov; }
