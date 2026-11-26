@@ -115,6 +115,8 @@ public final class MorgueConfig {
         mace.setFovCheck(bool(values, "mace.fovCheck", true));
         mace.setTeamsCheck(bool(values, "mace.teamsCheck", true));
         mace.setIgnoreCooldown(bool(values, "mace.ignoreCooldown", false));
+        mace.setStrafeAssistEnabled(bool(values, "mace.strafeAssist", false));
+        mace.setWTapEnabled(bool(values, "mace.wTap", false));
         mace.setPriority(enumValue(values, "mace.priority", MaceHitterModule.Priority.class,
                 MaceHitterModule.Priority.CLOSEST));
         mace.setTargetMode(enumValue(values, "mace.targetMode", MaceHitterModule.TargetMode.class,
@@ -176,6 +178,8 @@ public final class MorgueConfig {
         aura.setCriticalOnly(bool(values, "aura.criticalOnly", false));
         aura.setPauseOnThrowables(bool(values, "aura.pauseOnThrowables", true));
         aura.setAttackSound(bool(values, "aura.attackSound", false));
+        aura.setStrafeAssistEnabled(bool(values, "aura.strafeAssist", false));
+        aura.setWTapEnabled(bool(values, "aura.wTap", false));
         aura.setTargetMode(enumValue(values, "aura.targetMode", KillAuraModule.TargetMode.class,
                 KillAuraModule.TargetMode.PLAYERS));
         for (String id : aura.getSelectedEntityTypes()) {
@@ -215,6 +219,8 @@ public final class MorgueConfig {
         put(values, "mace.fovCheck", mace.isFovCheck());
         put(values, "mace.teamsCheck", mace.isTeamsCheck());
         put(values, "mace.ignoreCooldown", mace.isIgnoreCooldown());
+        put(values, "mace.strafeAssist", mace.isStrafeAssistEnabled());
+        put(values, "mace.wTap", mace.isWTapEnabled());
         put(values, "mace.priority", mace.getPriority());
         put(values, "mace.targetMode", mace.getTargetMode());
         put(values, "mace.entityTypes", String.join(",", mace.getSelectedEntityTypes()));
@@ -265,6 +271,8 @@ public final class MorgueConfig {
         put(values, "aura.criticalOnly", aura.isCriticalOnly());
         put(values, "aura.pauseOnThrowables", aura.isPauseOnThrowables());
         put(values, "aura.attackSound", aura.isAttackSound());
+        put(values, "aura.strafeAssist", aura.isStrafeAssistEnabled());
+        put(values, "aura.wTap", aura.isWTapEnabled());
         put(values, "aura.targetMode", aura.getTargetMode());
         put(values, "aura.entityTypes", String.join(",", aura.getSelectedEntityTypes()));
         put(values, "aura.priority", aura.getPriority());
