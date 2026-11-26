@@ -65,7 +65,7 @@ public final class AutoCrystalModule {
     private long nextExplodeAt;
     private int ticksEnabled;
     private int lastPlaceTick = Integer.MIN_VALUE;
-    private long lastActionAt;
+    private long lastAttackAt;
     private BlockPos lastPlacePosition;
 
     // Crystal block positions are one block above their obsidian/bedrock base.
@@ -110,7 +110,7 @@ public final class AutoCrystalModule {
                 existedAt.remove(bestCrystal.crystal().blockPosition());
                 ownCrystals.remove(bestCrystal.crystal().blockPosition());
                 nextExplodeAt = now + 1000L / Math.max(1, explodeSpeed);
-                lastActionAt = now;
+                lastAttackAt = now;
                 return;
             }
         }
@@ -118,7 +118,7 @@ public final class AutoCrystalModule {
         if (!place || now < nextPlaceAt) {
             return;
         }
-        if (!instantPlace && placeDelayMillis > 0 && now - lastActionAt < placeDelayMillis) {
+        if (!instantPlace && placeDelayMillis > 0 && now - lastAttackAt < placeDelayMillis) {
             return;
         }
 
@@ -144,13 +144,12 @@ public final class AutoCrystalModule {
             int actualSpeed = bestPlacement.damage().enemyDamage() <= slowDamage
                     ? slowSpeed : placeSpeed;
             nextPlaceAt = now + 1000L / Math.max(1, actualSpeed);
-            lastActionAt = now;
         }
     }
 
     private List<Player> collectPlayers(Minecraft client) {
         Player self = client.player;
-        AABB scan = self.getBoundingBox().inflate(12.0);
+        AABB scan = self.getBoundingBox().inflate(20.0);
         List<Player> players = client.level.getEntitiesOfClass(
                 Player.class, scan,
                 candidate -> candidate.isAlive() && !candidate.isRemoved()
@@ -345,10 +344,7 @@ public final class AutoCrystalModule {
         if (candidate.damage().selfDamage() != current.damage().selfDamage()) {
             return candidate.damage().selfDamage() < current.damage().selfDamage();
         }
-        return candidate.base().distSqr(lastPlacePosition == null
-                        ? BlockPos.ZERO : lastPlacePosition)
-                < current.base().distSqr(lastPlacePosition == null
-                        ? BlockPos.ZERO : lastPlacePosition);
+        return false;
     }
 
     private CrystalTarget findBestCrystal(Minecraft client, List<Player> players, long now) {
@@ -366,8 +362,9 @@ public final class AutoCrystalModule {
         CrystalTarget best = null;
         for (EndCrystal crystal : crystals) {
             Long createdAt = existedAt.get(crystal.blockPosition());
-            if (crystalAgeMillis > 0 && createdAt != null
-                    && ticksEnabled - createdAt < crystalAgeMillis / 50L) {
+            long requiredAgeTicks = (crystalAgeMillis + 49L) / 50L;
+            if (requiredAgeTicks > 0 && createdAt != null
+                    && ticksEnabled - createdAt < requiredAgeTicks) {
                 continue;
             }
 
