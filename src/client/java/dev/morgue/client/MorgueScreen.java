@@ -13,7 +13,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
-import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
@@ -29,8 +28,8 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xA5000000;
-    private static final int PANEL = 0xF00D121B;
+    private static final int BLACK = 0xFF000000;
+    private static final int PANEL = 0xFF0D121B;
     private static final int PANEL_LIGHT = 0xFF141E2B;
     private static final int BORDER = 0xFF2B394B;
     private static final int WHITE = 0xFFF1F5FA;
@@ -43,18 +42,19 @@ public final class MorgueScreen extends Screen {
         int b = (color & 0xFF) / 3;
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
-    private static final int BUTTON_IDLE = 0xF0141C28;
+    private static final int BUTTON_IDLE = 0xFF141C28;
     private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("morgue", "display"));
 
     private static final String BRAND_SUBTITLE = "CLIENT  /  GHOST-INSPIRED WORKSPACE";
     private static final String OVERVIEW_HINT =
-            "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE";
+            "CLICK TO TOGGLE  /  RIGHT-CLICK TO CONFIGURE  /  MIDDLE-CLICK TO REBIND";
     private static final String CLOSE_HINT = "RIGHT SHIFT  ·  CLOSE";
 
     // Minecraft 26.3 receives SDL mouse buttons, which are 1-based.
     private static final int MOUSE_BUTTON_LEFT = 1;
+    private static final int MOUSE_BUTTON_MIDDLE = 2;
     private static final int MOUSE_BUTTON_RIGHT = 3;
 
     private static final List<String> CATEGORIES = List.of(
@@ -150,6 +150,8 @@ public final class MorgueScreen extends Screen {
     private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
     private final Map<AbstractWidget, SliderBinding> sliderBindings = new IdentityHashMap<>();
     private SliderBinding activeSlider;
+    private String pendingKeybindModule;
+    private String keybindStatus = "";
     private final Map<String, Float> toggleProgress = new HashMap<>();
     private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
     private long openedAtNanos = System.nanoTime();
@@ -452,6 +454,8 @@ public final class MorgueScreen extends Screen {
                                    String category, String module) {
         boolean viewOnly = isViewOnlyModule(module);
         String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+        boolean hasKeybind = MorgueClient.editableKeyBinding(module) != null;
+        int moduleWidth = hasKeybind ? cardWidth - 88 : cardWidth - 58;
         addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
             selectedCategory = category;
             if (viewOnly) {
@@ -461,7 +465,14 @@ public final class MorgueScreen extends Screen {
                 toggleModule(module);
             }
             rebuildWidgets();
-        }).bounds(cardX + 10, itemY, cardWidth - 58, buttonHeight).build());
+        }).bounds(cardX + 10, itemY, moduleWidth, buttonHeight).build());
+
+        if (hasKeybind) {
+            addRenderableWidget(Button.builder(Component.literal(
+                    shortKeyName(MorgueClient.editableKeyBinding(module))),
+                    button -> beginKeybindCapture(module))
+                    .bounds(cardX + cardWidth - 72, itemY, 24, buttonHeight).build());
+        }
 
         addRenderableWidget(Button.builder(Component.literal("›"), button -> {
             selectedCategory = category;
@@ -469,6 +480,50 @@ public final class MorgueScreen extends Screen {
             entityPage = false;
             rebuildWidgets();
         }).bounds(cardX + cardWidth - 42, itemY, 32, buttonHeight).build());
+    }
+
+    private static String shortKeyName(net.minecraft.client.KeyMapping mapping) {
+        if (mapping == null) return "—";
+        String value = mapping.getTranslatedKeyMessage().getString();
+        if (value.startsWith("Mouse Button ")) return "M" + value.substring("Mouse Button ".length());
+        if ("Unbound".equalsIgnoreCase(value)) return "—";
+        return value.length() > 4 ? value.substring(0, 4) : value;
+    }
+
+    private void beginKeybindCapture(String name) {
+        if (MorgueClient.editableKeyBinding(name) == null) {
+            keybindStatus = "NO EDITABLE KEYBIND FOR " + name.toUpperCase(java.util.Locale.ROOT);
+            return;
+        }
+        pendingKeybindModule = name;
+        keybindStatus = "";
+    }
+
+    private void finishKeybindCapture(InputConstants.Key key) {
+        String name = pendingKeybindModule;
+        pendingKeybindModule = null;
+        if (MorgueClient.rebindKey(name, key)) {
+            String bound = MorgueClient.editableKeyBinding(name).getTranslatedKeyMessage().getString();
+            keybindStatus = name.toUpperCase(java.util.Locale.ROOT) + " BOUND TO " + bound.toUpperCase(java.util.Locale.ROOT);
+        } else {
+            keybindStatus = "COULD NOT UPDATE KEYBIND FOR " + name.toUpperCase(java.util.Locale.ROOT);
+        }
+        MorgueConfig.save();
+        rebuildWidgets();
+    }
+
+    private boolean captureMouseKeybind(MouseButtonEvent event) {
+        int glfwButton = switch (event.button()) {
+            case 1 -> 0; // SDL left -> GLFW left
+            case 2 -> 2; // SDL middle -> GLFW middle
+            case 3 -> 1; // SDL right -> GLFW right
+            case 4 -> 3; // SDL X1 -> GLFW button 4
+            case 5 -> 4; // SDL X2 -> GLFW button 5
+            default -> -1;
+        };
+        if (glfwButton < 0) return false;
+        finishKeybindCapture(InputConstants.Type.MOUSE.getOrCreate(glfwButton));
+        return true;
     }
 
     private static boolean isViewOnlyModule(String module) {
@@ -1204,13 +1259,18 @@ public final class MorgueScreen extends Screen {
 
     private void buildKeybindSettings() {
         int x = settingsLeftX();
-        addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
-            minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
-        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
-        addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
-                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
-                button -> {}).bounds(x, settingsTop() + 78, settingsWideWidth(), 28).build());
+        int y = settingsTop();
+        int row = 0;
+        for (var entry : MorgueClient.editableKeyBindings().entrySet()) {
+            String name = entry.getKey();
+            String keyName = entry.getValue().getTranslatedKeyMessage().getString();
+            addRenderableWidget(Button.builder(Component.literal(name + "  ·  " + keyName),
+                    button -> beginKeybindCapture(name))
+                    .bounds(x, y + row++ * 32, settingsWideWidth(), 27).build());
+        }
+        addRenderableWidget(Button.builder(Component.literal(
+                "MIDDLE-CLICK A MODULE ROW TO REBIND. ESC CANCELS; BACKSPACE UNBINDS."),
+                button -> {}).bounds(x, y + row * 32 + 4, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
@@ -1396,7 +1456,7 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(0, 0, width, height, 0x80060A10);
+        graphics.fill(0, 0, width, height, 0xFF060A10);
     }
 
     private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
@@ -1665,15 +1725,20 @@ public final class MorgueScreen extends Screen {
     private void drawFooter(GuiGraphicsExtractor graphics) {
         graphics.fill(margin, footerTop, width - margin, footerTop + 1, BORDER);
         int textY = height - 19;
-        String left = "MORGUE  /  LOCAL CONFIGURATION";
-        graphics.text(font, displayText(left), margin, textY, MUTED);
+        String left = pendingKeybindModule != null
+                ? "BINDING " + pendingKeybindModule.toUpperCase(java.util.Locale.ROOT)
+                        + "  /  PRESS A KEY OR CLICK A MOUSE BUTTON  /  ESC CANCEL"
+                : keybindStatus.isBlank() ? "MORGUE  /  LOCAL CONFIGURATION" : keybindStatus;
         int closeWidth = font.width(displayText(CLOSE_HINT));
         int closeX = width - margin - closeWidth;
+        drawTruncated(graphics, left, margin, textY, Math.max(40, closeX - margin - 12), MUTED);
         graphics.text(font, displayText(CLOSE_HINT), closeX, textY, MUTED);
-        String fx = "UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF");
-        int fxX = closeX - 14 - font.width(displayText(fx));
-        if (fxX > margin + font.width(displayText(left)) + 12) {
-            graphics.text(font, displayText(fx), fxX, textY, MUTED);
+        if (pendingKeybindModule == null && keybindStatus.isBlank()) {
+            String fx = "UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF");
+            int fxX = closeX - 14 - font.width(displayText(fx));
+            if (fxX > margin + font.width(displayText(left)) + 12) {
+                graphics.text(font, displayText(fx), fxX, textY, MUTED);
+            }
         }
     }
 
@@ -1744,8 +1809,26 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (pendingKeybindModule != null) {
+            captureMouseKeybind(event);
+            return true;
+        }
         if (!isInteractiveClick(event.x(), event.y())) {
             return false;
+        }
+        if (event.button() == MOUSE_BUTTON_MIDDLE && selectedModule == null) {
+            for (var child : children()) {
+                if (!(child instanceof AbstractWidget widget)
+                        || !widget.isMouseOver(event.x(), event.y())) continue;
+                String label = widget.getMessage().getString();
+                String module = label.startsWith("ON  ") || label.startsWith("OFF ")
+                        ? label.substring(4).trim() : "";
+                if (!module.isEmpty() && MorgueClient.editableKeyBinding(module) != null) {
+                    beginKeybindCapture(module);
+                    return true;
+                }
+            }
+            return true;
         }
         if (event.button() == MOUSE_BUTTON_RIGHT && selectedModule == null) {
             for (var child : children()) {
@@ -1852,6 +1935,21 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (pendingKeybindModule != null) {
+            if (event.key() == InputConstants.KEY_ESCAPE) {
+                pendingKeybindModule = null;
+                keybindStatus = "KEYBIND CHANGE CANCELLED";
+                rebuildWidgets();
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_BACKSPACE) {
+                finishKeybindCapture(InputConstants.UNKNOWN);
+                return true;
+            }
+            if (event.key() == InputConstants.UNKNOWN.getValue()) return true;
+            finishKeybindCapture(InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+            return true;
+        }
         // Open screens receive key events directly; the global key mapping does not
         // see them, so the advertised Right Shift close is handled here.
         if (event.key() == InputConstants.KEY_RSHIFT) {
