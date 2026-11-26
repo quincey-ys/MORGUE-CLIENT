@@ -13,7 +13,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
-import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
@@ -25,10 +24,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleSupplier;
 
 public final class MorgueScreen extends Screen {
-    private static final int BLACK = 0xA5000000;
-    private static final int PANEL = 0xF00D121B;
+    private static final int BLACK = 0xFF000000;
+    private static final int PANEL = 0xFF0D121B;
     private static final int PANEL_LIGHT = 0xFF141E2B;
     private static final int BORDER = 0xFF2B394B;
     private static final int WHITE = 0xFFF1F5FA;
@@ -41,18 +42,19 @@ public final class MorgueScreen extends Screen {
         int b = (color & 0xFF) / 3;
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
-    private static final int BUTTON_IDLE = 0xF0141C28;
+    private static final int BUTTON_IDLE = 0xFF141C28;
     private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("morgue", "display"));
 
     private static final String BRAND_SUBTITLE = "CLIENT  /  GHOST-INSPIRED WORKSPACE";
     private static final String OVERVIEW_HINT =
-            "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE";
+            "CLICK TO TOGGLE  /  RIGHT-CLICK TO CONFIGURE  /  MIDDLE-CLICK TO REBIND";
     private static final String CLOSE_HINT = "RIGHT SHIFT  ·  CLOSE";
 
     // Minecraft 26.3 receives SDL mouse buttons, which are 1-based.
     private static final int MOUSE_BUTTON_LEFT = 1;
+    private static final int MOUSE_BUTTON_MIDDLE = 2;
     private static final int MOUSE_BUTTON_RIGHT = 3;
 
     private static final List<String> CATEGORIES = List.of(
@@ -146,6 +148,10 @@ public final class MorgueScreen extends Screen {
     private int moduleTotalCount;
     private int moduleVisibleCount;
     private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
+    private final Map<AbstractWidget, SliderBinding> sliderBindings = new IdentityHashMap<>();
+    private SliderBinding activeSlider;
+    private String pendingKeybindModule;
+    private String keybindStatus = "";
     private final Map<String, Float> toggleProgress = new HashMap<>();
     private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
     private long openedAtNanos = System.nanoTime();
@@ -164,6 +170,8 @@ public final class MorgueScreen extends Screen {
     protected void init() {
         clearWidgets();
         hoverProgress.clear();
+        sliderBindings.clear();
+        activeSlider = null;
         if (!openSoundPlayed) {
             UiSoundManager.play(UiSoundManager.Effect.OPEN);
             openSoundPlayed = true;
@@ -446,6 +454,8 @@ public final class MorgueScreen extends Screen {
                                    String category, String module) {
         boolean viewOnly = isViewOnlyModule(module);
         String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+        boolean hasKeybind = MorgueClient.editableKeyBinding(module) != null;
+        int moduleWidth = hasKeybind ? cardWidth - 88 : cardWidth - 58;
         addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
             selectedCategory = category;
             if (viewOnly) {
@@ -455,7 +465,14 @@ public final class MorgueScreen extends Screen {
                 toggleModule(module);
             }
             rebuildWidgets();
-        }).bounds(cardX + 10, itemY, cardWidth - 58, buttonHeight).build());
+        }).bounds(cardX + 10, itemY, moduleWidth, buttonHeight).build());
+
+        if (hasKeybind) {
+            addRenderableWidget(Button.builder(Component.literal(
+                    shortKeyName(MorgueClient.editableKeyBinding(module))),
+                    button -> beginKeybindCapture(module))
+                    .bounds(cardX + cardWidth - 72, itemY, 24, buttonHeight).build());
+        }
 
         addRenderableWidget(Button.builder(Component.literal("›"), button -> {
             selectedCategory = category;
@@ -463,6 +480,50 @@ public final class MorgueScreen extends Screen {
             entityPage = false;
             rebuildWidgets();
         }).bounds(cardX + cardWidth - 42, itemY, 32, buttonHeight).build());
+    }
+
+    private static String shortKeyName(net.minecraft.client.KeyMapping mapping) {
+        if (mapping == null) return "—";
+        String value = mapping.getTranslatedKeyMessage().getString();
+        if (value.startsWith("Mouse Button ")) return "M" + value.substring("Mouse Button ".length());
+        if ("Unbound".equalsIgnoreCase(value)) return "—";
+        return value.length() > 4 ? value.substring(0, 4) : value;
+    }
+
+    private void beginKeybindCapture(String name) {
+        if (MorgueClient.editableKeyBinding(name) == null) {
+            keybindStatus = "NO EDITABLE KEYBIND FOR " + name.toUpperCase(java.util.Locale.ROOT);
+            return;
+        }
+        pendingKeybindModule = name;
+        keybindStatus = "";
+    }
+
+    private void finishKeybindCapture(InputConstants.Key key) {
+        String name = pendingKeybindModule;
+        pendingKeybindModule = null;
+        if (MorgueClient.rebindKey(name, key)) {
+            String bound = MorgueClient.editableKeyBinding(name).getTranslatedKeyMessage().getString();
+            keybindStatus = name.toUpperCase(java.util.Locale.ROOT) + " BOUND TO " + bound.toUpperCase(java.util.Locale.ROOT);
+        } else {
+            keybindStatus = "COULD NOT UPDATE KEYBIND FOR " + name.toUpperCase(java.util.Locale.ROOT);
+        }
+        MorgueConfig.save();
+        rebuildWidgets();
+    }
+
+    private boolean captureMouseKeybind(MouseButtonEvent event) {
+        int glfwButton = switch (event.button()) {
+            case 1 -> 0; // SDL left -> GLFW left
+            case 2 -> 2; // SDL middle -> GLFW middle
+            case 3 -> 1; // SDL right -> GLFW right
+            case 4 -> 3; // SDL X1 -> GLFW button 4
+            case 5 -> 4; // SDL X2 -> GLFW button 5
+            default -> -1;
+        };
+        if (glfwButton < 0) return false;
+        finishKeybindCapture(InputConstants.Type.MOUSE.getOrCreate(glfwButton));
+        return true;
     }
 
     private static boolean isViewOnlyModule(String module) {
@@ -482,8 +543,9 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.inventoryHelper();
         addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
                 () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Refill At: " + module.getRefillAt() + " items",
-                () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
+        addSliderSetting(x, y + 36, settingsColumnWidth(), 34, "Refill At",
+                1.0, 16.0, 1.0, " items", module::getRefillAt,
+                value -> module.setRefillAt((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Swaps matching low-count hotbar stacks with main-inventory stacks."),
                 button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
@@ -607,6 +669,10 @@ public final class MorgueScreen extends Screen {
                 () -> module.setTeamsCheck(!module.isTeamsCheck()));
         addSettingButton(rightX, y + row++ * 27, toggleLabel("Ignore Cooldown", module.isIgnoreCooldown()),
                 () -> module.setIgnoreCooldown(!module.isIgnoreCooldown()));
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("Strafe Assist", module.isStrafeAssistEnabled()),
+                () -> module.setStrafeAssistEnabled(!module.isStrafeAssistEnabled()));
+        addSettingButton(rightX, y + row++ * 27, toggleLabel("W-Tap", module.isWTapEnabled()),
+                () -> module.setWTapEnabled(!module.isWTapEnabled()));
 
         addRenderableWidget(Button.builder(Component.literal("ENTITY TARGET FILTER  >"), button -> {
             entityPage = true;
@@ -770,6 +836,10 @@ public final class MorgueScreen extends Screen {
                 () -> module.setPauseOnThrowables(!module.isPauseOnThrowables()));
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Attack Sound", module.isAttackSound()),
                 () -> module.setAttackSound(!module.isAttackSound()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Strafe Assist", module.isStrafeAssistEnabled()),
+                () -> module.setStrafeAssistEnabled(!module.isStrafeAssistEnabled()));
+        addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("W-Tap", module.isWTapEnabled()),
+                () -> module.setWTapEnabled(!module.isWTapEnabled()));
         addSettingButton(leftX, y + (leftRow + 1) * 27, "Minimum Target Age: " + module.getMinimumAgeTicks() + " ticks",
                 () -> module.setMinimumAgeTicks(module.getMinimumAgeTicks() >= 200 ? 0 : module.getMinimumAgeTicks() + 20));
         addSettingButton(leftX, y + (leftRow + 2) * 27, "Rotation Speed: " + format(module.getRotationSpeed()),
@@ -840,12 +910,12 @@ public final class MorgueScreen extends Screen {
                     ? dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.INVENTORY_FIRST
                     : dev.morgue.client.modules.player.AutoTotemModule.SearchPriority.HOTBAR_FIRST);
         });
-        addSettingButton(leftX, y + 72, "Switch Delay: " + module.getSwitchDelayMillis() + " ms", () -> {
-            module.setSwitchDelayMillis(module.getSwitchDelayMillis() >= 250 ? 0 : module.getSwitchDelayMillis() + 25);
-        });
-        addSettingButton(leftX, y + 108, "Activation Health: " + format(module.getActivationHealth()),
-                () -> module.setActivationHealth(module.getActivationHealth() <= 0.0F ? 20.0F
-                        : module.getActivationHealth() <= 2.0F ? 0.0F : module.getActivationHealth() - 2.0F));
+        addSliderSetting(leftX, y + 72, settingsColumnWidth(), 32, "Switch Delay",
+                0.0, 250.0, 25.0, " ms", module::getSwitchDelayMillis,
+                value -> module.setSwitchDelayMillis(Math.round(value)));
+        addSliderSetting(leftX, y + 108, settingsColumnWidth(), 32, "Activation Health",
+                0.0, 20.0, 0.5, " HP", module::getActivationHealth,
+                value -> module.setActivationHealth((float) value));
         addSettingButton(rightX, y, toggleLabel("Pause While Using Item", module.isPauseWhileUsingItem()),
                 () -> module.setPauseWhileUsingItem(!module.isPauseWhileUsingItem()));
         addSettingButton(rightX, y + 72, toggleLabel("Predict Recent Damage", module.isPredictRecentDamage()),
@@ -984,9 +1054,9 @@ public final class MorgueScreen extends Screen {
         var module = MorgueClient.autoEat();
         addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
                 () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
-        addSettingButton(x, y + 36, "Hunger Threshold: " + module.getHungerThreshold(),
-                () -> module.setHungerThreshold(module.getHungerThreshold() >= 19
-                        ? 1 : module.getHungerThreshold() + 1));
+        addSliderSetting(x, y + 36, settingsColumnWidth(), 34, "Hunger Threshold",
+                1.0, 19.0, 1.0, " hunger", module::getHungerThreshold,
+                value -> module.setHungerThreshold((int) Math.round(value)));
         addRenderableWidget(Button.builder(Component.literal(
                 "Selects the most nutritious food already in your hotbar."),
                 button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
@@ -1197,13 +1267,18 @@ public final class MorgueScreen extends Screen {
 
     private void buildKeybindSettings() {
         int x = settingsLeftX();
-        addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
-            minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
-        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
-        addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
-                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
-        addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
-                button -> {}).bounds(x, settingsTop() + 78, settingsWideWidth(), 28).build());
+        int y = settingsTop();
+        int row = 0;
+        for (var entry : MorgueClient.editableKeyBindings().entrySet()) {
+            String name = entry.getKey();
+            String keyName = entry.getValue().getTranslatedKeyMessage().getString();
+            addRenderableWidget(Button.builder(Component.literal(name + "  ·  " + keyName),
+                    button -> beginKeybindCapture(name))
+                    .bounds(x, y + row++ * 32, settingsWideWidth(), 27).build());
+        }
+        addRenderableWidget(Button.builder(Component.literal(
+                "MIDDLE-CLICK A MODULE ROW TO REBIND. ESC CANCELS; BACKSPACE UNBINDS."),
+                button -> {}).bounds(x, y + row * 32 + 4, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
@@ -1292,6 +1367,34 @@ public final class MorgueScreen extends Screen {
         }).bounds(x, y, settingsColumnWidth(), 27).build());
     }
 
+    private void addSliderSetting(int x, int y, int width, int height, String label,
+                                  double min, double max, double step, String suffix,
+                                  DoubleSupplier getter, DoubleConsumer setter) {
+        Button widget = Button.builder(Component.literal(sliderLabel(label, getter.getAsDouble(), step, suffix)),
+                button -> {}).bounds(x, y, width, height).build();
+        addRenderableWidget(widget);
+        sliderBindings.put(widget, new SliderBinding(widget, label, min, max, step, suffix, getter, setter));
+    }
+
+    private static String sliderLabel(String label, double value, double step, String suffix) {
+        String formatted = step < 1.0
+                ? String.format(java.util.Locale.ROOT, "%.1f", value)
+                : String.format(java.util.Locale.ROOT, "%.0f", value);
+        return label + ": " + formatted + suffix;
+    }
+
+    private void updateSliderFromMouse(SliderBinding slider, double mouseX) {
+        int trackX = slider.widget.getX() + 12;
+        int trackWidth = Math.max(1, slider.widget.getWidth() - 24);
+        double progress = Math.max(0.0, Math.min(1.0, (mouseX - trackX) / trackWidth));
+        double rawValue = slider.min + progress * (slider.max - slider.min);
+        double steps = Math.rint((rawValue - slider.min) / slider.step);
+        double value = Math.max(slider.min, Math.min(slider.max, slider.min + steps * slider.step));
+        if (!Double.isFinite(value) || Math.abs(slider.getter.getAsDouble() - value) < 0.000001) return;
+        slider.setter.accept(value);
+        slider.widget.setMessage(Component.literal(sliderLabel(slider.label, value, slider.step, slider.suffix)));
+    }
+
     private void addBackButton() {
         AbstractWidget back = Button.builder(Component.literal("< BACK TO MODULES"), button -> {
             selectedModule = null;
@@ -1361,14 +1464,14 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        graphics.fill(0, 0, width, height, 0x80060A10);
+        graphics.fill(0, 0, width, height, 0xFF060A10);
     }
 
     private static final FontDescription DOUBLE_STRUCK_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("minecraft", "default"));
 
     private static Component displayText(String value) {
-        return Component.literal(value).withStyle(style -> style.withBold(true));
+        return Component.literal(value).withStyle(style -> style.withFont(DISPLAY_FONT).withBold(true));
     }
 
     private void extractCustomButton(GuiGraphicsExtractor graphics, AbstractWidget widget, String rawLabel,
@@ -1426,6 +1529,19 @@ public final class MorgueScreen extends Screen {
         }
         int textY = y + Math.max(2, (h - 10) / 2);
         graphics.text(font, label, x + textPad, textY, textColor);
+
+        SliderBinding slider = sliderBindings.get(widget);
+        if (slider != null) {
+            int trackX = x + textPad;
+            int trackWidth = Math.max(8, w - textPad * 2);
+            int trackY = y + h - 7;
+            int filledWidth = (int) Math.round(trackWidth * slider.progress());
+            graphics.fill(trackX, trackY, trackX + trackWidth, trackY + 3, 0xFF293747);
+            if (filledWidth > 0) graphics.fill(trackX, trackY, trackX + filledWidth, trackY + 3, accentColor());
+            int knobX = trackX + filledWidth;
+            graphics.fill(knobX - 3, trackY - 2, knobX + 3, trackY + 5, WHITE);
+            graphics.outline(knobX - 3, trackY - 2, 6, 7, accentColor());
+        }
 
         if (toggle && w >= 110) {
             int trackX = x + w - 48;
@@ -1617,15 +1733,20 @@ public final class MorgueScreen extends Screen {
     private void drawFooter(GuiGraphicsExtractor graphics) {
         graphics.fill(margin, footerTop, width - margin, footerTop + 1, BORDER);
         int textY = height - 19;
-        String left = "MORGUE  /  LOCAL CONFIGURATION";
-        graphics.text(font, displayText(left), margin, textY, MUTED);
+        String left = pendingKeybindModule != null
+                ? "BINDING " + pendingKeybindModule.toUpperCase(java.util.Locale.ROOT)
+                        + "  /  PRESS A KEY OR CLICK A MOUSE BUTTON  /  ESC CANCEL"
+                : keybindStatus.isBlank() ? "MORGUE  /  LOCAL CONFIGURATION" : keybindStatus;
         int closeWidth = font.width(displayText(CLOSE_HINT));
         int closeX = width - margin - closeWidth;
+        drawTruncated(graphics, left, margin, textY, Math.max(40, closeX - margin - 12), MUTED);
         graphics.text(font, displayText(CLOSE_HINT), closeX, textY, MUTED);
-        String fx = "UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF");
-        int fxX = closeX - 14 - font.width(displayText(fx));
-        if (fxX > margin + font.width(displayText(left)) + 12) {
-            graphics.text(font, displayText(fx), fxX, textY, MUTED);
+        if (pendingKeybindModule == null && keybindStatus.isBlank()) {
+            String fx = "UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF");
+            int fxX = closeX - 14 - font.width(displayText(fx));
+            if (fxX > margin + font.width(displayText(left)) + 12) {
+                graphics.text(font, displayText(fx), fxX, textY, MUTED);
+            }
         }
     }
 
@@ -1696,8 +1817,26 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (pendingKeybindModule != null) {
+            captureMouseKeybind(event);
+            return true;
+        }
         if (!isInteractiveClick(event.x(), event.y())) {
             return false;
+        }
+        if (event.button() == MOUSE_BUTTON_MIDDLE && selectedModule == null) {
+            for (var child : children()) {
+                if (!(child instanceof AbstractWidget widget)
+                        || !widget.isMouseOver(event.x(), event.y())) continue;
+                String label = widget.getMessage().getString();
+                String module = label.startsWith("ON  ") || label.startsWith("OFF ")
+                        ? label.substring(4).trim() : "";
+                if (!module.isEmpty() && MorgueClient.editableKeyBinding(module) != null) {
+                    beginKeybindCapture(module);
+                    return true;
+                }
+            }
+            return true;
         }
         if (event.button() == MOUSE_BUTTON_RIGHT && selectedModule == null) {
             for (var child : children()) {
@@ -1713,6 +1852,15 @@ public final class MorgueScreen extends Screen {
             }
         }
         if (event.button() == MOUSE_BUTTON_LEFT) {
+            for (var entry : sliderBindings.entrySet()) {
+                if (entry.getKey().isMouseOver(event.x(), event.y())) {
+                    activeSlider = entry.getValue();
+                    updateSliderFromMouse(activeSlider, event.x());
+                    UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                    lastSliderSoundNanos = System.nanoTime();
+                    return true;
+                }
+            }
             playClickSoundAt(event);
             if (UiSettings.isAnimationsEnabled()) {
                 clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
@@ -1747,6 +1895,15 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (activeSlider != null && event.button() == MOUSE_BUTTON_LEFT) {
+            updateSliderFromMouse(activeSlider, event.x());
+            long now = System.nanoTime();
+            if (now - lastSliderSoundNanos >= 90_000_000L) {
+                UiSoundManager.play(UiSoundManager.Effect.SLIDER);
+                lastSliderSoundNanos = now;
+            }
+            return true;
+        }
         if (event.button() == MOUSE_BUTTON_LEFT) {
             long now = System.nanoTime();
             if (now - lastSliderSoundNanos >= 90_000_000L) {
@@ -1766,17 +1923,41 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        if (activeSlider != null && event.button() == MOUSE_BUTTON_LEFT) {
+            activeSlider = null;
+            MorgueConfig.save();
+            return true;
+        }
         return super.mouseReleased(event);
     }
 
     @Override
     public void removed() {
+        if (activeSlider != null) {
+            activeSlider = null;
+            MorgueConfig.save();
+        }
         if (openSoundPlayed) UiSoundManager.play(UiSoundManager.Effect.CLOSE);
         super.removed();
     }
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (pendingKeybindModule != null) {
+            if (event.key() == InputConstants.KEY_ESCAPE) {
+                pendingKeybindModule = null;
+                keybindStatus = "KEYBIND CHANGE CANCELLED";
+                rebuildWidgets();
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_BACKSPACE) {
+                finishKeybindCapture(InputConstants.UNKNOWN);
+                return true;
+            }
+            if (event.key() == InputConstants.UNKNOWN.getValue()) return true;
+            finishKeybindCapture(InputConstants.Type.KEYBOARD.getOrCreate(event.key()));
+            return true;
+        }
         // Open screens receive key events directly; the global key mapping does not
         // see them, so the advertised Right Shift close is handled here.
         if (event.key() == InputConstants.KEY_RSHIFT) {
@@ -1803,6 +1984,34 @@ public final class MorgueScreen extends Screen {
         height = screenHeight;
         computeLayout();
         rebuildWidgets();
+    }
+
+    private static final class SliderBinding {
+        private final AbstractWidget widget;
+        private final String label;
+        private final double min;
+        private final double max;
+        private final double step;
+        private final String suffix;
+        private final DoubleSupplier getter;
+        private final DoubleConsumer setter;
+
+        private SliderBinding(AbstractWidget widget, String label, double min, double max, double step,
+                              String suffix, DoubleSupplier getter, DoubleConsumer setter) {
+            this.widget = widget;
+            this.label = label;
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            this.suffix = suffix;
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        private double progress() {
+            if (max <= min) return 0.0;
+            return Math.max(0.0, Math.min(1.0, (getter.getAsDouble() - min) / (max - min)));
+        }
     }
 
     private record OverviewCard(String name, int moduleCount, int x, int y, int width, int height) {

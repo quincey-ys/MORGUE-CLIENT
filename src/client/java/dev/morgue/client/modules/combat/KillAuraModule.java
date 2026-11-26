@@ -47,6 +47,8 @@ public final class KillAuraModule {
     private boolean criticalOnly;
     private boolean pauseOnThrowables = true;
     private boolean attackSound;
+    private boolean strafeAssist;
+    private boolean wTap;
     private double rotationSpeed = 0.55;
     private long targetLockUntil;
     private static final long TARGET_LOCK_MILLIS = 180L;
@@ -105,12 +107,13 @@ public final class KillAuraModule {
         observedDamageCooldown = currentDamageCooldown;
 
         long now = System.currentTimeMillis();
-        // Keep rotating between attacks, but only attack once the eased aim is aligned.
+        // Aim may continue to turn between hits, but the shared hit controller
+        // only issues an attack when the current view ray actually intersects
+        // this target and vanilla attack cooldown is ready.
         if (rotate && !CombatRotation.rotateToward(player, target, rotationSpeed)) {
             return;
         }
-        if (now < nextAttackAt || player.getAttackStrengthScale(0.5F) < 1.0F
-                || (criticalOnly && !canLandVanillaCritical(player))) {
+        if (now < nextAttackAt || (criticalOnly && !canLandVanillaCritical(player))) {
             return;
         }
 
@@ -131,20 +134,16 @@ public final class KillAuraModule {
             }
         }
 
-        if (!CombatActionCoordinator.tryClaim(client)) {
-            // No attack was made, so always undo a temporary weapon selection.
-            if (changedSlot) player.getInventory().setSelectedSlot(originalSlot);
-            return;
-        }
-        client.gameMode.attack(player, target);
-        if (attackSound) player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.45F, 1.55F);
-        player.swing(net.minecraft.world.InteractionHand.MAIN_HAND,
-                player.getMainHandItem().getAttackAnimation(), true);
-
-        if (changedSlot && switchBack) {
+        boolean attacked = CombatHitController.attack(
+                client, target, range, ignoreWalls, false, wTap);
+        if (changedSlot && (!attacked || switchBack)) {
+            // Undo a temporary weapon selection when the hit was not issued,
+            // or when Switch Back is enabled.
             player.getInventory().setSelectedSlot(originalSlot);
         }
+        if (!attacked) return;
 
+        if (attackSound) player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.45F, 1.55F);
         nextAttackAt = now + attackDelayMillis;
     }
 
@@ -336,6 +335,10 @@ public final class KillAuraModule {
     public void setCriticalOnly(boolean value) { criticalOnly = value; }
     public boolean isAttackSound() { return attackSound; }
     public void setAttackSound(boolean value) { attackSound = value; }
+    public boolean isStrafeAssistEnabled() { return strafeAssist; }
+    public void setStrafeAssistEnabled(boolean value) { strafeAssist = value; }
+    public boolean isWTapEnabled() { return wTap; }
+    public void setWTapEnabled(boolean value) { wTap = value; }
     public boolean isPauseOnThrowables() { return pauseOnThrowables; }
     public void setPauseOnThrowables(boolean value) { pauseOnThrowables = value; }
     public LivingEntity getLastTarget() { return lastTarget; }

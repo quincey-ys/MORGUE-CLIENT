@@ -3,6 +3,7 @@ package dev.morgue.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.modules.combat.KillAuraModule;
+import dev.morgue.client.modules.combat.CombatMovementAssist;
 import dev.morgue.client.modules.combat.AimAssistModule;
 import dev.morgue.client.modules.combat.ClickAssistModule;
 import dev.morgue.client.config.MorgueConfig;
@@ -18,7 +19,11 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping openClickGui;
@@ -27,6 +32,7 @@ public final class MorgueClient implements ClientModInitializer {
     private static KeyMapping toggleAutoTotem;
     private static KeyMapping toggleMaceHitterMouse4;
     private static KeyMapping toggleKillAuraMouse5;
+    private static final Map<String, KeyMapping> EDITABLE_KEYBINDINGS = new LinkedHashMap<>();
     private static final MaceHitterModule MACE_HITTER = new MaceHitterModule();
     private static final KillAuraModule KILL_AURA = new KillAuraModule();
     private static final AimAssistModule AIM_ASSIST = new AimAssistModule();
@@ -75,6 +81,13 @@ public final class MorgueClient implements ClientModInitializer {
                 "key.morgue.toggle_kill_aura_mouse5", InputConstants.Type.MOUSE, 4, category
         ));
 
+        EDITABLE_KEYBINDINGS.put("Mace Hitter", toggleMaceHitter);
+        EDITABLE_KEYBINDINGS.put("KillAura", toggleKillAura);
+        EDITABLE_KEYBINDINGS.put("Auto Totem", toggleAutoTotem);
+        EDITABLE_KEYBINDINGS.put("Mace Hitter · Mouse 4", toggleMaceHitterMouse4);
+        EDITABLE_KEYBINDINGS.put("KillAura · Mouse 5", toggleKillAuraMouse5);
+
+        ClientTickEvents.START_CLIENT_TICK.register(CombatMovementAssist::beginClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.gui.screen() == null) {
                 while (toggleMaceHitter.consumeClick()) {
@@ -117,6 +130,7 @@ public final class MorgueClient implements ClientModInitializer {
             AUTO_EAT.tick(client);
             SPRINT.tick(client);
             SAFE_WALK.tick(client);
+            CombatMovementAssist.endClientTick(client);
         });
     }
 
@@ -214,5 +228,22 @@ public final class MorgueClient implements ClientModInitializer {
 
     public static AutoTotemModule autoTotem() {
         return AUTO_TOTEM;
+    }
+
+    public static Map<String, KeyMapping> editableKeyBindings() {
+        return java.util.Collections.unmodifiableMap(EDITABLE_KEYBINDINGS);
+    }
+
+    public static KeyMapping editableKeyBinding(String name) {
+        return EDITABLE_KEYBINDINGS.get(name);
+    }
+
+    public static boolean rebindKey(String name, InputConstants.Key key) {
+        KeyMapping mapping = EDITABLE_KEYBINDINGS.get(name);
+        if (mapping == null || key == null) return false;
+        mapping.setKey(key);
+        KeyMapping.resetMapping();
+        Minecraft.getInstance().options.save();
+        return true;
     }
 }
