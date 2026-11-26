@@ -42,7 +42,7 @@ public final class AutoCrystalModule {
                         && player.hasLineOfSight(target)
         );
         Player target = targets.stream()
-                .min(Comparator.comparingDouble(target -> player.distanceToSqr(target)))
+                .min(Comparator.comparingDouble(candidate -> player.distanceToSqr(candidate)))
                 .orElse(null);
         if (target == null) return;
 
