@@ -74,7 +74,11 @@ public final class MorgueIntegrity {
             Class<?> loaderType = Class.forName("net.fabricmc.loader.api.FabricLoader");
             Object loader = loaderType.getMethod("getInstance").invoke(null);
             return (Boolean) loaderType.getMethod("isDevelopmentEnvironment").invoke(loader);
-        } catch (ReflectiveOperationException | LinkageError exception) {
+        } catch (ReflectiveOperationException exception) {
+            return false;
+        } catch (LinkageError error) {
+            // A multi-catch here makes ProGuard 7.10 emit an Object-typed handler
+            // frame in the protected release JAR.
             return false;
         }
     }

@@ -1,5 +1,6 @@
 package dev.morgue.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.morgue.client.modules.combat.MaceHitterModule;
 import dev.morgue.client.config.MorgueConfig;
 import dev.morgue.client.ui.UiSettings;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
@@ -43,6 +45,15 @@ public final class MorgueScreen extends Screen {
     private static final int BUTTON_HOVER = 0xFF243246;
     private static final FontDescription DISPLAY_FONT = new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("morgue", "display"));
+
+    private static final String BRAND_SUBTITLE = "CLIENT  /  GHOST-INSPIRED WORKSPACE";
+    private static final String OVERVIEW_HINT =
+            "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE";
+    private static final String CLOSE_HINT = "RIGHT SHIFT  ·  CLOSE";
+
+    // Minecraft 26.3 receives SDL mouse buttons, which are 1-based.
+    private static final int MOUSE_BUTTON_LEFT = 1;
+    private static final int MOUSE_BUTTON_RIGHT = 3;
 
     private static final List<String> CATEGORIES = List.of(
             "Combat", "Movement", "Player", "Render", "World", "Misc", "Privacy", "Config"
@@ -114,12 +125,26 @@ public final class MorgueScreen extends Screen {
     private int panelY;
     private int panelWidth;
     private int panelHeight;
+    private int margin;
+    private int headerHeight;
+    private int headingY;
+    private int contentTop;
+    private int footerTop;
+    private boolean compactLayout;
+    private boolean showBrandSubtitle;
+    private boolean showPageSubtitle;
+    private int overviewScroll;
+    private int overviewContentHeight;
+    private int overviewViewportHeight;
+    private int settingsScroll;
+    private int settingsContentHeight;
+    private final java.util.List<OverviewCard> overviewCards = new java.util.ArrayList<>();
+    private final Set<AbstractWidget> fixedWidgets =
+            java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     private EditBox searchBox;
     private String searchQuery = "";
-    private int moduleScrollOffset;
     private int moduleTotalCount;
     private int moduleVisibleCount;
-    private int moduleColumns = 2;
     private final Map<AbstractWidget, Float> hoverProgress = new IdentityHashMap<>();
     private final Map<String, Float> toggleProgress = new HashMap<>();
     private final ArrayDeque<ClickRipple> clickRipples = new ArrayDeque<>();
@@ -147,24 +172,20 @@ public final class MorgueScreen extends Screen {
         // Full-screen workspace: no floating window, dragging, or resizing.
         panelX = 0;
         panelY = 0;
-        panelWidth = Math.max(320, width);
-        panelHeight = Math.max(300, height);
+        panelWidth = Math.max(1, width);
+        panelHeight = Math.max(1, height);
+        computeLayout();
+
         String nextTransitionKey = selectedCategory + ":" + selectedModule + ":" + entityPage;
         if (!nextTransitionKey.equals(transitionKey)) {
             transitionKey = nextTransitionKey;
             transitionAtNanos = System.nanoTime();
+            settingsScroll = 0;
         }
 
         if (selectedModule == null) {
-            int searchWidth = Math.max(100, Math.min(250, panelWidth - 110));
-            searchBox = new EditBox(font, panelX + panelWidth - searchWidth - 80, panelY + 23,
-                    searchWidth, 26, Component.literal("Search modules"));
-            searchBox.setValue(searchQuery);
-            addRenderableWidget(searchBox);
-            addRenderableWidget(Button.builder(Component.literal("FILTER"), button -> {
-                searchQuery = searchBox.getValue().trim();
-                rebuildWidgets();
-            }).bounds(panelX + panelWidth - 70, panelY + 22, 54, 28).build());
+            buildSearchControls();
+            overviewCards.clear();
             buildGhostOverview();
         } else if (entityPage) {
             buildEntitySelector();
@@ -229,61 +250,219 @@ public final class MorgueScreen extends Screen {
         } else {
             buildPlaceholderSettings();
         }
+
+        if (selectedModule != null) {
+            applySettingsScroll();
+        }
+    }
+
+    private void computeLayout() {
+        margin = Math.max(12, Math.min(22, width / 60));
+        compactLayout = height < 640;
+        showBrandSubtitle = width - margin * 2 >= 560;
+        showPageSubtitle = height >= 320;
+        headerHeight = height < 320 ? 50 : compactLayout ? 56 : 68;
+        headingY = headerHeight + (showPageSubtitle ? (compactLayout ? 12 : 14) : 14);
+        contentTop = headingY + (showPageSubtitle ? 36 : 18);
+        int footerHeight = height < 320 ? 24 : 30;
+        footerTop = height - footerHeight;
+    }
+
+    private int contentWidth() {
+        return Math.max(1, width - margin * 2);
+    }
+
+    private int overviewViewportBottom() {
+        return footerTop - 8;
+    }
+
+    private int backButtonY() {
+        return footerTop - 32;
+    }
+
+    private int settingsViewportBottom() {
+        return backButtonY() - 8;
+    }
+
+    private int settingsLeftX() {
+        return margin + 8;
+    }
+
+    private int settingsColumnWidth() {
+        return Math.max(120, (contentWidth() - 16 - 12) / 2);
+    }
+
+    private int settingsRightX() {
+        return settingsLeftX() + settingsColumnWidth() + 12;
+    }
+
+    private int settingsWideWidth() {
+        return Math.max(160, contentWidth() - 24);
+    }
+
+    private int settingsTop() {
+        return contentTop + 2;
+    }
+
+    private int brandWidth() {
+        int brand = font.width(displayText("MORGUE"));
+        if (showBrandSubtitle) {
+            brand = Math.max(brand, font.width(displayText(BRAND_SUBTITLE)));
+        }
+        return brand;
+    }
+
+    private void buildSearchControls() {
+        int searchHeight = height < 320 ? 24 : 26;
+        int filterWidth = 58;
+        int available = width - margin * 2 - brandWidth() - 16;
+        int searchWidth = Math.max(80, Math.min(320, available - filterWidth - 8));
+        int controlY = Math.max(6, (headerHeight - searchHeight) / 2);
+        int searchX = width - margin - filterWidth - 8 - searchWidth;
+        searchBox = new EditBox(font, searchX, controlY, searchWidth, searchHeight,
+                Component.literal("Search modules"));
+        searchBox.setValue(searchQuery);
+        addRenderableWidget(searchBox);
+        AbstractWidget filter = Button.builder(Component.literal("FILTER"), button -> {
+            searchQuery = searchBox.getValue().trim();
+            overviewScroll = 0;
+            rebuildWidgets();
+        }).bounds(width - margin - filterWidth, controlY, filterWidth, searchHeight).build();
+        addRenderableWidget(filter);
+        fixedWidgets.add(filter);
+    }
+
+    private void applySettingsScroll() {
+        int contentBottom = contentTop;
+        for (var child : children()) {
+            if (!(child instanceof AbstractWidget widget) || fixedWidgets.contains(widget)) continue;
+            contentBottom = Math.max(contentBottom, widget.getY() + widget.getHeight());
+        }
+        settingsContentHeight = Math.max(0, contentBottom - contentTop + 10);
+        int viewportHeight = Math.max(1, settingsViewportBottom() - contentTop);
+        int maxScroll = Math.max(0, settingsContentHeight - viewportHeight);
+        settingsScroll = Math.max(0, Math.min(settingsScroll, maxScroll));
+        if (settingsScroll == 0) return;
+        for (var child : children()) {
+            if (child instanceof AbstractWidget widget && !fixedWidgets.contains(widget)) {
+                widget.setY(widget.getY() - settingsScroll);
+            }
+        }
     }
 
     private void buildGhostOverview() {
-        int columns = Math.max(1, Math.min(4, panelWidth / 360));
-        int rows = (CATEGORIES.size() + columns - 1) / columns;
-        int gap = 12;
-        int margin = 16;
-        int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
-        int gridTop = panelY + 120;
-        int gridBottom = panelY + panelHeight - 48;
-        int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
+        overviewCards.clear();
         String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
-
-        moduleColumns = columns;
+        java.util.List<String> names = new java.util.ArrayList<>();
+        java.util.List<java.util.List<String>> moduleLists = new java.util.ArrayList<>();
         moduleTotalCount = 0;
         moduleVisibleCount = 0;
-
-        for (int categoryIndex = 0; categoryIndex < CATEGORIES.size(); categoryIndex++) {
-            String category = CATEGORIES.get(categoryIndex);
-            int column = categoryIndex % columns;
-            int row = categoryIndex / columns;
-            int cardX = panelX + margin + column * (cardWidth + gap);
-            int cardY = gridTop + row * (rowHeight + gap);
+        for (String category : CATEGORIES) {
             List<String> filtered = MODULES.getOrDefault(category, List.of()).stream()
                     .filter(module -> query.isEmpty()
                             || module.toLowerCase(java.util.Locale.ROOT).contains(query)
                             || category.toLowerCase(java.util.Locale.ROOT).contains(query))
                     .toList();
+            if (filtered.isEmpty()) continue;
+            names.add(category);
+            moduleLists.add(filtered);
             moduleTotalCount += filtered.size();
-            moduleVisibleCount += filtered.size();
-
-            int itemY = cardY + 34;
-            for (String module : filtered) {
-                boolean viewOnly = isViewOnlyModule(module);
-                String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
-                addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
-                    selectedCategory = category;
-                    if (viewOnly) {
-                        selectedModule = module;
-                        entityPage = false;
-                    } else {
-                        toggleModule(module);
-                    }
-                    rebuildWidgets();
-                }).bounds(cardX + 10, itemY, cardWidth - 58, 26).build());
-
-                addRenderableWidget(Button.builder(Component.literal("›"), button -> {
-                    selectedCategory = category;
-                    selectedModule = module;
-                    entityPage = false;
-                    rebuildWidgets();
-                }).bounds(cardX + cardWidth - 42, itemY, 32, 26).build());
-                itemY += 30;
-            }
         }
+        moduleVisibleCount = moduleTotalCount;
+
+        int viewportHeight = Math.max(1, overviewViewportBottom() - contentTop);
+        overviewViewportHeight = viewportHeight;
+        if (names.isEmpty()) {
+            overviewContentHeight = 0;
+            overviewScroll = 0;
+            return;
+        }
+
+        int gap = compactLayout ? 8 : 12;
+        int columns = Math.max(1, Math.min(4,
+                (Math.max(160, contentWidth() - 10) + gap) / (200 + gap)));
+        int gridWidth = Math.max(160, contentWidth() - 10);
+        int cardWidth = Math.max(150, (gridWidth - gap * (columns - 1)) / columns);
+        int rows = (names.size() + columns - 1) / columns;
+        int pitch = compactLayout ? 24 : 30;
+        int buttonHeight = compactLayout ? 20 : 26;
+        int cardHeader = compactLayout ? 26 : 34;
+
+        int[] rowHeights = new int[rows];
+        for (int row = 0; row < rows; row++) {
+            int maxModules = 0;
+            for (int column = 0; column < columns; column++) {
+                int index = row * columns + column;
+                if (index < names.size()) {
+                    maxModules = Math.max(maxModules, moduleLists.get(index).size());
+                }
+            }
+            rowHeights[row] = cardHeader + 4
+                    + Math.max(0, maxModules - 1) * pitch + buttonHeight + 8;
+        }
+
+        int naturalTotal = gap * (rows - 1);
+        for (int rowHeight : rowHeights) naturalTotal += rowHeight;
+        if (naturalTotal <= viewportHeight) {
+            int extra = viewportHeight - naturalTotal;
+            int base = extra / rows;
+            int remainder = extra % rows;
+            for (int row = 0; row < rows; row++) {
+                rowHeights[row] += base + (row < remainder ? 1 : 0);
+            }
+            overviewContentHeight = viewportHeight;
+            overviewScroll = 0;
+        } else {
+            overviewContentHeight = naturalTotal;
+            overviewScroll = Math.max(0, Math.min(overviewScroll,
+                    overviewContentHeight - viewportHeight));
+        }
+
+        int viewportBottom = overviewViewportBottom();
+        int cardY = contentTop - overviewScroll;
+        for (int row = 0; row < rows; row++) {
+            int cardHeight = rowHeights[row];
+            for (int column = 0; column < columns; column++) {
+                int index = row * columns + column;
+                if (index >= names.size()) break;
+                String category = names.get(index);
+                List<String> filtered = moduleLists.get(index);
+                int cardX = margin + column * (cardWidth + gap);
+                overviewCards.add(new OverviewCard(category, filtered.size(),
+                        cardX, cardY, cardWidth, cardHeight));
+                int itemY = cardY + cardHeader + 4;
+                for (String module : filtered) {
+                    if (itemY + buttonHeight >= contentTop && itemY <= viewportBottom) {
+                        addOverviewModule(cardX, itemY, cardWidth, buttonHeight, category, module);
+                    }
+                    itemY += pitch;
+                }
+            }
+            cardY += cardHeight + gap;
+        }
+    }
+
+    private void addOverviewModule(int cardX, int itemY, int cardWidth, int buttonHeight,
+                                   String category, String module) {
+        boolean viewOnly = isViewOnlyModule(module);
+        String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
+        addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
+            selectedCategory = category;
+            if (viewOnly) {
+                selectedModule = module;
+                entityPage = false;
+            } else {
+                toggleModule(module);
+            }
+            rebuildWidgets();
+        }).bounds(cardX + 10, itemY, cardWidth - 58, buttonHeight).build());
+
+        addRenderableWidget(Button.builder(Component.literal("›"), button -> {
+            selectedCategory = category;
+            selectedModule = module;
+            entityPage = false;
+            rebuildWidgets();
+        }).bounds(cardX + cardWidth - 42, itemY, 32, buttonHeight).build());
     }
 
     private static boolean isViewOnlyModule(String module) {
@@ -297,73 +476,9 @@ public final class MorgueScreen extends Screen {
                 || "UI Effects".equals(module) || "Theme".equals(module);
     }
 
-    private void buildModuleList() {
-        int moduleX = panelX + 158;
-        int listTop = panelY + 148;
-        int listBottom = panelY + panelHeight - 56;
-        int rowHeight = 62;
-        int buttonHeight = 48;
-        int columnGap = 12;
-        int contentWidth = Math.max(240, panelWidth - 190);
-        moduleColumns = Math.max(1, Math.min(4, (contentWidth + columnGap) / 360));
-        int cardWidth = Math.max(220,
-                (contentWidth - columnGap * (moduleColumns - 1)) / moduleColumns);
-        String query = searchQuery.toLowerCase(java.util.Locale.ROOT);
-        List<String> filtered = MODULES.getOrDefault(selectedCategory, List.of()).stream()
-                .filter(module -> query.isEmpty()
-                        || module.toLowerCase(java.util.Locale.ROOT).contains(query))
-                .toList();
-
-        moduleTotalCount = filtered.size();
-        int visibleRows = Math.max(1, (listBottom - listTop) / rowHeight);
-        moduleVisibleCount = visibleRows * moduleColumns;
-        int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
-        moduleScrollOffset = Math.max(0, Math.min(moduleScrollOffset, maxOffset));
-        moduleScrollOffset -= moduleScrollOffset % moduleColumns;
-
-        int end = Math.min(moduleTotalCount, moduleScrollOffset + moduleVisibleCount);
-        for (int i = moduleScrollOffset; i < end; i++) {
-            String module = filtered.get(i);
-            int relativeIndex = i - moduleScrollOffset;
-            int column = relativeIndex % moduleColumns;
-            int row = relativeIndex / moduleColumns;
-            int cardX = moduleX + column * (cardWidth + columnGap);
-            int moduleY = listTop + row * rowHeight;
-            boolean viewOnly = "AI Brain".equals(module) || "Build Integrity".equals(module)
-                    || "Credits".equals(module) || "World Info".equals(module)
-                    || "Client Metadata".equals(module) || "Module List".equals(module)
-                    || "Environment".equals(module) || "Visual Settings".equals(module)
-                    || "Notifications".equals(module) || "Client Utilities".equals(module)
-                    || "Screenshot Privacy".equals(module) || "World Settings".equals(module)
-                    || "Item Use".equals(module) || "HUD Editor".equals(module)
-                    || "UI Effects".equals(module);
-            String state = viewOnly ? "INFO  " : (isModuleEnabled(module) ? "ON  " : "OFF ");
-            addRenderableWidget(Button.builder(Component.literal(state + module), button -> {
-                if (viewOnly) {
-                    selectedModule = module;
-                    entityPage = false;
-                } else {
-                    toggleModule(module);
-                }
-                rebuildWidgets();
-            }).bounds(cardX, moduleY, cardWidth - 76, buttonHeight).build());
-
-            addRenderableWidget(Button.builder(Component.literal("EDIT"), button -> {
-                selectedModule = module;
-                entityPage = false;
-                rebuildWidgets();
-            }).bounds(cardX + cardWidth - 68, moduleY, 68, buttonHeight).build());
-        }
-
-        if (moduleTotalCount == 0) {
-            addRenderableWidget(Button.builder(Component.literal("NO MATCHING MODULES"),
-                    button -> {}).bounds(moduleX, listTop, Math.max(200, contentWidth), buttonHeight).build());
-        }
-    }
-
     private void buildInventoryHelperSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.inventoryHelper();
         addSettingButton(x, y, toggleLabel("Inventory Refill", module.isEnabled()),
                 () -> MorgueClient.setInventoryHelperEnabled(!module.isEnabled()));
@@ -371,46 +486,46 @@ public final class MorgueScreen extends Screen {
                 () -> module.setRefillAt(module.getRefillAt() >= 16 ? 1 : module.getRefillAt() + 1));
         addRenderableWidget(Button.builder(Component.literal(
                 "Swaps matching low-count hotbar stacks with main-inventory stacks."),
-                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses vanilla container input; item components must match."),
-                button -> {}).bounds(x, y + 112, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 112, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildSafeWalkSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.safeWalk();
         addSettingButton(x, y, toggleLabel("Safe Walk", module.isEnabled()),
                 () -> MorgueClient.setSafeWalkEnabled(!module.isEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "Automatically crouches when movement projects beyond a supported block edge."),
-                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 38, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Your physical sneak key takes priority over automatic edge protection."),
-                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildSprintSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.sprint();
         addSettingButton(x, y, toggleLabel("Auto Sprint", module.isEnabled()),
                 () -> MorgueClient.setSprintEnabled(!module.isEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "Automatically sprints while horizontal movement is detected."),
-                button -> {}).bounds(x, y + 38, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 38, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses normal player sprint state; it does not alter packets or bypass server rules."),
-                button -> {}).bounds(x, y + 76, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 76, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildAimAssistSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.aimAssist();
         addSettingButton(x, y, toggleLabel("Visible Aim Assist", module.isEnabled()),
                 () -> MorgueClient.setAimAssistEnabled(!module.isEnabled()));
@@ -422,16 +537,16 @@ public final class MorgueScreen extends Screen {
                 () -> module.setSmoothing(module.getSmoothing() >= 1.0F ? 0.05F : module.getSmoothing() + 0.05F));
         addRenderableWidget(Button.builder(Component.literal(
                 "Only assists while you hold attack, targets visible players, and rotates visibly."),
-                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 150, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Automatically disables its steering while Mace Hitter or KillAura is enabled."),
-                button -> {}).bounds(x, y + 186, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 186, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildClickAssistSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.clickAssist();
         addSettingButton(x, y, toggleLabel("Click Assist", module.isEnabled()),
                 () -> MorgueClient.setClickAssistEnabled(!module.isEnabled()));
@@ -440,18 +555,18 @@ public final class MorgueScreen extends Screen {
                         ? 1 : module.getClicksPerSecond() + 1));
         addRenderableWidget(Button.builder(Component.literal(
                 "Repeats your held attack input against the entity under your crosshair."),
-                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses vanilla attack cooldown and shared combat arbitration; no packet spoofing."),
-                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 114, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildMaceHitterSettings() {
         MaceHitterModule module = MorgueClient.maceHitter();
-        int leftX = panelX + 150;
-        int rightX = panelX + panelWidth / 2 + 12;
-        int y = panelY + 108;
+        int leftX = settingsLeftX();
+        int rightX = settingsRightX();
+        int y = settingsTop();
         int row = 0;
 
         addSettingButton(leftX, y + row++ * 27, "Range: " + format(module.getRange()) + "  (+0.2)",
@@ -497,12 +612,19 @@ public final class MorgueScreen extends Screen {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX + 170, panelY + panelHeight - 42, panelWidth - 360, 24).build());
+        }).bounds(leftX, y + 6 * 27 + 8, settingsColumnWidth(), 26).build());
 
         addBackButton();
     }
 
     private void buildEntitySelector() {
+        int entityPitch = compactLayout ? 24 : 27;
+        int entityHeight = entityPitch - 3;
+        int rowsTop = settingsTop() + 36;
+        int pageY = rowsTop + 8 * entityPitch + 8;
+        int leftX = settingsLeftX();
+        int rightX = settingsRightX();
+
         if ("KillAura".equals(selectedModule)) {
             var module = MorgueClient.killAura();
             Set<String> selected = module.getSelectedEntityTypes();
@@ -515,18 +637,16 @@ public final class MorgueScreen extends Screen {
                 });
                 MorgueConfig.save();
                 rebuildWidgets();
-            }).bounds(panelX + 150, panelY + 102, panelWidth - 176, 26).build());
+            }).bounds(leftX, settingsTop(), settingsWideWidth(), 26).build());
 
             int pageSize = 16;
             int start = entityPageIndex * pageSize;
             int end = Math.min(ENTITY_OPTIONS.size(), start + pageSize);
-            int leftX = panelX + 150;
-            int rightX = panelX + panelWidth / 2 + 12;
             for (int i = start; i < end; i++) {
                 EntityOption option = ENTITY_OPTIONS.get(i);
                 int visibleIndex = i - start;
                 int columnX = visibleIndex < 8 ? leftX : rightX;
-                int rowY = panelY + 138 + (visibleIndex % 8) * 27;
+                int rowY = rowsTop + (visibleIndex % 8) * entityPitch;
                 boolean enabled = selected.contains(option.id());
                 addRenderableWidget(Button.builder(Component.literal((enabled ? "[x] " : "[ ] ") + option.name()),
                         button -> {
@@ -534,20 +654,20 @@ public final class MorgueScreen extends Screen {
                             module.setTargetMode(dev.morgue.client.modules.combat.KillAuraModule.TargetMode.CUSTOM);
                             MorgueConfig.save();
                             rebuildWidgets();
-                        }).bounds(columnX, rowY, panelWidth / 2 - 170, 23).build());
+                        }).bounds(columnX, rowY, settingsColumnWidth(), entityHeight).build());
             }
 
             if (entityPageIndex > 0) {
                 addRenderableWidget(Button.builder(Component.literal("< PREVIOUS"), button -> {
                     entityPageIndex--;
                     rebuildWidgets();
-                }).bounds(leftX, panelY + panelHeight - 78, 104, 26).build());
+                }).bounds(leftX, pageY, 104, 26).build());
             }
             if (end < ENTITY_OPTIONS.size()) {
                 addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                     entityPageIndex++;
                     rebuildWidgets();
-                }).bounds(rightX + 80, panelY + panelHeight - 78, 90, 26).build());
+                }).bounds(rightX + settingsColumnWidth() - 90, pageY, 90, 26).build());
             }
             addBackButton();
             return;
@@ -559,18 +679,16 @@ public final class MorgueScreen extends Screen {
             module.setTargetMode(nextTargetMode(module.getTargetMode()));
             MorgueConfig.save();
             rebuildWidgets();
-        }).bounds(panelX + 150, panelY + 102, panelWidth - 176, 26).build());
+        }).bounds(leftX, settingsTop(), settingsWideWidth(), 26).build());
 
         int pageSize = 16;
         int start = entityPageIndex * pageSize;
         int end = Math.min(ENTITY_OPTIONS.size(), start + pageSize);
-        int leftX = panelX + 150;
-        int rightX = panelX + panelWidth / 2 + 12;
         for (int i = start; i < end; i++) {
             EntityOption option = ENTITY_OPTIONS.get(i);
             int visibleIndex = i - start;
             int columnX = visibleIndex < 8 ? leftX : rightX;
-            int rowY = panelY + 138 + (visibleIndex % 8) * 27;
+            int rowY = rowsTop + (visibleIndex % 8) * entityPitch;
             boolean enabled = selected.contains(option.id());
             addRenderableWidget(Button.builder(Component.literal((enabled ? "[x] " : "[ ] ") + option.name()),
                     button -> {
@@ -578,29 +696,29 @@ public final class MorgueScreen extends Screen {
                         module.setTargetMode(MaceHitterModule.TargetMode.CUSTOM);
                         MorgueConfig.save();
                         rebuildWidgets();
-                    }).bounds(columnX, rowY, panelWidth / 2 - 170, 23).build());
+                    }).bounds(columnX, rowY, settingsColumnWidth(), entityHeight).build());
         }
 
         if (entityPageIndex > 0) {
             addRenderableWidget(Button.builder(Component.literal("< PREVIOUS"), button -> {
                 entityPageIndex--;
                 rebuildWidgets();
-            }).bounds(leftX, panelY + panelHeight - 78, 104, 26).build());
+            }).bounds(leftX, pageY, 104, 26).build());
         }
         if (end < ENTITY_OPTIONS.size()) {
             addRenderableWidget(Button.builder(Component.literal("NEXT >"), button -> {
                 entityPageIndex++;
                 rebuildWidgets();
-            }).bounds(rightX + 80, panelY + panelHeight - 78, 90, 26).build());
+            }).bounds(rightX + settingsColumnWidth() - 90, pageY, 90, 26).build());
         }
         addBackButton();
     }
 
     private void buildKillAuraSettings() {
         var module = MorgueClient.killAura();
-        int leftX = panelX + 150;
-        int rightX = panelX + panelWidth / 2 + 12;
-        int y = panelY + 110;
+        int leftX = settingsLeftX();
+        int rightX = settingsRightX();
+        int y = settingsTop();
         int leftRow = 0;
         int rightRow = 0;
 
@@ -628,7 +746,7 @@ public final class MorgueScreen extends Screen {
             entityPage = true;
             entityPageIndex = 0;
             rebuildWidgets();
-        }).bounds(leftX, y + leftRow * 27, panelWidth / 2 - 170, 26).build());
+        }).bounds(leftX, y + leftRow * 27, settingsColumnWidth(), 26).build());
 
         addSettingButton(rightX, y + rightRow++ * 27, toggleLabel("Rotation", module.isRotate()),
                 () -> module.setRotate(!module.isRotate()));
@@ -661,8 +779,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildAiBrainSettings() {
-        int x = panelX + 150;
-        int y = panelY + 108;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var assessment = dev.morgue.client.ai.TargetIntelligence.getLatestAssessment();
 
         String activeCombat = MorgueClient.maceHitter().isEnabled() && MorgueClient.killAura().isEnabled()
@@ -670,44 +788,44 @@ public final class MorgueScreen extends Screen {
                 : MorgueClient.maceHitter().isEnabled() ? "Mace Hitter"
                 : MorgueClient.killAura().isEnabled() ? "KillAura" : "No combat module active";
         addRenderableWidget(Button.builder(Component.literal("ENGINE: LOCAL TARGET INTELLIGENCE  /  READY"),
-                button -> {}).bounds(x, y, panelWidth - 176, 27).build());
+                button -> {}).bounds(x, y, settingsWideWidth(), 27).build());
         addRenderableWidget(Button.builder(Component.literal("ACTIVE CONTROLLER: " + activeCombat),
-                button -> {}).bounds(x, y + 34, panelWidth - 176, 27).build());
+                button -> {}).bounds(x, y + 34, settingsWideWidth(), 27).build());
 
         if (assessment == null) {
             addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: Waiting for a valid target"),
-                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 68, settingsWideWidth(), 27).build());
             addRenderableWidget(Button.builder(Component.literal("ASSESSMENT: No candidate passed the active filters"),
-                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 102, settingsWideWidth(), 27).build());
         } else {
             addRenderableWidget(Button.builder(Component.literal("CURRENT TARGET: " + assessment.targetName()),
-                    button -> {}).bounds(x, y + 68, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 68, settingsWideWidth(), 27).build());
             addRenderableWidget(Button.builder(Component.literal("PRIORITY: " + assessment.priority()
                     + "  /  DISTANCE: " + format(assessment.distance())),
-                    button -> {}).bounds(x, y + 102, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 102, settingsWideWidth(), 27).build());
             addRenderableWidget(Button.builder(Component.literal("THREAT SCORE: "
                     + String.format(java.util.Locale.ROOT, "%.2f", assessment.threatScore())
                     + "  /  HEALTH: " + format(assessment.health())),
-                    button -> {}).bounds(x, y + 136, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 136, settingsWideWidth(), 27).build());
             addRenderableWidget(Button.builder(Component.literal("REASON: " + assessment.reason()),
-                    button -> {}).bounds(x, y + 170, panelWidth - 176, 27).build());
+                    button -> {}).bounds(x, y + 170, settingsWideWidth(), 27).build());
         }
 
         addRenderableWidget(Button.builder(Component.literal("DECISION MODEL: deterministic local heuristics; no cloud AI"),
-                button -> {}).bounds(x, y + 208, panelWidth - 176, 27).build());
+                button -> {}).bounds(x, y + 208, settingsWideWidth(), 27).build());
         addRenderableWidget(Button.builder(Component.literal("CLEAR LAST ASSESSMENT"), button -> {
             dev.morgue.client.ai.TargetIntelligence.clearAssessment();
             rebuildWidgets();
-        }).bounds(x, y + 242, panelWidth - 176, 27).build());
+        }).bounds(x, y + 242, settingsWideWidth(), 27).build());
 
         addBackButton();
     }
 
     private void buildAutoTotemSettings() {
         var module = MorgueClient.autoTotem();
-        int leftX = panelX + 150;
-        int rightX = panelX + panelWidth / 2 + 12;
-        int y = panelY + 112;
+        int leftX = settingsLeftX();
+        int rightX = settingsRightX();
+        int y = settingsTop();
 
         addSettingButton(leftX, y, "Mode: " + module.getMode(), () -> {
             module.setMode(switch (module.getMode()) {
@@ -745,28 +863,28 @@ public final class MorgueScreen extends Screen {
                     ENABLED.put("Auto Totem", MorgueClient.autoTotem().isEnabled());
                     MorgueConfig.save();
                     rebuildWidgets();
-                }).bounds(rightX, y + 36, panelWidth / 2 - 170, 27).build());
+                }).bounds(rightX, y + 36, settingsColumnWidth(), 27).build());
 
         addBackButton();
     }
 
     private void buildMovementSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addSettingButton(x, y, toggleLabel("Auto Sprint", MorgueClient.sprint().isEnabled()),
                 () -> MorgueClient.setSprintEnabled(!MorgueClient.sprint().isEnabled()));
         addSettingButton(x, y + 36, toggleLabel("Safe Walk", MorgueClient.safeWalk().isEnabled()),
                 () -> MorgueClient.setSafeWalkEnabled(!MorgueClient.safeWalk().isEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "Both options use normal client movement state and respect the server's movement rules."),
-                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildEnabledModuleList() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         String[] lines = {
                 "MACE HITTER: " + (MorgueClient.maceHitter().isEnabled() ? "ON" : "OFF"),
                 "KILLAURA: " + (MorgueClient.killAura().isEnabled() ? "ON" : "OFF"),
@@ -784,9 +902,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildEnvironmentInfo() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         if (minecraft == null || minecraft.level == null) {
             addRenderableWidget(Button.builder(Component.literal("ENVIRONMENT: No world loaded."),
                     button -> {}).bounds(x, y, width, 28).build());
@@ -805,9 +923,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildClientUtilities() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         addRenderableWidget(Button.builder(Component.literal("OPEN RESOURCE PACK MANAGER"), button -> {
             selectedModule = "Resource Pack Manager";
             rebuildWidgets();
@@ -829,9 +947,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildScreenshotPrivacy() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         String[] lines = {
                 "SCREENSHOT PRIVACY: STANDARD GAME CAPTURE",
                 "MORGUE DOES NOT HIDE MODULES OR ALTER SCREENSHOTS",
@@ -848,9 +966,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildWorldSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         addRenderableWidget(Button.builder(Component.literal("WORLD RULES ARE CONTROLLED BY THE WORLD OWNER OR SERVER."),
                 button -> {}).bounds(x, y, width, 28).build());
         addRenderableWidget(Button.builder(Component.literal("MORGUE DOES NOT OVERRIDE SERVER GAME RULES OR DIFFICULTY."),
@@ -861,8 +979,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildAutoEatSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         var module = MorgueClient.autoEat();
         addSettingButton(x, y, toggleLabel("Auto Eat", module.isEnabled()),
                 () -> MorgueClient.setAutoEatEnabled(!module.isEnabled()));
@@ -871,17 +989,17 @@ public final class MorgueScreen extends Screen {
                         ? 1 : module.getHungerThreshold() + 1));
         addRenderableWidget(Button.builder(Component.literal(
                 "Selects the most nutritious food already in your hotbar."),
-                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Uses vanilla item-use input and restores your previous hotbar slot after eating."),
-                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 114, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildItemUseInfo() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         addRenderableWidget(Button.builder(Component.literal("ITEM USE: VANILLA INPUT ONLY"),
                 button -> {}).bounds(x, y, width, 28).build());
         addRenderableWidget(Button.builder(Component.literal("NO AUTOMATIC FOOD, POTION, OR PROJECTILE USE IS ENABLED."),
@@ -892,8 +1010,8 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildHudEditorInfo() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addSettingButton(x, y, toggleLabel("Module List Overlay",
                 dev.morgue.client.MorgueHud.isModuleListEnabled()),
                 () -> dev.morgue.client.MorgueHud.setModuleListEnabled(
@@ -908,33 +1026,33 @@ public final class MorgueScreen extends Screen {
                         !dev.morgue.client.MorgueHud.isHitMarkerEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "The marker appears briefly when the selected target's damage cooldown resets."),
-                button -> {}).bounds(x, y + 114, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 114, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Overlay positions are fixed to the upper corners; drag-and-drop editing is not implemented."),
-                button -> {}).bounds(x, y + 150, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 150, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildNotificationsSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addSettingButton(x, y, toggleLabel("Local Chat Notifications",
                 dev.morgue.client.ClientNotifications.isEnabled()),
                 () -> dev.morgue.client.ClientNotifications.setEnabled(
                         !dev.morgue.client.ClientNotifications.isEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "Notifications are local chat messages for AutoTotem and Inventory Helper actions."),
-                button -> {}).bounds(x, y + 40, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 40, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "No notification content is sent to a remote service."),
-                button -> {}).bounds(x, y + 78, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, y + 78, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildVisualSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         String[] lines = {
                 "ACTIVE THEME: GOTHIC MIDNIGHT BLUE",
                 "PANEL: DEEP NAVY / BLACK",
@@ -952,9 +1070,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildWorldInfo() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         if (minecraft == null || minecraft.player == null || minecraft.level == null) {
             addRenderableWidget(Button.builder(Component.literal("WORLD STATUS: No world is currently loaded."),
                     button -> {}).bounds(x, y, width, 28).build());
@@ -980,9 +1098,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildClientMetadata() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         String[] details = {
                 "CLIENT: MORGUE REFINED",
                 "TARGET: MINECRAFT JAVA 26.3",
@@ -1001,9 +1119,9 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildCredits() {
-        int x = panelX + 150;
-        int y = panelY + 108;
-        int contentWidth = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int contentWidth = settingsWideWidth();
         String[] credits = {
                 "PROJECT LEAD  /  quincey-ys",
                 "AI DEVELOPMENT SUPPORT  /  OpenAI ChatGPT",
@@ -1024,7 +1142,7 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildResourcePackManager() {
-        int x = panelX + 150;
+        int x = settingsLeftX();
         addRenderableWidget(Button.builder(Component.literal("OPEN VANILLA RESOURCE PACK MANAGER"), button -> {
             minecraft.gui.setScreen(new PackSelectionScreen(
                     minecraft.getResourcePackRepository(),
@@ -1035,64 +1153,64 @@ public final class MorgueScreen extends Screen {
                     minecraft.getResourcePackDirectory(),
                     Component.translatable("resourcePack.title")
             ));
-        }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
+        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
 
         addRenderableWidget(Button.builder(Component.literal("Manage local packs and normal client selections."),
-                button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("Server-required packs remain controlled by the server."),
-                button -> {}).bounds(x, panelY + 192, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 76, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildPrivacyDashboard() {
-        int x = panelX + 150;
+        int x = settingsLeftX();
         addRenderableWidget(Button.builder(Component.literal("MORGUE does not send a custom mod-list handshake."),
-                button -> {}).bounds(x, panelY + 116, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop(), settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("Servers can still inspect normal gameplay and network behavior."),
-                button -> {}).bounds(x, panelY + 152, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 36, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("No anti-cheat evasion, fake responses, or required-pack bypass is active."),
-                button -> {}).bounds(x, panelY + 188, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 72, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildIntegrityDashboard() {
-        int x = panelX + 150;
-        int y = panelY + 112;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addRenderableWidget(Button.builder(Component.literal(
                 "PACKAGE STATUS: " + dev.morgue.client.security.MorgueIntegrity.getStatus()), button -> {})
-                .bounds(x, y, panelWidth - 176, 28).build());
+                .bounds(x, y, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "DETAIL: " + dev.morgue.client.security.MorgueIntegrity.getDetails()), button -> {})
-                .bounds(x, y + 36, panelWidth - 176, 28).build());
+                .bounds(x, y + 36, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "SCOPE: all packaged JAR entries except this manifest"), button -> {})
-                .bounds(x, y + 72, panelWidth - 176, 28).build());
+                .bounds(x, y + 72, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "LIMIT: local tamper check, not a cryptographic signature"), button -> {})
-                .bounds(x, y + 108, panelWidth - 176, 28).build());
+                .bounds(x, y + 108, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("RUN CHECK AGAIN"), button -> {
             dev.morgue.client.security.MorgueIntegrity.verify();
             rebuildWidgets();
-        }).bounds(x, y + 152, panelWidth - 176, 28).build());
+        }).bounds(x, y + 152, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildKeybindSettings() {
-        int x = panelX + 150;
+        int x = settingsLeftX();
         addRenderableWidget(Button.builder(Component.literal("OPEN MINECRAFT KEYBIND SETTINGS"), button -> {
             minecraft.gui.setScreen(new KeyBindsScreen(this, minecraft.options));
-        }).bounds(x, panelY + 116, panelWidth - 176, 30).build());
+        }).bounds(x, settingsTop(), settingsWideWidth(), 30).build());
         addRenderableWidget(Button.builder(Component.literal("Keyboard defaults: Right Shift / M / K / V"),
-                button -> {}).bounds(x, panelY + 156, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 40, settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("MOUSE 4 / MOUSE 5: SIDE-BUTTON TOGGLES AVAILABLE"),
-                button -> {}).bounds(x, panelY + 194, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 78, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildProfileSettings() {
-        int x = panelX + 150;
-        int y = panelY + 112;
-        int width = panelWidth - 176;
+        int x = settingsLeftX();
+        int y = settingsTop();
+        int width = settingsWideWidth();
         addRenderableWidget(Button.builder(Component.literal("SAVE PROFILE SLOT 1"), button -> {
             profileStatus = MorgueConfig.exportProfile("profile-1")
                     ? "Saved profile slot 1." : "Could not save profile slot 1.";
@@ -1129,28 +1247,28 @@ public final class MorgueScreen extends Screen {
     }
 
     private void buildPlaceholderSettings() {
-        int x = panelX + 150;
+        int x = settingsLeftX();
         addRenderableWidget(Button.builder(Component.literal("This module is listed in the ClickGUI prototype."),
-                button -> {}).bounds(x, panelY + 112, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop(), settingsWideWidth(), 28).build());
         addRenderableWidget(Button.builder(Component.literal("Gameplay behavior is not connected yet."),
-                button -> {}).bounds(x, panelY + 148, panelWidth - 176, 28).build());
+                button -> {}).bounds(x, settingsTop() + 36, settingsWideWidth(), 28).build());
         addBackButton();
     }
 
     private void buildThemeSettings() {
-        int x = panelX + 158;
-        int y = panelY + 148;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addSettingButton(x, y, "Accent Color: " + UiSettings.accentName() + "  ›",
                 () -> UiSettings.cycleAccent());
         addRenderableWidget(Button.builder(Component.literal(
                 "Choose a palette inspired by Ghost Client's clean, high-contrast panel styling."),
-                button -> {}).bounds(x, y + 42, Math.max(260, panelWidth - 190), 32).build());
+                button -> {}).bounds(x, y + 42, settingsWideWidth(), 32).build());
         addBackButton();
     }
 
     private void buildUiEffectsSettings() {
-        int x = panelX + 158;
-        int y = panelY + 148;
+        int x = settingsLeftX();
+        int y = settingsTop();
         addSettingButton(x, y, toggleLabel("Interface Animations", UiSettings.isAnimationsEnabled()),
                 () -> UiSettings.setAnimationsEnabled(!UiSettings.isAnimationsEnabled()));
         addSettingButton(x, y + 38, toggleLabel("Custom UI Sounds", UiSettings.isSoundsEnabled()),
@@ -1159,10 +1277,10 @@ public final class MorgueScreen extends Screen {
                 () -> UiSettings.setKillSoundEnabled(!UiSettings.isKillSoundEnabled()));
         addRenderableWidget(Button.builder(Component.literal(
                 "Bundled custom sounds: open, close, hover, click, toggles, slider, and kill."),
-                button -> {}).bounds(x, y + 118, Math.max(260, panelWidth - 190), 32).build());
+                button -> {}).bounds(x, y + 118, settingsWideWidth(), 32).build());
         addRenderableWidget(Button.builder(Component.literal(
                 "Ambient music is intentionally not included yet."),
-                button -> {}).bounds(x, y + 156, Math.max(260, panelWidth - 190), 32).build());
+                button -> {}).bounds(x, y + 156, settingsWideWidth(), 32).build());
         addBackButton();
     }
 
@@ -1171,15 +1289,17 @@ public final class MorgueScreen extends Screen {
             action.run();
             MorgueConfig.save();
             rebuildWidgets();
-        }).bounds(x, y, panelWidth / 2 - 170, 27).build());
+        }).bounds(x, y, settingsColumnWidth(), 27).build());
     }
 
     private void addBackButton() {
-        addRenderableWidget(Button.builder(Component.literal("< BACK TO MODULES"), button -> {
+        AbstractWidget back = Button.builder(Component.literal("< BACK TO MODULES"), button -> {
             selectedModule = null;
             entityPage = false;
             rebuildWidgets();
-        }).bounds(panelX + 150, panelY + panelHeight - 42, 160, 24).build());
+        }).bounds(settingsLeftX(), backButtonY(), 160, 24).build();
+        addRenderableWidget(back);
+        fixedWidgets.add(back);
     }
 
     private static boolean isModuleEnabled(String module) {
@@ -1297,16 +1417,17 @@ public final class MorgueScreen extends Screen {
 
         String visibleLabel = rawLabel;
         Component label = displayText(visibleLabel);
-        int switchSpace = toggle ? 62 : 24;
-        int maxTextWidth = Math.max(8, w - switchSpace);
+        int textPad = w < 90 ? 6 : 12;
+        int switchSpace = toggle && w >= 110 ? 56 : 0;
+        int maxTextWidth = Math.max(8, w - textPad * 2 - switchSpace);
         while (font.width(label) > maxTextWidth && visibleLabel.length() > 4) {
             visibleLabel = visibleLabel.substring(0, visibleLabel.length() - 2) + "…";
             label = displayText(visibleLabel);
         }
         int textY = y + Math.max(2, (h - 10) / 2);
-        graphics.text(font, label, x + 12, textY, textColor);
+        graphics.text(font, label, x + textPad, textY, textColor);
 
-        if (toggle && w >= 70) {
+        if (toggle && w >= 110) {
             int trackX = x + w - 48;
             int trackY = y + (h - 16) / 2;
             int trackColor = activeState ? accentSoftColor() : 0xFF293747;
@@ -1375,129 +1496,210 @@ public final class MorgueScreen extends Screen {
                 (now - transitionAtNanos) / 170_000_000.0));
 
         graphics.fill(0, 0, width, height, 0xFF070B12);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, BLACK);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 68, PANEL_LIGHT);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 3, accentColor());
+        graphics.fill(0, 0, width, headerHeight, PANEL_LIGHT);
+        graphics.fill(0, 0, width, 3, accentColor());
 
-        graphics.text(font, displayText("MORGUE"), panelX + 20, panelY + 17, WHITE);
-        graphics.text(font, displayText("CLIENT  /  GHOST-INSPIRED WORKSPACE"), panelX + 20, panelY + 36, MUTED);
-        graphics.text(font, displayText("RIGHT SHIFT  ·  CLOSE"),
-                panelX + panelWidth - 154, panelY + 29, MUTED);
+        graphics.text(font, displayText("MORGUE"), margin,
+                Math.max(6, headerHeight / 2 - 16), WHITE);
+        if (showBrandSubtitle) {
+            graphics.text(font, displayText(BRAND_SUBTITLE), margin,
+                    Math.max(6, headerHeight / 2 + 2), MUTED);
+        }
 
         String heading = selectedModule == null ? "MODULE PANELS"
                 : selectedModule.toUpperCase(java.util.Locale.ROOT);
-        graphics.text(font, displayText(heading), panelX + 20, panelY + 82, WHITE);
-        graphics.text(font, displayText(selectedModule == null
-                ? "ALL CATEGORIES  /  CLICK TO TOGGLE  /  RIGHT-CLICK OR ARROW TO CONFIGURE"
-                : entityPage ? "ENTITY FILTER" : "MODULE SETTINGS"),
-                panelX + 20, panelY + 97, MUTED);
+        graphics.text(font, displayText(heading), margin, headingY, WHITE);
+        String breadcrumb = selectedModule == null ? OVERVIEW_HINT
+                : "MODULE PANELS  /  " + selectedCategory.toUpperCase(java.util.Locale.ROOT)
+                + (entityPage ? "  /  ENTITY FILTER" : "  /  MODULE SETTINGS");
+        if (showPageSubtitle) {
+            drawTruncated(graphics, breadcrumb, margin, headingY + 15, contentWidth(), MUTED);
+        }
+        int navY = showPageSubtitle ? headingY + 26 : headingY + 12;
+        int navWidth = (int) Math.round(contentWidth() * navProgress);
+        graphics.fill(margin, navY, margin + navWidth, navY + 2, accentColor());
+        int openWidth = (int) Math.round((width - margin * 2) * openProgress);
+        graphics.fill(margin, headerHeight - 3, margin + openWidth, headerHeight - 1,
+                accentSoftColor());
 
-        int contentRight = Math.max(panelX + 180, panelX + panelWidth - 18);
-        int navWidth = (int) Math.round((contentRight - (panelX + 20)) * navProgress);
-        graphics.fill(panelX + 20, panelY + 108, panelX + 20 + navWidth, panelY + 110, accentColor());
-        int openWidth = (int) Math.round((panelWidth - 40) * openProgress);
-        graphics.fill(panelX + 20, panelY + 65, panelX + 20 + openWidth, panelY + 67, accentSoftColor());
-
+        double reveal = navProgress * openProgress;
         if (selectedModule == null) {
-            int columns = Math.max(1, Math.min(4, panelWidth / 360));
-            int rows = (CATEGORIES.size() + columns - 1) / columns;
-            int gap = 12;
-            int margin = 16;
-            int cardWidth = Math.max(180, (panelWidth - margin * 2 - gap * (columns - 1)) / columns);
-            int gridTop = panelY + 120;
-            int gridBottom = panelY + panelHeight - 48;
-            int rowHeight = Math.max(150, (gridBottom - gridTop - gap * (rows - 1)) / rows);
-            for (int i = 0; i < CATEGORIES.size(); i++) {
-                int column = i % columns;
-                int row = i / columns;
-                int x = panelX + margin + column * (cardWidth + gap);
-                int y = gridTop + row * (rowHeight + gap);
-                graphics.fill(x, y, x + cardWidth, y + rowHeight, PANEL);
-                graphics.outline(x, y, cardWidth, rowHeight, BORDER);
-                graphics.fill(x + 1, y + 1, x + cardWidth - 1, y + 3, accentColor());
-                graphics.text(font, displayText(CATEGORIES.get(i).toUpperCase(java.util.Locale.ROOT)),
-                        x + 10, y + 11, WHITE);
-                graphics.fill(x + 10, y + 27, x + cardWidth - 10, y + 28, BORDER);
+            int viewBottom = overviewViewportBottom();
+            graphics.enableScissor(margin, contentTop, width, viewBottom);
+            for (OverviewCard card : overviewCards) {
+                drawOverviewCard(graphics, card);
+            }
+            drawContentButtons(graphics, mouseX, mouseY, now, frameFactor, reveal);
+            graphics.disableScissor();
+            drawScrollbar(graphics, margin + contentWidth() - 4, contentTop, viewBottom,
+                    overviewScroll, overviewContentHeight, overviewViewportHeight);
+            if (moduleTotalCount == 0) {
+                graphics.text(font, displayText("NO MODULES MATCH  /  CLEAR THE FILTER TO SEE ALL CATEGORIES"),
+                        margin + 12, contentTop + 18, MUTED);
             }
         } else {
-            graphics.fill(panelX + 16, panelY + panelHeight - 34,
-                    panelX + panelWidth - 16, panelY + panelHeight - 33, BORDER);
-        }
-
-        graphics.text(font, displayText("MORGUE  /  LOCAL CONFIGURATION"),
-                panelX + 18, panelY + panelHeight - 24, MUTED);
-        graphics.text(font, displayText("UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF")),
-                panelX + panelWidth - 106, panelY + panelHeight - 24, MUTED);
-
-        Map<AbstractWidget, String> buttonLabels = new java.util.IdentityHashMap<>();
-        for (var child : children()) {
-            if (child instanceof AbstractWidget widget && !(widget instanceof EditBox)) {
-                buttonLabels.put(widget, widget.getMessage().getString());
-                widget.setMessage(Component.empty());
-            }
-        }
-
-        super.extractRenderState(graphics, mouseX, mouseY, delta);
-
-        for (var entry : buttonLabels.entrySet()) {
-            AbstractWidget widget = entry.getKey();
-            String rawLabel = entry.getValue();
-            widget.setMessage(Component.literal(rawLabel));
-            extractCustomButton(graphics, widget, rawLabel, mouseX, mouseY, now, frameFactor, navProgress * openProgress);
+            int viewBottom = settingsViewportBottom();
+            graphics.enableScissor(margin, contentTop, width, viewBottom);
+            drawContentButtons(graphics, mouseX, mouseY, now, frameFactor, reveal);
+            graphics.disableScissor();
+            drawScrollbar(graphics, margin + contentWidth() - 4, contentTop, viewBottom,
+                    settingsScroll, settingsContentHeight,
+                    Math.max(1, viewBottom - contentTop));
+            graphics.fill(margin, backButtonY() - 8, width - margin, backButtonY() - 7, BORDER);
         }
 
         for (var child : children()) {
-            if (child instanceof AbstractWidget widget && widget instanceof EditBox) {
-                int ex = widget.getX();
-                int ey = widget.getY();
-                int ew = widget.getWidth();
-                int eh = widget.getHeight();
-                boolean searchHovered = widget.isMouseOver(mouseX, mouseY);
-                // Keep the vanilla text/edit handling visible; decorate only its frame.
-                graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
-                        searchHovered ? accentColor() : BORDER);
-                graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
-                        searchHovered ? accentColor() : 0xFF405065);
-            }
+            if (!(child instanceof AbstractWidget widget) || widget instanceof EditBox) continue;
+            if (!fixedWidgets.contains(widget)) continue;
+            extractCustomButton(graphics, widget, widget.getMessage().getString(),
+                    mouseX, mouseY, now, frameFactor, reveal);
         }
 
-        if (selectedModule == null && moduleTotalCount > moduleVisibleCount && moduleVisibleCount > 0) {
-            int trackX = panelX + panelWidth - 14;
-            int trackTop = panelY + 148;
-            int trackBottom = panelY + panelHeight - 56;
-            int trackHeight = Math.max(1, trackBottom - trackTop);
-            int thumbHeight = Math.max(18, trackHeight * moduleVisibleCount / moduleTotalCount);
-            int maxOffset = Math.max(1, moduleTotalCount - moduleVisibleCount);
-            int thumbY = trackTop + (trackHeight - thumbHeight) * moduleScrollOffset / maxOffset;
-            graphics.fill(trackX, trackTop, trackX + 2, trackBottom, 0xFF293747);
-            graphics.fill(trackX - 1, thumbY, trackX + 3, thumbY + thumbHeight, accentColor());
+        if (searchBox != null) {
+            searchBox.extractRenderState(graphics, mouseX, mouseY, delta);
+            int ex = searchBox.getX();
+            int ey = searchBox.getY();
+            int ew = searchBox.getWidth();
+            int eh = searchBox.getHeight();
+            boolean searchHovered = searchBox.isMouseOver(mouseX, mouseY);
+            graphics.outline(ex - 1, ey - 1, ew + 2, eh + 2,
+                    searchHovered ? accentColor() : BORDER);
+            graphics.fill(ex + 2, ey + eh - 2, ex + ew - 2, ey + eh - 1,
+                    searchHovered ? accentColor() : 0xFF405065);
         }
 
+        drawFooter(graphics);
         drawClickRipples(graphics, now);
     }
 
-    private int hoveredSearchBorder(AbstractWidget widget, int mouseX, int mouseY) {
-        return widget.isMouseOver(mouseX, mouseY) ? accentColor() : 0xFF6586AC;
+    private void drawContentButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+                                    long now, double frameFactor, double reveal) {
+        for (var child : children()) {
+            if (!(child instanceof AbstractWidget widget) || widget instanceof EditBox) continue;
+            if (fixedWidgets.contains(widget)) continue;
+            extractCustomButton(graphics, widget, widget.getMessage().getString(),
+                    mouseX, mouseY, now, frameFactor, reveal);
+        }
+    }
+
+    private void drawOverviewCard(GuiGraphicsExtractor graphics, OverviewCard card) {
+        int x = card.x();
+        int y = card.y();
+        int w = card.width();
+        int h = card.height();
+        graphics.fill(x, y, x + w, y + h, PANEL);
+        graphics.outline(x, y, w, h, BORDER);
+        graphics.fill(x + 1, y + 1, x + w - 1, y + 3, accentColor());
+        String title = card.name().toUpperCase(java.util.Locale.ROOT);
+        graphics.text(font, displayText(title), x + 10, y + 9, WHITE);
+        String count = card.moduleCount() + (card.moduleCount() == 1 ? " MODULE" : " MODULES");
+        int countWidth = font.width(displayText(count));
+        if (x + 20 + font.width(displayText(title)) + 8 < x + w - 10 - countWidth) {
+            graphics.text(font, displayText(count), x + w - 10 - countWidth, y + 9, MUTED);
+        }
+        int separatorY = y + (compactLayout ? 22 : 28);
+        graphics.fill(x + 10, separatorY, x + w - 10, separatorY + 1, BORDER);
+    }
+
+    private void drawScrollbar(GuiGraphicsExtractor graphics, int x, int top, int bottom,
+                               int scroll, int contentHeight, int viewportHeight) {
+        if (contentHeight <= viewportHeight || viewportHeight <= 0) return;
+        int trackHeight = Math.max(1, bottom - top);
+        int thumbHeight = Math.max(20,
+                (int) ((long) trackHeight * viewportHeight / contentHeight));
+        thumbHeight = Math.min(trackHeight, thumbHeight);
+        int maxScroll = Math.max(1, contentHeight - viewportHeight);
+        int thumbY = top + (int) ((long) (trackHeight - thumbHeight) * scroll / maxScroll);
+        graphics.fill(x, top, x + 2, bottom, 0xFF293747);
+        graphics.fill(x - 1, thumbY, x + 3, thumbY + thumbHeight, accentColor());
+    }
+
+    private void drawFooter(GuiGraphicsExtractor graphics) {
+        graphics.fill(margin, footerTop, width - margin, footerTop + 1, BORDER);
+        int textY = height - 19;
+        String left = "MORGUE  /  LOCAL CONFIGURATION";
+        graphics.text(font, displayText(left), margin, textY, MUTED);
+        int closeWidth = font.width(displayText(CLOSE_HINT));
+        int closeX = width - margin - closeWidth;
+        graphics.text(font, displayText(CLOSE_HINT), closeX, textY, MUTED);
+        String fx = "UI FX  " + (UiSettings.isAnimationsEnabled() ? "ON" : "OFF");
+        int fxX = closeX - 14 - font.width(displayText(fx));
+        if (fxX > margin + font.width(displayText(left)) + 12) {
+            graphics.text(font, displayText(fx), fxX, textY, MUTED);
+        }
+    }
+
+    private void drawTruncated(GuiGraphicsExtractor graphics, String text, int x, int y,
+                               int maxWidth, int color) {
+        String shown = text;
+        if (font.width(displayText(shown)) > maxWidth) {
+            int end = shown.length();
+            while (end > 0 && font.width(displayText(shown.substring(0, end) + "…")) > maxWidth) {
+                end--;
+            }
+            shown = shown.substring(0, end) + "…";
+        }
+        graphics.text(font, displayText(shown), x, y, color);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (selectedModule != null && moduleTotalCount > moduleVisibleCount
-                && mouseX >= panelX + 140 && mouseX <= panelX + panelWidth - 10
-                && mouseY >= panelY + 132 && mouseY <= panelY + panelHeight - 42
-                && verticalAmount != 0.0) {
-            int maxOffset = Math.max(0, moduleTotalCount - moduleVisibleCount);
-            moduleScrollOffset = Math.max(0, Math.min(maxOffset,
-                    moduleScrollOffset - (verticalAmount > 0 ? moduleColumns : -moduleColumns)));
-            rebuildWidgets();
-            return true;
+        if (verticalAmount == 0.0) {
+            return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        }
+        int step = compactLayout ? 30 : 42;
+        int delta = (int) Math.round(verticalAmount * step);
+        if (selectedModule == null) {
+            int viewBottom = overviewViewportBottom();
+            if (mouseX >= margin && mouseX <= width - margin
+                    && mouseY >= contentTop && mouseY <= viewBottom) {
+                int viewportHeight = Math.max(1, viewBottom - contentTop);
+                int maxScroll = Math.max(0, overviewContentHeight - viewportHeight);
+                if (maxScroll > 0) {
+                    overviewScroll = Math.max(0, Math.min(maxScroll, overviewScroll - delta));
+                    rebuildWidgets();
+                    return true;
+                }
+            }
+        } else {
+            int viewBottom = settingsViewportBottom();
+            if (mouseX >= margin && mouseX <= width - margin
+                    && mouseY >= contentTop && mouseY <= viewBottom) {
+                int viewportHeight = Math.max(1, viewBottom - contentTop);
+                int maxScroll = Math.max(0, settingsContentHeight - viewportHeight);
+                if (maxScroll > 0) {
+                    settingsScroll = Math.max(0, Math.min(maxScroll, settingsScroll - delta));
+                    rebuildWidgets();
+                    return true;
+                }
+            }
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
+    private boolean isInteractiveClick(double mouseX, double mouseY) {
+        if (selectedModule == null) {
+            if (mouseY < contentTop) {
+                if (searchBox != null && searchBox.isMouseOver(mouseX, mouseY)) return true;
+                for (AbstractWidget widget : fixedWidgets) {
+                    if (widget.isMouseOver(mouseX, mouseY)) return true;
+                }
+                return false;
+            }
+            return mouseY <= overviewViewportBottom();
+        }
+        for (AbstractWidget widget : fixedWidgets) {
+            if (widget.isMouseOver(mouseX, mouseY)) return true;
+        }
+        return mouseY >= contentTop && mouseY <= settingsViewportBottom();
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 1 && selectedModule == null) {
+        if (!isInteractiveClick(event.x(), event.y())) {
+            return false;
+        }
+        if (event.button() == MOUSE_BUTTON_RIGHT && selectedModule == null) {
             for (var child : children()) {
                 if (!(child instanceof AbstractWidget widget)
                         || !widget.isMouseOver(event.x(), event.y())) continue;
@@ -1510,7 +1712,7 @@ public final class MorgueScreen extends Screen {
                 }
             }
         }
-        if (event.button() == 0) {
+        if (event.button() == MOUSE_BUTTON_LEFT) {
             playClickSoundAt(event);
             if (UiSettings.isAnimationsEnabled()) {
                 clickRipples.addLast(new ClickRipple(event.x(), event.y(), System.nanoTime()));
@@ -1545,7 +1747,7 @@ public final class MorgueScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 0) {
+        if (event.button() == MOUSE_BUTTON_LEFT) {
             long now = System.nanoTime();
             if (now - lastSliderSoundNanos >= 90_000_000L) {
                 for (var child : children()) {
@@ -1574,6 +1776,17 @@ public final class MorgueScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(KeyEvent event) {
+        // Open screens receive key events directly; the global key mapping does not
+        // see them, so the advertised Right Shift close is handled here.
+        if (event.key() == InputConstants.KEY_RSHIFT) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
     public void onClose() {
         minecraft.gui.setScreen(null);
     }
@@ -1581,6 +1794,18 @@ public final class MorgueScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void resize(int screenWidth, int screenHeight) {
+        super.resize(screenWidth, screenHeight);
+        width = screenWidth;
+        height = screenHeight;
+        computeLayout();
+        rebuildWidgets();
+    }
+
+    private record OverviewCard(String name, int moduleCount, int x, int y, int width, int height) {
     }
 
     private record EntityOption(String name, String id) {
